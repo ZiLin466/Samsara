@@ -1,0 +1,107 @@
+plugins {
+    id 'net.fabricmc.fabric-loom' version "${loom_version}"
+    id 'java'
+}
+
+version = project.mod_version
+group = project.maven_group
+
+base {
+    archivesName = project.archives_base_name
+}
+
+repositories {
+    maven {
+        name = 'Fabric'
+        url = 'https://maven.fabricmc.net/'
+    }
+    mavenCentral()
+    maven { url = 'https://maven.ccbluex.net/snapshots' }
+    maven { url = 'https://maven.lenni0451.net/releases' }
+}
+
+dependencies {
+    minecraft "com.mojang:minecraft:${project.minecraft_version}"
+    implementation "net.fabricmc:fabric-loader:${project.loader_version}"
+    testImplementation platform('org.junit:junit-bom:5.13.4')
+    testImplementation 'org.junit.jupiter:junit-jupiter'
+    testRuntimeOnly 'org.junit.platform:junit-platform-launcher'
+    implementation 'net.ccbluex:MinecraftAuth:5.0.3-20260821.014810-1'
+    include 'net.ccbluex:MinecraftAuth:5.0.3-20260821.014810-1'
+    include 'net.lenni0451.commons:httpclient:1.9.2'
+    include 'net.lenni0451.commons:gson:1.9.2'
+    // Each distribution carries the target platform's WebView (override when cross-building).
+    def webViewPlatform = providers.gradleProperty('samsara.webViewPlatform').getOrElse(
+        System.getProperty('os.name').startsWith('Windows') ? 'win' :
+        System.getProperty('os.name').startsWith('Mac') ? (System.getProperty('os.arch') == 'aarch64' ? 'mac-aarch64' : 'mac') : 'linux')
+    ['base', 'graphics', 'controls', 'media', 'web'].each { module ->
+        implementation include("org.openjfx:javafx-${module}:25.0.1:${webViewPlatform}")
+    }
+    // Bundle WebKit's JavaScript API too; trimmed/newer launcher runtimes may omit jdk.jsobject.
+    implementation include("org.openjfx:jdk-jsobject:25.0.1:${webViewPlatform}")
+
+    // Keep the bindings and natives aligned with Minecraft 26.3's LWJGL 3.4.3 core.
+    // 3.3.3 structs reference Struct.UNSAFE, which Java 25's 3.4.3 core no longer exposes.
+    // Bundle only the extra modules; the launcher owns the core and OpenGL libraries.
+    def extraLwjglVersion = '3.4.3'
+    implementation include("org.lwjgl:lwjgl-nanovg:${extraLwjglVersion}")
+    implementation include("org.lwjgl:lwjgl-glfw:${extraLwjglVersion}")
+    runtimeOnly include("org.lwjgl:lwjgl-nanovg:${extraLwjglVersion}:natives-linux")
+    runtimeOnly include("org.lwjgl:lwjgl-nanovg:${extraLwjglVersion}:natives-linux-arm64")
+    runtimeOnly include("org.lwjgl:lwjgl-nanovg:${extraLwjglVersion}:natives-windows")
+    runtimeOnly include("org.lwjgl:lwjgl-nanovg:${extraLwjglVersion}:natives-windows-arm64")
+    runtimeOnly include("org.lwjgl:lwjgl-nanovg:${extraLwjglVersion}:natives-macos")
+    runtimeOnly include("org.lwjgl:lwjgl-nanovg:${extraLwjglVersion}:natives-macos-arm64")
+    runtimeOnly include("org.lwjgl:lwjgl-glfw:${extraLwjglVersion}:natives-windows")
+    runtimeOnly include("org.lwjgl:lwjgl-glfw:${extraLwjglVersion}:natives-windows-arm64")
+    runtimeOnly include("org.lwjgl:lwjgl-glfw:${extraLwjglVersion}:natives-linux")
+    runtimeOnly include("org.lwjgl:lwjgl-glfw:${extraLwjglVersion}:natives-linux-arm64")
+    runtimeOnly include("org.lwjgl:lwjgl-glfw:${extraLwjglVersion}:natives-macos")
+    runtimeOnly include("org.lwjgl:lwjgl-glfw:${extraLwjglVersion}:natives-macos-arm64")
+}
+
+// The 26.3 shaderc include callback crashes in LWJGL's Java 25 FFM path on
+// Windows. Use the matching core jar's JNI implementation, keeping all native
+// classifiers and other multi-release libraries unchanged.
+def useLwjglJni = providers.gradleProperty('samsara.lwjglJni').map { it.toBoolean() }
+        .getOrElse(System.getProperty('os.name').startsWith('Windows'))
+if (useLwjglJni) {
+    configurations.named('runtimeClasspath') {
+        resolutionStrategy.eachDependency { details ->
+            if (details.requested.group == 'org.lwjgl' && details.requested.name == 'lwjgl') {
+                details.artifactSelection { selection ->
+                    if (!selection.hasSelectors()) {
+                        selection.selectArtifact('jar', 'jar', 'unsafe')
+                    }
+                }
+            }
+        }
+    }
+}
+
+java {
+    toolchain {
+        languageVersion = JavaLanguageVersion.of(25)
+    }
+    withSourcesJar()
+}
+
+tasks.withType(JavaCompile).configureEach {
+    it.options.encoding = 'UTF-8'
+    it.options.release = 25
+}
+
+processResources {
+    from('LICENSE') { into 'META-INF' }
+    inputs.property 'version', project.version
+    filesMatching(['fabric.mod.json', 'samsara-version.properties']) {
+        expand 'version': project.version
+    }
+}
+
+tasks.named('test', Test) {
+    useJUnitPlatform()
+    javaLauncher = javaToolchains.launcherFor {
+        languageVersion = JavaLanguageVersion.of(25)
+    }
+}

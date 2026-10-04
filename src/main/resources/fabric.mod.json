@@ -1,0 +1,30 @@
+{
+  "schemaVersion": 1,
+  "id": "samsara",
+  "version": "${version}",
+  "name": "Samsara",
+  "description": "Samsara client",
+  "authors": [
+    "Trillionaire"
+  ],
+  "contact": {
+    "sources": "https://github.com/ZiLin466/Samsara",
+    "issues": "https://github.com/ZiLin466/Samsara/issues"
+  },
+  "license": "GPL-3.0-only",
+  "icon": "assets/samsara/icon.png",
+  "environment": "*",
+  "entrypoints": {
+    "main": [
+      "com.samsara.SamsaraClient"
+    ]
+  },
+  "mixins": [
+    "samsara.mixins.json"
+  ],
+  "depends": {
+    "fabricloader": ">=0.19.5",
+    "minecraft": "~26.3",
+    "java": ">=25"
+  }
+}

@@ -1,0 +1,16 @@
+.gradle/
+build/
+.DS_Store
+*.iml
+.idea/
+run/
+
+/docs/
+/logs/
+/.vscode/
+/out/
+*.log
+.env
+.env.*
+/config/
+/samsara/

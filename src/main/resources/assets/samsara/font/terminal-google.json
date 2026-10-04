@@ -1,0 +1,6 @@
+{
+  "providers": [
+    { "type": "ttf", "file": "samsara:terminal-google.ttf", "size": 10, "oversample": 3 },
+    { "type": "reference", "id": "samsara:terminal" }
+  ]
+}
