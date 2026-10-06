@@ -1,6 +1,6 @@
 package com.samsara.ui.hud.session;
 
-import com.samsara.module.visual.SessionHud.SessionStats;
+import com.samsara.module.visual.Hud.SessionHud.SessionStats;
 import java.util.UUID;
 import org.junit.jupiter.api.Test;
 

@@ -27,11 +27,8 @@ public final class HudEditorScreen extends Screen {
    @Override public void extractBackground(GuiGraphicsExtractor graphics, int mouseX, int mouseY, float partialTick) { }
    @Override public void extractRenderState(GuiGraphicsExtractor graphics, int mouseX, int mouseY, float partialTick) {
       this.mouseX = mouseX; this.mouseY = mouseY;
-      // Preview once through the same native rendering code, even without an Aura target.
-      if (FeatureManager.inventoryHud != null) FeatureManager.inventoryHud.renderInventory(graphics);
-      if (FeatureManager.targetHud != null) FeatureManager.targetHud.m207(graphics, partialTick, Minecraft.getInstance().player);
-      if (FeatureManager.sessionHud != null) FeatureManager.sessionHud.renderSession(graphics);
-      if (FeatureManager.potionStatus != null) FeatureManager.potionStatus.renderStatus(graphics);
+      // Preview through the same native rendering code, even without an Aura target.
+      if (FeatureManager.f25 != null) FeatureManager.f25.renderPreview(graphics, partialTick);
       graphics.centeredText(Minecraft.getInstance().font,
          "Drag HUDs • Hold left + scroll to resize • Right-click resets size • Esc to finish",
          this.width / 2, this.height - 22, 0xFFFFFFFF);

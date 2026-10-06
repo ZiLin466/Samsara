@@ -9,8 +9,8 @@ import static org.junit.jupiter.api.Assertions.*;
 final class HudEditorGestureTest {
    @Test void potionRowsDragAndScaleAsOneVerticallyCenteredGroup() {
       var layouts=new HudLayouts();var gesture=new HudEditorGesture(layouts);
-      float width=80*com.samsara.module.visual.PotionStatus.PotionStatusPainter.DEFAULT_SCALE;
-      float height=64.5f*com.samsara.module.visual.PotionStatus.PotionStatusPainter.DEFAULT_SCALE;
+      float width=80*com.samsara.module.visual.Hud.PotionStatus.PotionStatusPainter.DEFAULT_SCALE;
+      float height=64.5f*com.samsara.module.visual.Hud.PotionStatus.PotionStatusPainter.DEFAULT_SCALE;
       var box=layouts.fit(HudLayouts.Element.POTION,width,height,400,300,false);
       layouts.drawn(HudLayouts.Element.POTION,box);
       assertEquals(150+layouts.get(HudLayouts.Element.POTION).y(),box.y()+box.height()/2,.001f);

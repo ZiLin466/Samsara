@@ -1,6 +1,6 @@
 package com.samsara.ui.hud.target;
 
-import com.samsara.module.visual.TargetHud.OpaiTargetHudHealth;
+import com.samsara.module.visual.Hud.TargetHud.OpaiTargetHudHealth;
 import org.junit.jupiter.api.Test;
 
 import static org.junit.jupiter.api.Assertions.*;

@@ -5,6 +5,7 @@ import com.samsara.module.Feature;
 import com.samsara.module.FeatureManager;
 import com.samsara.setting.ModeSetting;
 import com.samsara.ui.clickgui.ClickGuiScreen;
+import com.samsara.ui.clickgui.neverlose.NeverloseClickGuiScreen;
 import com.samsara.ui.clickgui.opai.OpaiClickGuiScreen;
 import com.samsara.ui.clickgui.opai.OpaiStyle;
 import com.samsara.ui.clickgui.RockstarClickGuiScreen;
@@ -15,7 +16,8 @@ public class ClickGui extends Feature {
    private static final String f616 = "ClickGUI";
    private Screen f617;
    private OpaiClickGuiScreen opaiScreen;
-   public final ModeSetting style = new ModeSetting("Style", this, "Opai", new String[]{"Modern", "Opai"});
+   private NeverloseClickGuiScreen neverloseScreen;
+   public final ModeSetting style = new ModeSetting("Style", this, "Opai", new String[]{"Modern", "Opai", "Neverlose"});
    public final ModeSetting renderMode = new ModeSetting("Interface", this, "LiquidGlass", new String[]{"LiquidGlass", "Normal"});
    public final ModeSetting opaiColor = new ModeSetting("Opai Color", this, "Lavender", new String[]{"Lavender", "Light Pink"});
 
@@ -30,6 +32,9 @@ public class ClickGui extends Feature {
       if (this.style.m228("Opai")) {
          if (this.opaiScreen == null) this.opaiScreen = new OpaiClickGuiScreen(this.opaiColor);
          this.f617 = this.opaiScreen;
+      } else if (this.style.m228("Neverlose")) {
+         if (this.neverloseScreen == null) this.neverloseScreen = new NeverloseClickGuiScreen();
+         this.f617 = this.neverloseScreen;
       } else {
          ClickGuiScreen modern = new ClickGuiScreen(RockstarClickGuiScreen.Style.MODERN);
          modern.setRenderMode(this.renderMode);
@@ -42,7 +47,7 @@ public class ClickGui extends Feature {
 
    public ClickGui() {
       super(f616, GLFW.GLFW_KEY_RIGHT_SHIFT, Category.VISUAL);
-      this.renderMode.setVisible(() -> !this.style.m228("Opai"));
+      this.renderMode.setVisible(() -> this.style.m228("Modern"));
       this.opaiColor.setVisible(() -> this.style.m228("Opai"));
    }
 }

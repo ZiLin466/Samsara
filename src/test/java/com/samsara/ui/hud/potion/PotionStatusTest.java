@@ -1,7 +1,7 @@
 package com.samsara.ui.hud.potion;
 
-import com.samsara.module.visual.PotionStatus.PotionStatusData;
-import com.samsara.module.visual.PotionStatus.PotionStatusMotion;
+import com.samsara.module.visual.Hud.PotionStatus.PotionStatusData;
+import com.samsara.module.visual.Hud.PotionStatus.PotionStatusMotion;
 import java.util.List;
 import org.junit.jupiter.api.Test;
 

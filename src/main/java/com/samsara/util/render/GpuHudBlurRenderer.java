@@ -60,16 +60,20 @@ public final class GpuHudBlurRenderer implements AutoCloseable {
    public void invalidate() { captured=false; }
 
    public void capture(GpuTextureView source, float guiWidth, List<HudBlurRenderer.Region> regions) {
+      capture(source, guiWidth, regions, HudGlassStyle.BLUR_SIGMA);
+   }
+
+   public void capture(GpuTextureView source, float guiWidth, List<HudBlurRenderer.Region> regions, float blurSigma) {
       invalidate();
       int w=source.getWidth(0),h=source.getHeight(0);
-      if (w<=0 || h<=0 || guiWidth<=0) return;
+      if (w<=0 || h<=0 || guiWidth<=0 || !Float.isFinite(blurSigma) || blurSigma<=0) return;
       resize(w,h);
       var encoder=device.createCommandEncoder();
       float[] copy=new float[UNIFORM_FLOATS]; copy[16]=1;
       draw(encoder,source,views[0],copy,false,null,guiWidth,0);
-      float[] kernel=kernel(HudGlassStyle.BLUR_SIGMA*sampleWidth/guiWidth);
+      float[] kernel=kernel(blurSigma*sampleWidth/guiWidth);
       kernel[0]=1f/sampleWidth;
-      draw(encoder,views[0],views[1],kernel,false,regions,guiWidth,HudGlassStyle.BLUR_PADDING);
+      draw(encoder,views[0],views[1],kernel,false,regions,guiWidth,blurSigma*3+1);
       kernel[0]=0; kernel[1]=1f/sampleHeight;
       draw(encoder,views[1],views[2],kernel,false,regions,guiWidth,1);
       captured=true;

@@ -1,7 +1,7 @@
 package com.samsara.ui.hud.session;
 
-import com.samsara.module.visual.SessionHud.SessionHudPainter;
-import com.samsara.module.visual.SessionHud.SessionStats;
+import com.samsara.module.visual.Hud.SessionHud.SessionHudPainter;
+import com.samsara.module.visual.Hud.SessionHud.SessionStats;
 import org.junit.jupiter.api.Test;
 
 import static org.junit.jupiter.api.Assertions.*;
@@ -9,7 +9,7 @@ import static org.junit.jupiter.api.Assertions.*;
 final class SessionHudWidthTest {
    private final SessionHudPainter.Canvas canvas=new SessionHudPainter.Canvas() {
       public float measure(String text) { return text.length()*5; }
-      public void panel(com.samsara.module.visual.TargetHud.OpaiTargetHudPainter.Bounds bounds) { }
+      public void panel(com.samsara.module.visual.Hud.TargetHud.OpaiTargetHudPainter.Bounds bounds) { }
       public void face(float x,float y,float size,float radius) { }
       public void armor(int slot,float x,float y) { }
       public void text(String text,float x,float y,int color) { }

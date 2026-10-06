@@ -49,7 +49,7 @@ public final class ModuleConfigCodec {
       return prepare(modules,root,scope,startup,message -> { });
    }
    public static Runnable prepare(List<Feature> modules, JsonObject root, Scope scope, boolean startup, Consumer<String> warning) {
-      root = CombatConfigMigration.migrate(root);
+      root = com.samsara.module.visual.Hud.Widget.migrate(CombatConfigMigration.migrate(root));
       for (String name : List.of("InvManager", "ChestStealer")) {
          var module = root.get(name);
          if (module == null || !module.isJsonObject()) continue;

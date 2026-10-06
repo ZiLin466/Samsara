@@ -86,8 +86,12 @@ public final class HudBlurRenderer implements AutoCloseable {
    }
 
    public void capture(int width, int height, float guiWidth, List<Region> regions) {
+      capture(width, height, guiWidth, regions, HudGlassStyle.BLUR_SIGMA);
+   }
+
+   public void capture(int width, int height, float guiWidth, List<Region> regions, float blurSigma) {
       invalidate();
-      if (width <= 0 || height <= 0 || guiWidth <= 0) return;
+      if (width <= 0 || height <= 0 || guiWidth <= 0 || !Float.isFinite(blurSigma) || blurSigma <= 0) return;
       State state = new State();
       try {
          initialize();
@@ -102,8 +106,8 @@ public final class HudBlurRenderer implements AutoCloseable {
          glUseProgram(this.blurProgram);
          glUniform1i(glGetUniformLocation(this.blurProgram, "scene"), 0);
          // Sample contiguous texels. Spreading a fixed nine-tap kernel aliases cloud/block detail.
-         kernel(HudGlassStyle.BLUR_SIGMA * (this.sampleWidth / guiWidth));
-         blur(0, 1, 1f / this.sampleWidth, 0, regions, guiWidth, HudGlassStyle.BLUR_PADDING);
+         kernel(blurSigma * (this.sampleWidth / guiWidth));
+         blur(0, 1, 1f / this.sampleWidth, 0, regions, guiWidth, blurSigma * 3 + 1);
          blur(1, 2, 0, 1f / this.sampleHeight, regions, guiWidth, 1);
          this.captured = true;
       } finally {

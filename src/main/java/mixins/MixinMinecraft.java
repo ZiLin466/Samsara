@@ -52,7 +52,7 @@ public class MixinMinecraft {
 
    @Inject(method = "tick", at = @At("TAIL"))
    private void samsara$trackSessionAndSave(CallbackInfo callback) {
-      com.samsara.module.visual.SessionHud.SessionTracker.tick();
+      com.samsara.module.visual.Hud.SessionHud.SessionTracker.tick();
       com.samsara.config.ConfigManager.tick();
    }
 

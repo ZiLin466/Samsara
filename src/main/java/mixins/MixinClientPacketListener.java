@@ -61,12 +61,12 @@ public class MixinClientPacketListener implements DynamicIslandLatency.Source {
    }
    @Inject(method = "setTitleText", at = @At("TAIL"))
    private void samsara$recordVictory(net.minecraft.network.protocol.game.ClientboundSetTitleTextPacket packet, CallbackInfo callback) {
-      com.samsara.module.visual.SessionHud.SessionTracker.title(packet.text().getString());
+      com.samsara.module.visual.Hud.SessionHud.SessionTracker.title(packet.text().getString());
    }
    @Inject(method = "handleEntityEvent", at = @At("TAIL"))
    private void samsara$recordDeath(net.minecraft.network.protocol.game.ClientboundEntityEventPacket packet, CallbackInfo callback) {
       var level = Minecraft.getInstance().level;
-      if (level != null && packet.getEventId() == 3) com.samsara.module.visual.SessionHud.SessionTracker.death(packet.getEntity(level));
+      if (level != null && packet.getEventId() == 3) com.samsara.module.visual.Hud.SessionHud.SessionTracker.death(packet.getEntity(level));
    }
    @Unique
    private final DynamicIslandLatency samsara$islandLatency = new DynamicIslandLatency();

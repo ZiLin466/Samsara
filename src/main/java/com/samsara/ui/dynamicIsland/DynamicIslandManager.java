@@ -7,6 +7,8 @@ import com.samsara.module.player.ChestStealer;
 import com.samsara.module.player.ChestStealer.IslandGeometry;
 import com.samsara.module.player.ChestStealer.IslandView;
 import com.samsara.module.visual.ClickGui;
+import com.samsara.module.visual.Hud;
+import com.samsara.ui.clickgui.neverlose.NeverloseClickGuiScreen;
 import com.samsara.ui.dynamicIsland.DynamicIslandState.Icon;
 import com.samsara.util.InventoryUtil;
 import com.samsara.util.TimerController;
@@ -44,11 +46,24 @@ public final class DynamicIslandManager {
    private DynamicIslandManager() { }
 
    public static synchronized boolean shouldRender(Screen current) {
+      if (current instanceof NeverloseClickGuiScreen) {
+         // Neverlose uses the full window; stale island frames must not leak into it.
+         extracted = null;
+         STATE.clear();
+         SCAFFOLD_BPS.reset();
+         return false;
+      }
       if (MC.player == null || MC.level == null) {
          extracted = null;
          STATE.clear();
          SCAFFOLD_BPS.reset();
          if (MC.getConnection() == null) SERVER_LABEL.reset();
+         return false;
+      }
+      if (!Hud.enabled(Hud.Widget.STATUS_BAR)) {
+         extracted = null;
+         STATE.clear();
+         SCAFFOLD_BPS.reset();
          return false;
       }
       return MC.gui.overlay() == null && (MC.gui.hud.isHidden()
@@ -65,7 +80,7 @@ public final class DynamicIslandManager {
             STATE.remove("scaffold");
          }
       }
-      if (MC.player == null) {
+      if (MC.player == null || !Hud.enabled(Hud.Widget.STATUS_BAR)) {
          return;
       }
       String label = module.getName().replaceAll("(?<=[a-z])(?=[A-Z])", " ");
@@ -86,7 +101,7 @@ public final class DynamicIslandManager {
    }
 
    private static void notify(String title, String description, Icon icon, long duration) {
-      if (MC.player != null) {
+      if (MC.player != null && Hud.enabled(Hud.Widget.STATUS_BAR)) {
          STATE.post(icon + ":" + title + ":" + description, title, description, "", icon, false, now(), duration);
       }
    }
@@ -146,6 +161,7 @@ public final class DynamicIslandManager {
    }
 
    public static synchronized void renderNano() {
+      if (!shouldRender(MC.gui.screen())) return;
       Sample sample = extracted != null ? extracted : sample(now(), MC.gui.screen());
       var frame = sample.frame();
       float scale = sample.scale();

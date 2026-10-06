@@ -19,6 +19,6 @@ public class MixinMultiPlayerGameMode {
 
    @Inject(method = "attack", at = @At("HEAD"))
    private void samsara$recordAttack(Player player, Entity target, CallbackInfo callback) {
-      com.samsara.module.visual.SessionHud.SessionTracker.attack(target);
+      com.samsara.module.visual.Hud.SessionHud.SessionTracker.attack(target);
    }
 }

@@ -1,7 +1,7 @@
 package com.samsara.ui.hud.target;
 
-import com.samsara.module.visual.TargetHud.OpaiTargetHudHealth;
-import com.samsara.module.visual.TargetHud.OpaiTargetHudPainter;
+import com.samsara.module.visual.Hud.TargetHud.OpaiTargetHudHealth;
+import com.samsara.module.visual.Hud.TargetHud.OpaiTargetHudPainter;
 import com.samsara.ui.clickgui.opai.OpaiStyle;
 import org.junit.jupiter.api.Test;
 

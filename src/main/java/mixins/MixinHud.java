@@ -14,7 +14,7 @@ import org.spongepowered.asm.mixin.injection.callback.CallbackInfo;
 public class MixinHud {
    @Inject(method="extractEffects",at=@At("HEAD"),cancellable=true)
    private void samsara$replacePotionEffects(GuiGraphicsExtractor graphics, DeltaTracker delta, CallbackInfo callback) {
-      if (FeatureManager.potionStatus!=null && FeatureManager.potionStatus.isEnabled()) callback.cancel();
+      if (com.samsara.module.visual.Hud.enabled(com.samsara.module.visual.Hud.Widget.POTION_STATUS)) callback.cancel();
    }
 
    @ModifyArg(
