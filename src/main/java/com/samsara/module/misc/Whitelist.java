@@ -1,7 +1,7 @@
 package com.samsara.module.misc;
 
 import com.samsara.event.Event;
-import com.samsara.event.Events;
+import com.samsara.event.impl.EventPacketReceive;
 import com.samsara.module.Category;
 import com.samsara.module.Feature;
 import net.minecraft.network.protocol.common.ClientboundDisconnectPacket;
@@ -23,20 +23,20 @@ public class Whitelist extends Feature {
 
    @Override
    public void onEvent(Event event) {
-      if (event == Events.PACKET_RECEIVE) {
-         if (Events.PACKET_RECEIVE.getPacket() instanceof ClientboundDisconnectPacket) {
+      if (event instanceof EventPacketReceive receiving) {
+         if (receiving.getPacket() instanceof ClientboundDisconnectPacket) {
             this.bedSpawnKnown = false;
             this.bedSpawnPosition = null;
          }
 
-         if (Events.PACKET_RECEIVE.getPacket() instanceof ClientboundSystemChatPacket systemChatPacket) {
+         if (receiving.getPacket() instanceof ClientboundSystemChatPacket systemChatPacket) {
             String message = systemChatPacket.content().getString();
             if (message.contains(PROTECT_YOUR_BED_AND_DESTROY_THE_ENEMY_BEDS_LABEL)) {
                this.awaitingBedSpawnPosition = true;
             }
          }
 
-         if (Events.PACKET_RECEIVE.getPacket() instanceof ClientboundPlayerPositionPacket playerPositionPacket && this.awaitingBedSpawnPosition) {
+         if (receiving.getPacket() instanceof ClientboundPlayerPositionPacket playerPositionPacket && this.awaitingBedSpawnPosition) {
             this.bedSpawnKnown = true;
             this.awaitingBedSpawnPosition = false;
             this.bedSpawnPosition = playerPositionPacket.change().position();

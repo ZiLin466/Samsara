@@ -2,6 +2,7 @@ package com.samsara.module.misc;
 
 import com.samsara.event.Event;
 import com.samsara.event.Events;
+import com.samsara.event.impl.EventPacketSend;
 import com.samsara.module.Category;
 import com.samsara.module.Feature;
 import com.samsara.setting.BooleanSetting;
@@ -38,8 +39,8 @@ public class Disabler extends Feature {
          this.ticks--;
       }
 
-      if (event == Events.PACKET_SEND) {
-         Packet packet = Events.PACKET_SEND.getPacket();
+      if (event instanceof EventPacketSend sending) {
+         Packet packet = sending.getPacket();
          if (this.keepAlivePacket.getValue() && packet instanceof ServerboundKeepAlivePacket) {
             event.setCancelled(true);
          }
@@ -50,7 +51,7 @@ public class Disabler extends Feature {
             event.setCancelled(true);
          }
 
-         if (this.watchdogInvMove.getValue() && Events.PACKET_SEND.getPacket() instanceof ServerboundPlayerCommandPacket playerCommandPacket && playerCommandPacket.getAction() == Action.OPEN_INVENTORY) {
+         if (this.watchdogInvMove.getValue() && sending.getPacket() instanceof ServerboundPlayerCommandPacket playerCommandPacket && playerCommandPacket.getAction() == Action.OPEN_INVENTORY) {
             event.setCancelled(true);
          }
 

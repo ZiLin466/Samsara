@@ -1,5 +1,7 @@
 package com.samsara.setting;
 
+import com.google.gson.JsonElement;
+import com.google.gson.JsonPrimitive;
 import com.samsara.module.Feature;
 
 public class NumberSetting extends Setting {
@@ -49,5 +51,15 @@ public class NumberSetting extends Setting {
       value = (double)Math.round(value / this.step) * this.step;
       value = (double)Math.round(value * this.decimalMultiplier) / this.decimalMultiplier;
       this.value = value;
+   }
+
+   @Override public JsonElement snapshot(boolean defaults) {
+      return new JsonPrimitive(defaults ? this.defaultValue : this.value);
+   }
+
+   @Override protected Runnable prepareValue(JsonElement value) {
+      double desired = value.getAsDouble();
+      if (!Double.isFinite(desired)) throw new IllegalArgumentException("Non-finite setting");
+      return () -> setValue(desired);
    }
 }

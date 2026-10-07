@@ -1,6 +1,5 @@
 package mixins;
 
-import com.samsara.event.Events;
 import com.samsara.event.impl.EventPacketReceive;
 import com.samsara.event.impl.EventPacketSend;
 import com.samsara.util.PacketBlinkQueue;
@@ -24,7 +23,7 @@ public class MixinConnection {
       cancellable = true
    )
    private void samsara$dispatchPacketSend(Packet packet, ChannelFutureListener listener, boolean flush, CallbackInfo callback) {
-      EventPacketSend packetSendEvent = Events.PACKET_SEND.reset(packet);
+      EventPacketSend packetSendEvent = new EventPacketSend(packet);
       packetSendEvent.call();
       if (packetSendEvent.isCancelled()) {
          callback.cancel();
@@ -48,7 +47,7 @@ public class MixinConnection {
       cancellable = true
    )
    private void samsara$dispatchPacketReceive(ChannelHandlerContext channelContext, Packet packet, CallbackInfo callback) {
-      EventPacketReceive packetReceiveEvent = Events.PACKET_RECEIVE.reset(packet);
+      EventPacketReceive packetReceiveEvent = new EventPacketReceive(packet);
       packetReceiveEvent.call();
       if (packet instanceof ClientboundDisconnectPacket || packet instanceof ClientboundStartConfigurationPacket) {
          PacketBlinkQueue.disable();

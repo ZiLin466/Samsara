@@ -2,6 +2,7 @@ package com.samsara.module.movement;
 
 import com.samsara.event.Event;
 import com.samsara.event.Events;
+import com.samsara.event.impl.EventPacketReceive;
 import com.samsara.module.Category;
 import com.samsara.module.Feature;
 import com.samsara.module.FeatureManager;
@@ -29,9 +30,9 @@ public class LongJump extends Feature {
    private static final String FIREBALL_DELAY_LABEL = "Fireball Delay";
    private static final String SHOW_PROGRESS_LABEL = "Show Progress";
 
-   private ModeSetting mode;
-   private NumberSetting fireballDelay;
-   private BooleanSetting showProgress;
+   private final ModeSetting mode;
+   private final NumberSetting fireballDelay;
+   private final BooleanSetting showProgress;
 
    public final List<TimedPacket> delayedPackets;
 
@@ -61,10 +62,10 @@ public class LongJump extends Feature {
       this.previousProgressAlpha = this.progressAlpha;
       this.progressAlpha = (int)Mth.lerp(0.5F, (float)this.progressAlpha, (float)targetAlpha);
       synchronized (this.delayedPackets) {
-         Iterator iterator = this.delayedPackets.iterator();
+         Iterator<TimedPacket> iterator = this.delayedPackets.iterator();
 
          while (iterator.hasNext()) {
-            TimedPacket timedPacket = (TimedPacket)iterator.next();
+            TimedPacket timedPacket = iterator.next();
             if (timedPacket.isReady() || !this.delayingPackets) {
                iterator.remove();
                mc.execute(() -> timedPacket.packet.handle(mc.getConnection()));
@@ -113,90 +114,91 @@ public class LongJump extends Feature {
 
    @Override
    public void onEvent(Event event) {
-      if (event == Events.RENDER_2D && this.showProgress.getValue()) {
-         if (!this.delayingPackets && this.progressAlpha <= 5) {
-            this.previousProgress = 0.0;
-         } else {
-            float barWidth = 100.0F;
-            float barHeight = 4.0F;
-            float barX = (float)mc.getWindow().getGuiScaledWidth() * 0.5F - barWidth * 0.5F;
-            float barY = (float)mc.getWindow().getGuiScaledHeight() * 0.5F + 20.0F;
-            float partialTick = Events.RENDER_2D.getPartialTick();
-            double progress = this.previousProgress + (this.progress - this.previousProgress) * (double)partialTick;
-            int alpha = (int)((float)this.previousProgressAlpha + (float)(this.progressAlpha - this.previousProgressAlpha) * partialTick);
-            int progressColor = ClientColors.colorAtOffset(0) & 16777215 | alpha << 24;
-            int borderColor = alpha << 24;
-            int backgroundColor = (int)((float)alpha * 0.5F) << 24 | 6316128;
-            WorldToScreenProjector.drawProgressBar(Events.RENDER_2D, (int)barX, (int)barY, (int)barWidth, (int)barHeight, progress, borderColor, backgroundColor, progressColor);
-         }
-      }
-
-      if (event == Events.ROTATION) {
-         this.setSuffix(this.mode.getValue());
-         if (FeatureManager.scaffold.isEnabled()) {
-            FeatureManager.scaffold.toggle();
-         }
-
-         int fireChargeSlot = this.findFireChargeSlot();
-         if (fireChargeSlot != -1) {
-            Events.ROTATION.setPitch(90.0F);
-            switch (this.jumpTicks) {
-               case 0:
-                  this.previousSlot = mc.player.getInventory().getSelectedSlot();
-                  mc.player.getInventory().setSelectedSlot(fireChargeSlot);
-                  break;
-               case 1:
-                  ((MultiPlayerGameModeAccessor)mc.gameMode)
-                     .invokeStartPrediction(mc.level, sequence -> new ServerboundUseItemPacket(InteractionHand.MAIN_HAND, sequence, Events.ROTATION.getYaw(), Events.ROTATION.getPitch()));
-                  break;
-               case 2:
-                  if (this.mode.is(FIREBALL_LABEL)) {
-                     mc.player.getInventory().setSelectedSlot(this.previousSlot);
-                  }
-                  break;
-               case 15:
-                  if (this.mode.is(FIREBALL2_LABEL)) {
-                     ((MultiPlayerGameModeAccessor)mc.gameMode)
-                        .invokeStartPrediction(
-                           mc.level, sequence -> new ServerboundUseItemPacket(InteractionHand.MAIN_HAND, sequence, Events.ROTATION.getYaw(), Events.ROTATION.getPitch())
-                        );
-                  }
-                  break;
-               case 16:
-                  mc.player.getInventory().setSelectedSlot(this.previousSlot);
-            }
-
-            this.jumpTicks++;
-         } else {
-            this.jumpTicks++;
-         }
-
-         this.updatePacketDelay();
-         if (mc.player.onGround() && this.jumpTicks > 20) {
-            this.toggle();
-         }
-      }
-
-      if (event == Events.POST_MOVE_INPUT && this.jumpTicks == (this.mode.is(FIREBALL_LABEL) ? 4 : 20)) {
+      if (event == Events.RENDER_2D && this.showProgress.getValue()) this.renderProgress();
+      else if (event == Events.ROTATION) this.updateFireballJump();
+      else if (event == Events.POST_MOVE_INPUT && this.jumpTicks == (this.mode.is(FIREBALL_LABEL) ? 4 : 20)) {
          mc.player.input.makeJump();
+      } else if (event instanceof EventPacketReceive receiving) this.handlePacketReceive(receiving);
+   }
+
+   private void renderProgress() {
+      if (!this.delayingPackets && this.progressAlpha <= 5) {
+         this.previousProgress = 0.0;
+      } else {
+         float barWidth = 100.0F;
+         float barHeight = 4.0F;
+         float barX = (float)mc.getWindow().getGuiScaledWidth() * 0.5F - barWidth * 0.5F;
+         float barY = (float)mc.getWindow().getGuiScaledHeight() * 0.5F + 20.0F;
+         float partialTick = Events.RENDER_2D.getPartialTick();
+         double progress = this.previousProgress + (this.progress - this.previousProgress) * (double)partialTick;
+         int alpha = (int)((float)this.previousProgressAlpha + (float)(this.progressAlpha - this.previousProgressAlpha) * partialTick);
+         int progressColor = ClientColors.colorAtOffset(0) & 16777215 | alpha << 24;
+         int borderColor = alpha << 24;
+         int backgroundColor = (int)((float)alpha * 0.5F) << 24 | 6316128;
+         WorldToScreenProjector.drawProgressBar(Events.RENDER_2D, (int)barX, (int)barY, (int)barWidth, (int)barHeight, progress, borderColor, backgroundColor, progressColor);
+      }
+   }
+
+   private void updateFireballJump() {
+      this.setSuffix(this.mode.getValue());
+      if (FeatureManager.scaffold.isEnabled()) {
+         FeatureManager.scaffold.toggle();
       }
 
-      if (event == Events.PACKET_RECEIVE) {
-         if (Events.PACKET_RECEIVE.getPacket() instanceof ClientboundSetEntityMotionPacket setEntityMotionPacket) {
-            if (setEntityMotionPacket.id() == mc.player.getId()) {
-               synchronized (this.delayedPackets) {
-                  this.delayedPackets.add(new TimedPacket(setEntityMotionPacket, this.mode.is(FIREBALL_LABEL) ? (long)this.fireballDelay.getValue() : (long)this.fireballDelay.getValue() + 800L));
-                  event.setCancelled(true);
+      int fireChargeSlot = this.findFireChargeSlot();
+      if (fireChargeSlot != -1) {
+         Events.ROTATION.setPitch(90.0F);
+         switch (this.jumpTicks) {
+            case 0:
+               this.previousSlot = mc.player.getInventory().getSelectedSlot();
+               mc.player.getInventory().setSelectedSlot(fireChargeSlot);
+               break;
+            case 1:
+               ((MultiPlayerGameModeAccessor)mc.gameMode)
+                  .invokeStartPrediction(mc.level, sequence -> new ServerboundUseItemPacket(InteractionHand.MAIN_HAND, sequence, Events.ROTATION.getYaw(), Events.ROTATION.getPitch()));
+               break;
+            case 2:
+               if (this.mode.is(FIREBALL_LABEL)) {
+                  mc.player.getInventory().setSelectedSlot(this.previousSlot);
                }
-
-               this.delayingPackets = true;
-            }
-         } else if (this.delayingPackets) {
-            synchronized (this.delayedPackets) {
-               this.delayedPackets.add(new TimedPacket(Events.PACKET_RECEIVE.getPacket(), this.mode.is(FIREBALL_LABEL) ? (long)this.fireballDelay.getValue() : (long)this.fireballDelay.getValue() + 800L));
-               event.setCancelled(true);
-            }
+               break;
+            case 15:
+               if (this.mode.is(FIREBALL2_LABEL)) {
+                  ((MultiPlayerGameModeAccessor)mc.gameMode)
+                     .invokeStartPrediction(
+                        mc.level, sequence -> new ServerboundUseItemPacket(InteractionHand.MAIN_HAND, sequence, Events.ROTATION.getYaw(), Events.ROTATION.getPitch())
+                     );
+               }
+               break;
+            case 16:
+               mc.player.getInventory().setSelectedSlot(this.previousSlot);
          }
+      }
+
+      this.jumpTicks++;
+      this.updatePacketDelay();
+      if (mc.player.onGround() && this.jumpTicks > 20) {
+         this.toggle();
+      }
+   }
+
+   private void handlePacketReceive(EventPacketReceive receiving) {
+      if (receiving.getPacket() instanceof ClientboundSetEntityMotionPacket setEntityMotionPacket) {
+         if (setEntityMotionPacket.id() == mc.player.getId()) {
+            this.delayPacket(receiving);
+
+            this.delayingPackets = true;
+         }
+      } else if (this.delayingPackets) {
+         this.delayPacket(receiving);
+      }
+   }
+
+   private void delayPacket(EventPacketReceive receiving) {
+      synchronized (this.delayedPackets) {
+         long delayMillis = this.mode.is(FIREBALL_LABEL) ? (long)this.fireballDelay.getValue() : (long)this.fireballDelay.getValue() + 800L;
+         this.delayedPackets.add(new TimedPacket(receiving.getPacket(), delayMillis));
+         receiving.setCancelled(true);
       }
    }
 

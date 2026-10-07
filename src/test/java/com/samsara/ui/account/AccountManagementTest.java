@@ -41,9 +41,15 @@ final class AccountManagementTest {
       store.remove(updated.key()); assertEquals(2,new AccountStore(file).accounts().size());
    }
    @Test void failedWritesAndMalformedFilesPreservePreviousData() throws Exception {
-      var file=temp.resolve("accounts.json"); var store=new AccountStore(file); store.add("Dev");
-      Files.createDirectory(file.resolveSibling("accounts.json.tmp"));
+      var directory = Files.createDirectory(temp.resolve("storage"));
+      var file=directory.resolve("accounts.json"); var store=new AccountStore(file); store.add("Dev");
+      var backup = temp.resolve("previous-storage");
+      Files.move(directory, backup);
+      Files.writeString(directory, "Blocking path");
       assertThrows(java.io.IOException.class,()->store.add("Other")); assertEquals(List.of("Dev"),store.names());
+      assertEquals(List.of("Dev"),new AccountStore(backup.resolve("accounts.json")).names());
+      Files.delete(directory);
+      Files.move(backup, directory);
       assertEquals(List.of("Dev"),new AccountStore(file).names());
       for(String invalid:List.of("not-json","{\"version\":7}","{\"version\":2,\"accounts\":[{}]}")) {
          Files.writeString(file,invalid); assertThrows(java.io.IOException.class,()->new AccountStore(file)); assertEquals(invalid,Files.readString(file));

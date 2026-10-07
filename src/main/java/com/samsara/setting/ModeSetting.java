@@ -1,5 +1,7 @@
 package com.samsara.setting;
 
+import com.google.gson.JsonElement;
+import com.google.gson.JsonPrimitive;
 import com.samsara.module.Feature;
 
 public class ModeSetting extends Setting implements ChoiceSetting {
@@ -43,4 +45,13 @@ public class ModeSetting extends Setting implements ChoiceSetting {
    @Override public String selectionLabel() { return getValue(); }
    @Override public boolean selected(int index) { return is(this.options[index]); }
    @Override public void select(int index) { setValue(this.options[index]); }
+
+   @Override public JsonElement snapshot(boolean defaults) {
+      return new JsonPrimitive(defaults ? this.defaultValue : this.value);
+   }
+
+   @Override protected Runnable prepareValue(JsonElement value) {
+      String desired = canonical(value.getAsString());
+      return () -> setValue(desired);
+   }
 }

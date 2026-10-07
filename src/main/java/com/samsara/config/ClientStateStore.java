@@ -4,6 +4,7 @@ import com.google.gson.Gson;
 import com.google.gson.GsonBuilder;
 import com.google.gson.JsonObject;
 import com.google.gson.JsonParser;
+import com.samsara.util.AtomicFiles;
 import java.io.IOException;
 import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
@@ -69,7 +70,10 @@ public final class ClientStateStore implements AutoCloseable {
       // Do not drop a newer snapshot just because the previous write is still running.
       requested=next;
       pending=writer.submit(()->{
-         try { ConfigManager.atomicWrite(file,next);saved=next; }
+         try {
+            if (Files.isSymbolicLink(file)) throw new IOException("Linked configuration files are not supported");
+            AtomicFiles.writeUtf8(file,next);saved=next;
+         }
          catch (IOException error) { failure.accept("Unable to save automatic state",error); }
       });
    }

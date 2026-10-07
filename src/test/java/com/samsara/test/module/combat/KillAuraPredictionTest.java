@@ -15,13 +15,18 @@ import org.junit.jupiter.api.Test;
 import static org.junit.jupiter.api.Assertions.*;
 
 final class KillAuraPredictionTest {
-   private static final MethodHandle SAMPLE = handle("sampleBlockRotation", double[].class,
-      double[].class, float.class, float.class, double.class);
-   private static final MethodHandle MOVEMENT = handle("sampleBlockMovement", double[].class, double[].class, Vec3.class, double.class);
+   private static final Class<?> ROTATION_SAMPLE = nestedType("RotationSample");
+   private static final Class<?> MOVEMENT_SAMPLE = nestedType("MovementSample");
+   private static final MethodHandle SAMPLE = handle("sampleBlockRotation", ROTATION_SAMPLE,
+      ROTATION_SAMPLE, float.class, float.class, double.class).asType(MethodType.methodType(Object.class,
+         Object.class, float.class, float.class, double.class));
+   private static final MethodHandle MOVEMENT = handle("sampleBlockMovement", MOVEMENT_SAMPLE, MOVEMENT_SAMPLE, Vec3.class, double.class)
+      .asType(MethodType.methodType(Object.class, Object.class, Vec3.class, double.class));
+   private static final MethodHandle VELOCITY = velocityAccessor();
    private static final MethodHandle MOVING = handle("predictsMovingBlockThreat", boolean.class,
-      double.class, Vec3.class, double[].class, double.class, Vec3.class, Vec3.class, AABB.class, double.class, BiPredicate.class);
-   private static final MethodHandle PREDICT = method("predictsBlockThreat", double.class, Vec3.class,
-      double[].class, double[].class, AABB.class, double.class, Predicate.class);
+      double.class, Vec3.class, ROTATION_SAMPLE, double.class, Vec3.class, Vec3.class, AABB.class, double.class, BiPredicate.class)
+      .asType(MethodType.methodType(boolean.class, double.class, Vec3.class, Object.class, double.class,
+         Vec3.class, Vec3.class, AABB.class, double.class, BiPredicate.class));
    private static final MethodHandle BLOCK = method("shouldAutoBlock", boolean.class, boolean.class, boolean.class, boolean.class);
 
    private static MethodHandle method(String name, Class<?>... parameters) {
@@ -30,14 +35,34 @@ final class KillAuraPredictionTest {
 
    private static MethodHandle handle(String name, Class<?> result, Class<?>... parameters) {
       try {
-         return MethodHandles.privateLookupIn(KillAura.class, MethodHandles.lookup())
-            .findStatic(KillAura.class, name, MethodType.methodType(result, parameters));
+         Class<?> declaringType = name.equals("shouldAutoBlock") ? KillAura.class : nestedType("BlockPrediction");
+         return MethodHandles.privateLookupIn(declaringType, MethodHandles.lookup())
+            .findStatic(declaringType, name, MethodType.methodType(result, parameters));
       } catch (ReflectiveOperationException error) { throw new ExceptionInInitializerError(error); }
    }
 
-   private static boolean predictsBlockThreat(double distance, Vec3 eyes, double[] current, double[] previous,
+   private static Class<?> nestedType(String name) {
+      String container = name.equals("RotationSample") || name.equals("MovementSample") ? "$BlockPrediction$" : "$";
+      try { return Class.forName(KillAura.class.getName() + container + name); }
+      catch (ClassNotFoundException error) { throw new ExceptionInInitializerError(error); }
+   }
+
+   private static MethodHandle velocityAccessor() {
+      try {
+         return MethodHandles.privateLookupIn(MOVEMENT_SAMPLE, MethodHandles.lookup())
+            .findVirtual(MOVEMENT_SAMPLE, "velocity", MethodType.methodType(Vec3.class))
+            .asType(MethodType.methodType(Vec3.class, Object.class));
+      } catch (ReflectiveOperationException error) { throw new ExceptionInInitializerError(error); }
+   }
+
+   private record ViewSample(float yaw, float pitch, double tick) { }
+
+   private static boolean predictsBlockThreat(double distance, Vec3 eyes, ViewSample current, ViewSample previous,
       AABB target, double wallRange, Predicate<Vec3> occluded) {
-      try { return (boolean)PREDICT.invokeExact(distance, eyes, current, previous, target, wallRange, occluded); }
+      Object history = previous == null ? null : sample(null, previous.yaw(), previous.pitch(), previous.tick());
+      Object rotation = sample(history, current.yaw(), current.pitch(), current.tick());
+      BiPredicate<Vec3, Vec3> blocked = (origin, hit) -> occluded.test(hit);
+      try { return (boolean)MOVING.invokeExact(distance, eyes, rotation, current.tick(), Vec3.ZERO, Vec3.ZERO, target, wallRange, blocked); }
       catch (Throwable error) { throw new AssertionError(error); }
    }
 
@@ -50,21 +75,26 @@ final class KillAuraPredictionTest {
    private static final AABB PLAYER = new AABB(-0.3, 0, 2.7, 0.3, 1.8, 3.3);
    private static final Predicate<Vec3> CLEAR = hit -> false;
 
-   private static double[] rotation(float yaw, float pitch, int tick) {
-      return new double[]{yaw, pitch, tick};
+   private static ViewSample rotation(float yaw, float pitch, int tick) {
+      return new ViewSample(yaw, pitch, tick);
    }
 
-   private static double[] sample(double[] previous, float yaw, float pitch, double now) {
-      try { return (double[])SAMPLE.invokeExact(previous, yaw, pitch, now); }
+   private static Object sample(Object previous, float yaw, float pitch, double now) {
+      try { return (Object)SAMPLE.invokeExact(previous, yaw, pitch, now); }
       catch (Throwable error) { throw new AssertionError(error); }
    }
 
-   private static double[] movement(double[] previous, Vec3 position, double now) {
-      try { return (double[])MOVEMENT.invokeExact(previous, position, now); }
+   private static Object movement(Object previous, Vec3 position, double now) {
+      try { return (Object)MOVEMENT.invokeExact(previous, position, now); }
       catch (Throwable error) { throw new AssertionError(error); }
    }
 
-   private static boolean moving(Vec3 eyes, double[] sample, double now, Vec3 attackerVelocity, Vec3 localVelocity, AABB target) {
+   private static Vec3 velocity(Object sample) {
+      try { return (Vec3)VELOCITY.invokeExact(sample); }
+      catch (Throwable error) { throw new AssertionError(error); }
+   }
+
+   private static boolean moving(Vec3 eyes, Object sample, double now, Vec3 attackerVelocity, Vec3 localVelocity, AABB target) {
       BiPredicate<Vec3, Vec3> clear = (origin, hit) -> false;
       try { return (boolean)MOVING.invokeExact(9.0, eyes, sample, now, attackerVelocity, localVelocity, target, 0.0, clear); }
       catch (Throwable error) { throw new AssertionError(error); }
@@ -100,10 +130,10 @@ final class KillAuraPredictionTest {
    @Test void movementSamplesHandleStopsTeleportsAndStaleHistory() {
       var initial = movement(null, Vec3.ZERO, 10);
       var moved = movement(initial, new Vec3(0.3, 0, 0), 11);
-      assertEquals(0.3, moved[4], 1.0E-9);
-      assertEquals(0, movement(moved, new Vec3(0.3, 0, 0), 12)[4]);
-      assertEquals(0, movement(moved, new Vec3(10, 0, 0), 12)[4]);
-      assertEquals(0, movement(moved, new Vec3(0.6, 0, 0), 15)[4]);
+      assertEquals(0.3, velocity(moved).x, 1.0E-9);
+      assertEquals(0, velocity(movement(moved, new Vec3(0.3, 0, 0), 12)).x);
+      assertEquals(0, velocity(movement(moved, new Vec3(10, 0, 0), 12)).x);
+      assertEquals(0, velocity(movement(moved, new Vec3(0.6, 0, 0), 15)).x);
    }
 
    @Test void currentViewMustPointTowardThePlayerInYawAndPitch() {
@@ -193,6 +223,16 @@ final class KillAuraPredictionTest {
       assertTrue(shouldAutoBlock(true, false, true, true));
    }
 
+   @Test void disabledFireballAttacksDoNotAccessTheWorld() throws Exception {
+      var aura = new KillAura();
+      var setting = (BooleanSetting)aura.settings.stream()
+         .filter(candidate -> candidate.getName().equals("Attack Fireballs")).findFirst().orElseThrow();
+      setting.setValue(false);
+      var attack = KillAura.class.getDeclaredMethod("attackFireballIfPresent");
+      attack.setAccessible(true);
+      assertEquals(false, attack.invoke(aura));
+   }
+
    @Test void rmbAloneStillRequiresTheButtonEvenWhenThereIsDanger() {
       assertFalse(shouldAutoBlock(false, true, false, false));
       assertFalse(shouldAutoBlock(false, true, false, true));
@@ -207,6 +247,47 @@ final class KillAuraPredictionTest {
       assertTrue(shouldAutoBlock(true, true, true, true));
    }
 
+   private static Object component(KillAura aura, String name) {
+      try {
+         var field = KillAura.class.getDeclaredField(name);
+         field.setAccessible(true);
+         return field.get(aura);
+      } catch (ReflectiveOperationException error) { throw new AssertionError(error); }
+   }
+
+   private static void setBlockState(KillAura aura, String name, boolean active) {
+      try {
+         Object blocking = component(aura, "blocking");
+         var field = blocking.getClass().getDeclaredField(name);
+         field.setAccessible(true);
+         field.setBoolean(blocking, active);
+      } catch (ReflectiveOperationException error) { throw new AssertionError(error); }
+   }
+
+   @Test void resettingPredictionPreservesAnUnreleasedServerBlock() throws Exception {
+      var aura = new KillAura();
+      setBlockState(aura, "serverBlocking", true);
+      setBlockState(aura, "predictiveBlockActive", true);
+      var reset = KillAura.class.getDeclaredMethod("resetBlockPrediction");
+      reset.setAccessible(true);
+      reset.invoke(aura);
+      assertTrue(aura.isServerBlocking());
+      assertTrue(aura.isAutoBlocking());
+      Object blocking = component(aura, "blocking");
+      var predictive = blocking.getClass().getDeclaredField("predictiveBlockActive");
+      predictive.setAccessible(true);
+      assertFalse(predictive.getBoolean(blocking));
+   }
+
+   @Test void blockStateBelongsToItsAuraInstance() {
+      var firstAura = new KillAura();
+      var secondAura = new KillAura();
+      setBlockState(firstAura, "serverBlocking", true);
+      assertTrue(firstAura.isServerBlocking());
+      assertFalse(secondAura.isServerBlocking());
+      assertFalse(secondAura.isAutoBlocking());
+   }
+
    @Test void predictKeepsItsAnimationAndRmbFollowsTheActiveBlockCycle() {
       var aura = new KillAura() {
          @Override public boolean isAutoBlockInputAllowed() { return true; }
@@ -218,13 +299,13 @@ final class KillAuraPredictionTest {
       assertFalse(aura.isAutoBlocking()); assertTrue(aura.hasAutoBlockAnimation());
       rmb.setValue(true);
       assertFalse(aura.hasAutoBlockAnimation());
-      aura.autoBlockActive = true;
+      setBlockState(aura, "autoBlockActive", true);
       assertTrue(aura.hasAutoBlockAnimation());
-      aura.serverBlocking = true;
+      setBlockState(aura, "serverBlocking", true);
       assertTrue(aura.hasAutoBlockAnimation());
-      aura.serverBlocking = false;
+      setBlockState(aura, "serverBlocking", false);
       assertTrue(aura.hasAutoBlockAnimation());
-      aura.autoBlockActive = false;
+      setBlockState(aura, "autoBlockActive", false);
       assertFalse(aura.hasAutoBlockAnimation());
       rmb.setValue(false);
       assertTrue(aura.hasAutoBlockAnimation());
@@ -244,18 +325,18 @@ final class KillAuraPredictionTest {
       for (String value : mode.getOptions()) {
          if (value.equals("None")) continue;
          mode.setValue(value);
-         aura.autoBlockActive = false; aura.serverBlocking = false;
+         setBlockState(aura, "autoBlockActive", false); setBlockState(aura, "serverBlocking", false);
          assertFalse(aura.hasAutoBlockAnimation(), value);
-         aura.autoBlockActive = true;
+         setBlockState(aura, "autoBlockActive", true);
          assertTrue(aura.hasAutoBlockAnimation(), value + " begins its cycle");
-         aura.serverBlocking = true;
+         setBlockState(aura, "serverBlocking", true);
          assertTrue(aura.hasAutoBlockAnimation(), value + " sends the use packet");
-         aura.serverBlocking = false;
+         setBlockState(aura, "serverBlocking", false);
          assertTrue(aura.hasAutoBlockAnimation(), value + " temporarily releases or swaps slots");
          inputAllowed[0] = false;
          assertFalse(aura.hasAutoBlockAnimation(), value + " pauses for UI or AutoRod");
          inputAllowed[0] = true;
-         aura.autoBlockActive = false;
+         setBlockState(aura, "autoBlockActive", false);
          assertFalse(aura.hasAutoBlockAnimation(), value + " stops");
       }
    }

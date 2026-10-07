@@ -2,6 +2,8 @@ package com.samsara.module.combat;
 
 import com.samsara.event.Event;
 import com.samsara.event.Events;
+import com.samsara.event.impl.EventPacketReceive;
+import com.samsara.event.impl.EventPacketSend;
 import com.samsara.module.Category;
 import com.samsara.module.Feature;
 import com.samsara.module.FeatureManager;
@@ -51,7 +53,7 @@ public class Velocity extends Feature {
    public boolean blocksAttacks() { return !this.delayedPackets.isEmpty() || this.knockback.delaying(); }
    public boolean blocksBacktrack() { return !this.mode.is("Original") && this.knockback.blocksBacktrack(); }
 
-   @Override public int getPriority(Event event) { return event == Events.PACKET_RECEIVE ? -10 : 0; }
+   @Override public int getPriority(Event event) { return event instanceof EventPacketReceive ? -10 : 0; }
    private boolean synchronizeState() {
       if (mc.player == null || mc.level == null || mc.getConnection() == null) {
          reset(false); this.jumpReset.clearDamage(); return false;
@@ -65,7 +67,7 @@ public class Velocity extends Feature {
       }
       return true;
    }
-   public void clientTick() {
+   @Override public void clientTick() {
       if (!synchronizeState()) return;
       this.jumpReset.tick();
       if (isEnabled() && (this.mode.is("Reduce") || this.mode.is("Delay"))) this.knockback.clientTick();
@@ -81,7 +83,7 @@ public class Velocity extends Feature {
       if (this.mode.is("Original")) this.original.onEvent(event);
       else if (this.mode.is("JumpReset")) {
          if (event == Events.MOVE_INPUT) this.jumpReset.input();
-      } else if (event == Events.PACKET_RECEIVE && !event.isCancelled()) this.knockback.receive(event, Events.PACKET_RECEIVE.getPacket());
+      } else if (event instanceof EventPacketReceive receiving && !event.isCancelled()) this.knockback.receive(event, receiving.getPacket());
       else if (event == Events.ROTATION) {
          this.knockback.rotate();
          if (this.mode.is("Delay")) this.knockback.playerTick();
@@ -203,117 +205,111 @@ public class Velocity extends Feature {
       private boolean suppressActionPackets;
 
       public void onEvent(Event event) {
-         if (event == Events.POST_MOVE_INPUT && mc.player.onGround() && this.pendingJump) {
+         if (event == Events.POST_MOVE_INPUT) this.applyPendingJump();
+         else if (event == Events.ROTATION) this.updateReduction();
+         else if (event instanceof EventPacketSend sending) this.handlePacketSend(sending);
+         else if (event instanceof EventPacketReceive receiving) this.handlePacketReceive(receiving);
+      }
+
+      private void applyPendingJump() {
+         if (mc.player.onGround() && this.pendingJump) {
             mc.player.input.makeJump();
             this.pendingJump = false;
          }
+      }
 
-         if (event == Events.ROTATION) {
-            if (!this.delayedPackets.isEmpty()) {
-               this.delayTicksElapsed++;
-               if ((double)this.delayTicksElapsed > this.delayTicks.getValue() || this.delayUntilGround.getValue() && mc.player.onGround()) {
-                  this.flushDelayedPackets();
-               }
-            }
-
-            if (this.reductionTicks >= 0 && (double)this.reductionTicks < this.reduceTicks.getValue() && mc.gui.screen() == null) {
-               this.reductionTicks++;
-               Vec3 motion = mc.player.getDeltaMovement();
-               double motionMultiplier = this.reduceMotion.getValue();
-               if (this.reduce.is(NORMAL_LABEL)) {
-                  LivingEntity nearbyTarget = TargetFinder.nearestTarget(3.0, false);
-                  if (nearbyTarget != null && nearbyTarget instanceof Player && this.lastAttackTick != mc.player.tickCount && this.delayedPackets.isEmpty() && nearbyTarget.isAlive()) {
-                     Vec3 playerEye = mc.player.getEyePosition();
-                     Vec3 targetEye = nearbyTarget.getEyePosition();
-                     double deltaX = targetEye.x - playerEye.x;
-                     double deltaY = targetEye.y - playerEye.y;
-                     double deltaZ = targetEye.z - playerEye.z;
-                     double horizontalDistance = Math.sqrt(deltaX * deltaX + deltaZ * deltaZ);
-                     float yaw = (float)(Math.toDegrees(Math.atan2(deltaZ, deltaX)) - 90.0);
-                     float pitch = (float)(-Math.toDegrees(Math.atan2(deltaY, horizontalDistance)));
-                     Events.ROTATION.setYaw(yaw);
-                     Events.ROTATION.setPitch(pitch);
-                     this.attackTarget(nearbyTarget);
-                  }
-               } else if (this.reduce.is(AIR_PUSH_LABEL)) {
-                  LivingEntity airPushTarget = TargetFinder.farthestDistantPlayer(false);
-                  if (airPushTarget != null && this.lastAttackTick != mc.player.tickCount && this.delayedPackets.isEmpty() && airPushTarget.isAlive()) {
-                     this.attackTarget(airPushTarget);
-                  } else {
-                     airPushTarget = TargetFinder.nearestTarget(3.0, false);
-                     if (airPushTarget != null && airPushTarget instanceof Player && this.lastAttackTick != mc.player.tickCount && this.delayedPackets.isEmpty() && airPushTarget.isAlive()) {
-                        Vec3 playerEye = mc.player.getEyePosition();
-                        Vec3 targetEye = airPushTarget.getEyePosition();
-                        double deltaX = targetEye.x - playerEye.x;
-                        double deltaY = targetEye.y - playerEye.y;
-                        double deltaZ = targetEye.z - playerEye.z;
-                        double horizontalDistance = Math.sqrt(deltaX * deltaX + deltaZ * deltaZ);
-                        float yaw = (float)(Math.toDegrees(Math.atan2(deltaZ, deltaX)) - 90.0);
-                        float pitch = (float)(-Math.toDegrees(Math.atan2(deltaY, horizontalDistance)));
-                        Events.ROTATION.setYaw(yaw);
-                        Events.ROTATION.setPitch(pitch);
-                        this.attackTarget(airPushTarget);
-                     }
-                  }
-               } else {
-                  mc.player.setDeltaMovement(motion.x * motionMultiplier, motion.y, motion.z * motionMultiplier);
-               }
+      private void updateReduction() {
+         if (!this.delayedPackets.isEmpty()) {
+            this.delayTicksElapsed++;
+            if ((double)this.delayTicksElapsed > this.delayTicks.getValue() || this.delayUntilGround.getValue() && mc.player.onGround()) {
+               this.flushDelayedPackets();
             }
          }
 
-         if (event == Events.PACKET_SEND) {
-            if (Events.PACKET_SEND.getPacket() instanceof ServerboundAttackPacket) {
-               this.lastAttackTick = mc.player.tickCount;
-            }
+         if (this.reductionTicks >= 0 && (double)this.reductionTicks < this.reduceTicks.getValue() && mc.gui.screen() == null) {
+            this.reductionTicks++;
+            this.reduceMotion();
+         }
+      }
 
-            if (Events.PACKET_SEND.getPacket() instanceof ServerboundPlayerActionPacket && this.suppressActionPackets) {
-               event.setCancelled(true);
-            }
+      private void handlePacketSend(EventPacketSend sending) {
+         if (sending.getPacket() instanceof ServerboundAttackPacket) {
+            this.lastAttackTick = mc.player.tickCount;
          }
 
-         if (event == Events.PACKET_RECEIVE) {
-            Packet packet = Events.PACKET_RECEIVE.getPacket();
-            if (packet instanceof ClientboundSetEntityMotionPacket setEntityMotionPacket) {
-               if (setEntityMotionPacket.id() == mc.player.getId()) {
-                  Vec3 knockback = setEntityMotionPacket.movement();
-                  if (knockback.y > 0.0 && !FeatureManager.longJump.isEnabled()) {
-                     double horizontalMultiplier = this.reverse.getValue() ? -this.horizontal.getValue() * 0.01 : this.horizontal.getValue() * 0.01;
-                     double knockbackX = knockback.x * horizontalMultiplier;
-                     double knockbackY = knockback.y * this.vertical.getValue() * 0.01;
-                     double knockbackZ = knockback.z * horizontalMultiplier;
-                     if (this.horizontal.getValue() != 100.0 || this.reverse.getValue()) {
-                        event.setCancelled(true);
-                     }
+         if (sending.getPacket() instanceof ServerboundPlayerActionPacket && this.suppressActionPackets) {
+            sending.setCancelled(true);
+         }
+      }
 
-                     if (this.reduceTicks.getValue() != 0.0) {
-                        this.reductionTicks = 0;
-                     }
+      private void reduceMotion() {
+         Vec3 motion = mc.player.getDeltaMovement();
+         double motionMultiplier = this.reduceMotion.getValue();
+         if (this.reduce.is(NORMAL_LABEL)) {
+            this.attackNearbyTarget();
+         } else if (this.reduce.is(AIR_PUSH_LABEL)) {
+            LivingEntity target = TargetFinder.farthestDistantPlayer(false);
+            if (this.canAttack(target)) this.attackTarget(target);
+            else this.attackNearbyTarget();
+         } else {
+            mc.player.setDeltaMovement(motion.x * motionMultiplier, motion.y, motion.z * motionMultiplier);
+         }
+      }
 
-                     if (this.delay.getValue() && this.shouldDelayKnockback()) {
-                        this.delayedPackets.add(setEntityMotionPacket);
-                        event.setCancelled(true);
-                     } else {
-                        if (this.horizontal.getValue() != 100.0 || this.reverse.getValue()) {
-                           mc.player.setDeltaMovement(new Vec3(knockbackX, knockbackY, knockbackZ));
-                        }
+      private boolean canAttack(LivingEntity target) {
+         return target != null && this.lastAttackTick != mc.player.tickCount && this.delayedPackets.isEmpty() && target.isAlive();
+      }
 
-                        if (this.jumpReset.getValue() && mc.player.onGround() && mc.player.isSprinting()) {
-                           this.pendingJump = true;
-                        }
-                     }
-                  }
-               }
-            } else if (this.delay.getValue() && !this.delayedPackets.isEmpty()) {
-               if (packet instanceof ClientboundStartConfigurationPacket || packet instanceof ClientboundDisconnectPacket) {
-                  this.flushDelayedPackets();
-                  return;
-               }
+      private void attackNearbyTarget() {
+         LivingEntity target = TargetFinder.nearestTarget(3.0, false);
+         if (!(target instanceof Player) || !this.canAttack(target)) return;
+         Vec3 playerEye = mc.player.getEyePosition();
+         Vec3 targetEye = target.getEyePosition();
+         double deltaX = targetEye.x - playerEye.x;
+         double deltaY = targetEye.y - playerEye.y;
+         double deltaZ = targetEye.z - playerEye.z;
+         double horizontalDistance = Math.sqrt(deltaX * deltaX + deltaZ * deltaZ);
+         float yaw = (float)(Math.toDegrees(Math.atan2(deltaZ, deltaX)) - 90.0);
+         float pitch = (float)(-Math.toDegrees(Math.atan2(deltaY, horizontalDistance)));
+         Events.ROTATION.setYaw(yaw);
+         Events.ROTATION.setPitch(pitch);
+         this.attackTarget(target);
+      }
 
-               synchronized (this.delayedPackets) {
-                  this.delayedPackets.add(packet);
-                  event.setCancelled(true);
-               }
+      private void handlePacketReceive(EventPacketReceive receiving) {
+         Packet<?> packet = receiving.getPacket();
+         if (packet instanceof ClientboundSetEntityMotionPacket motion) {
+            this.receiveLocalMotion(receiving, motion);
+         } else if (this.delay.getValue() && !this.delayedPackets.isEmpty()) {
+            if (packet instanceof ClientboundStartConfigurationPacket || packet instanceof ClientboundDisconnectPacket) {
+               this.flushDelayedPackets();
+               return;
             }
+            synchronized (this.delayedPackets) {
+               this.delayedPackets.add(packet);
+               receiving.setCancelled(true);
+            }
+         }
+      }
+
+      private void receiveLocalMotion(EventPacketReceive receiving, ClientboundSetEntityMotionPacket motion) {
+         if (motion.id() != mc.player.getId()) return;
+         Vec3 knockback = motion.movement();
+         if (!(knockback.y > 0.0) || FeatureManager.longJump.isEnabled()) return;
+         double horizontalMultiplier = this.reverse.getValue() ? -this.horizontal.getValue() * 0.01 : this.horizontal.getValue() * 0.01;
+         double knockbackX = knockback.x * horizontalMultiplier;
+         double knockbackY = knockback.y * this.vertical.getValue() * 0.01;
+         double knockbackZ = knockback.z * horizontalMultiplier;
+         if (this.horizontal.getValue() != 100.0 || this.reverse.getValue()) receiving.setCancelled(true);
+         if (this.reduceTicks.getValue() != 0.0) this.reductionTicks = 0;
+         if (this.delay.getValue() && this.shouldDelayKnockback()) {
+            this.delayedPackets.add(motion);
+            receiving.setCancelled(true);
+         } else {
+            if (this.horizontal.getValue() != 100.0 || this.reverse.getValue()) {
+               mc.player.setDeltaMovement(new Vec3(knockbackX, knockbackY, knockbackZ));
+            }
+            if (this.jumpReset.getValue() && mc.player.onGround() && mc.player.isSprinting()) this.pendingJump = true;
          }
       }
 
@@ -480,7 +476,7 @@ public class Velocity extends Feature {
 
       void rotate() {
          if (this.mode.get().equals("Reduce") && this.remainingSprintTicks >= 1
-            && FeatureManager.killAura.target == null && !FeatureManager.scaffold.isEnabled()) {
+            && FeatureManager.killAura.getTarget() == null && !FeatureManager.scaffold.isEnabled()) {
             Events.ROTATION.setYaw(this.knockbackYaw);
          }
       }
@@ -533,7 +529,7 @@ public class Velocity extends Feature {
             if (System.currentTimeMillis() - this.lastReduceCorrectionTime >= CORRECTION_GRACE_MILLIS) { Events.MOVE_INPUT.setJump(true); pressForward(); }
             this.reduceJumpPending = false;
          }
-         if (this.remainingSprintTicks-- >= 1 && FeatureManager.killAura.target == null && !FeatureManager.scaffold.isEnabled()
+         if (this.remainingSprintTicks-- >= 1 && FeatureManager.killAura.getTarget() == null && !FeatureManager.scaffold.isEnabled()
             && System.currentTimeMillis() - this.lastReduceCorrectionTime >= CORRECTION_GRACE_MILLIS) pressForward();
       }
 

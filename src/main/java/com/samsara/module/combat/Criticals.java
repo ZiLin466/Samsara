@@ -2,6 +2,7 @@ package com.samsara.module.combat;
 
 import com.samsara.event.Event;
 import com.samsara.event.Events;
+import com.samsara.event.impl.EventPacketSend;
 import com.samsara.module.Category;
 import com.samsara.module.Feature;
 import com.samsara.setting.ModeSetting;
@@ -40,8 +41,8 @@ public class Criticals extends Feature {
 
    @Override
    public void onEvent(Event event) {
-      if (event == Events.PACKET_SEND) {
-         if (Events.PACKET_SEND.getPacket() instanceof ServerboundAttackPacket attackPacket) {
+      if (event instanceof EventPacketSend sending) {
+         if (sending.getPacket() instanceof ServerboundAttackPacket attackPacket) {
             if (mc.player == null) {
                return;
             }
@@ -59,10 +60,10 @@ public class Criticals extends Feature {
             }
          }
 
-         if (Events.PACKET_SEND.getPacket() instanceof ServerboundMovePlayerPacket
-            || Events.PACKET_SEND.getPacket() instanceof Pos
-            || Events.PACKET_SEND.getPacket() instanceof Rot
-            || Events.PACKET_SEND.getPacket() instanceof PosRot) {
+         if (sending.getPacket() instanceof ServerboundMovePlayerPacket
+            || sending.getPacket() instanceof Pos
+            || sending.getPacket() instanceof Rot
+            || sending.getPacket() instanceof PosRot) {
             if (!event.isCancelled()) {
                this.movementTimeBalanceMillis -= 50.0;
             }

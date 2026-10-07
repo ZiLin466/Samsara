@@ -4,11 +4,11 @@ import com.google.gson.GsonBuilder;
 import com.google.gson.JsonArray;
 import com.google.gson.JsonObject;
 import com.google.gson.JsonParser;
+import com.samsara.util.AtomicFiles;
 import java.io.IOException;
 import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.nio.file.Path;
-import java.nio.file.StandardCopyOption;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Locale;
@@ -106,11 +106,8 @@ public final class AccountStore {
          }
          accountState.add("bans", bans); array.add(accountState);
       }
-      root.add("accounts", array); Files.createDirectories(file.toAbsolutePath().getParent());
-      Path temporary = file.resolveSibling(file.getFileName() + ".tmp");
-      Files.writeString(temporary, new GsonBuilder().setPrettyPrinting().create().toJson(root));
-      try { Files.move(temporary, file, StandardCopyOption.REPLACE_EXISTING, StandardCopyOption.ATOMIC_MOVE); }
-      catch (java.nio.file.AtomicMoveNotSupportedException error) { Files.move(temporary, file, StandardCopyOption.REPLACE_EXISTING); }
+      root.add("accounts", array);
+      AtomicFiles.writeUtf8(file, new GsonBuilder().setPrettyPrinting().create().toJson(root));
       accounts = List.copyOf(next);
    }
 }

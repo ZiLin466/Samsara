@@ -1,4 +1,5 @@
 package com.samsara.config;
+import com.samsara.util.AtomicFiles;
 
 import com.google.gson.JsonObject;
 import com.google.gson.JsonParser;
@@ -60,7 +61,7 @@ final class ClientStateStoreTest {
    @Test void portablePresetIncludesOnlyVisualBindingsAndPreservesVisualParametersAndGeometry() throws Exception {
       var session=new Session();session.gameplay.flag.setValue(true);session.visual.flag.setValue(true);
       var preset=ModuleConfigCodec.snapshot(session.modules,ModuleConfigCodec.Scope.GAMEPLAY,false);
-      Path file=directory.resolve("pvp.json");ConfigManager.atomicWrite(file,preset.toString());
+      Path file=directory.resolve("pvp.json");AtomicFiles.writeUtf8(file,preset.toString());
       assertEquals(java.util.Set.of("key"),preset.getAsJsonObject("Visual").keySet());
       assertFalse(preset.has("hud"));assertFalse(preset.has("clickGui"));
       session.gameplay.flag.setValue(false);session.visual.flag.setValue(false);
@@ -82,7 +83,7 @@ final class ClientStateStoreTest {
       saved.getAsJsonObject("modules").getAsJsonObject("Combat").getAsJsonObject("settings").addProperty("Mode","retired");
       saved.getAsJsonObject("hud").getAsJsonObject("INVENTORY").remove("scale");
       saved.getAsJsonObject("clickGui").addProperty("opai:Visual","invalid");
-      ConfigManager.atomicWrite(file,saved.toString());ClickGuiLayouts.load(new JsonObject());
+      AtomicFiles.writeUtf8(file,saved.toString());ClickGuiLayouts.load(new JsonObject());
       var restarted=new Session();
       try(var store=restarted.store(file)) {
          store.load();assertTrue(restarted.gameplay.flag.getValue());assertEquals("A",restarted.gameplay.mode.getValue());

@@ -1,8 +1,10 @@
 package com.samsara.setting;
 
+import com.google.gson.JsonArray;
 import com.google.gson.JsonElement;
 import com.google.gson.JsonObject;
 import com.samsara.module.Feature;
+import java.util.ArrayList;
 import java.util.Collection;
 import java.util.LinkedHashSet;
 import java.util.List;
@@ -70,5 +72,29 @@ public final class MultiSelectSetting extends Setting implements ChoiceSetting {
       if (!result.remove(option)) result.add(option);
       if (!this.allowEmpty && result.isEmpty()) return;
       setSelected(result);
+   }
+
+   @Override public JsonElement snapshot(boolean defaults) {
+      JsonArray values = new JsonArray();
+      (defaults ? this.defaults : this.selected).forEach(values::add);
+      return values;
+   }
+
+   @Override protected Runnable prepareMissing(JsonObject values) {
+      List<String> desired = legacySelection(values);
+      return () -> setSelected(desired);
+   }
+
+   @Override protected Runnable prepareValue(JsonElement value) {
+      if (!value.isJsonArray()) throw new IllegalArgumentException("Invalid selection array");
+      var entries = new ArrayList<String>();
+      for (JsonElement entry : value.getAsJsonArray()) {
+         if (!entry.isJsonPrimitive() || !entry.getAsJsonPrimitive().isString()) {
+            throw new IllegalArgumentException("Invalid choice");
+         }
+         entries.add(entry.getAsString());
+      }
+      List<String> desired = canonical(entries);
+      return () -> setSelected(desired);
    }
 }

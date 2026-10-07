@@ -44,7 +44,7 @@ public class Animations extends Feature {
       if (!isEnabled() || hand != InteractionHand.MAIN_HAND || !item.is(ItemTags.SWORDS) || mc.player == null
          || mc.gui.screen() != null || !mc.isWindowActive()) return false;
       var aura = FeatureManager.killAura;
-      boolean target = aura != null && aura.isEnabled() && aura.target != null;
+      boolean target = aura != null && aura.isEnabled() && aura.getTarget() != null;
       if (target && !aura.isAutoBlockInputAllowed()) return false;
       boolean usingHand = mc.player.isUsingItem() && mc.player.getUsedItemHand() == hand;
       if (target && aura.hasAutoBlockMode()) return usingHand || aura.hasAutoBlockAnimation();

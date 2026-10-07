@@ -5,6 +5,7 @@ import com.samsara.event.Events;
 import com.samsara.event.impl.EventPacketReceive;
 import com.samsara.module.Category;
 import com.samsara.module.Feature;
+import com.samsara.module.FeatureManager;
 import com.samsara.setting.NumberSetting;
 import com.samsara.util.TargetFinder;
 import java.util.Queue;
@@ -13,6 +14,7 @@ import net.minecraft.network.protocol.Packet;
 import net.minecraft.network.protocol.common.ClientboundDisconnectPacket;
 import net.minecraft.network.protocol.common.ClientboundKeepAlivePacket;
 import net.minecraft.network.protocol.common.ClientboundPingPacket;
+import net.minecraft.network.protocol.common.ClientCommonPacketListener;
 import net.minecraft.network.protocol.game.ClientboundStartConfigurationPacket;
 import net.minecraft.world.entity.LivingEntity;
 import net.minecraft.world.phys.Vec3;
@@ -25,7 +27,7 @@ public class Backtrack extends Feature {
    private final NumberSetting range;
    private final NumberSetting ticks;
 
-   private final Queue queuedPackets;
+   private final Queue<Packet<ClientCommonPacketListener>> queuedPackets = new ConcurrentLinkedQueue<>();
 
    private boolean trackingTarget;
    private int trackingTicks;
@@ -33,30 +35,36 @@ public class Backtrack extends Feature {
 
    @Override
    public void onEvent(Event event) {
-      if (event == Events.PACKET_RECEIVE) {
-         if (event.isCancelled() || com.samsara.module.FeatureManager.velocity.blocksBacktrack()) return;
-         EventPacketReceive packetReceiveEvent = (EventPacketReceive)event;
-         Packet packet = packetReceiveEvent.getPacket();
+      if (event instanceof EventPacketReceive receiving) {
+         if (receiving.isCancelled() || FeatureManager.velocity.blocksBacktrack()) return;
+         Packet<?> packet = receiving.getPacket();
          if (packet instanceof ClientboundStartConfigurationPacket || packet instanceof ClientboundDisconnectPacket) {
             this.flushQueuedPackets();
             return;
          }
 
-         if (this.trackingTarget && (packet instanceof ClientboundPingPacket || packet instanceof ClientboundKeepAlivePacket) && mc.level != null) {
-            packetReceiveEvent.setCancelled(true);
-            this.queuedPackets.add(new QueuedPacket(packet, mc.level.getGameTime()));
+         if (this.trackingTarget && mc.level != null) {
+            Packet<ClientCommonPacketListener> deferred = switch (packet) {
+               case ClientboundPingPacket ping -> ping;
+               case ClientboundKeepAlivePacket keepAlive -> keepAlive;
+               default -> null;
+            };
+            if (deferred != null) {
+               receiving.setCancelled(true);
+               this.queuedPackets.add(deferred);
+            }
          }
       }
 
       if (event == Events.ROTATION) {
-         if (com.samsara.module.FeatureManager.velocity.blocksBacktrack()) {
+         if (FeatureManager.velocity.blocksBacktrack()) {
             this.trackingTicks = 0; this.initialTargetPosition = null; this.trackingTarget = false; this.flushQueuedPackets(); return;
          }
          LivingEntity target = TargetFinder.nearestTarget(this.range.getValue(), true);
          if (target != null) {
             Vec3 position = target.position();
             if (!this.trackingTarget) {
-               this.initialTargetPosition = new Vec3(position.x, position.y, position.z);
+               this.initialTargetPosition = position;
             }
 
             if (this.initialTargetPosition.distanceTo(mc.player.position()) < target.position().distanceTo(mc.player.position())) {
@@ -80,10 +88,9 @@ public class Backtrack extends Feature {
    }
 
    private void flushQueuedPackets() {
-      while (!this.queuedPackets.isEmpty()) {
-         QueuedPacket queuedPacket = (QueuedPacket)this.queuedPackets.peek();
-         this.queuedPackets.poll();
-         queuedPacket.packet.handle(mc.getConnection());
+      Packet<ClientCommonPacketListener> packet;
+      while ((packet = this.queuedPackets.poll()) != null) {
+         packet.handle(mc.getConnection());
       }
    }
 
@@ -91,16 +98,5 @@ public class Backtrack extends Feature {
       super(BACKTRACK_LABEL, Category.PLAYER);
       this.range = new NumberSetting(RANGE_LABEL, this, 6.0, 4.0, 8.0, 0.5);
       this.ticks = new NumberSetting(TICKS_LABEL, this, 2.0, 1.0, 10.0, 1.0);
-      this.queuedPackets = new ConcurrentLinkedQueue();
-   }
-
-   public static class QueuedPacket {
-      public Packet packet;
-      public long time;
-
-      public QueuedPacket(Packet packet, long time) {
-         this.packet = packet;
-         this.time = time;
-      }
    }
 }

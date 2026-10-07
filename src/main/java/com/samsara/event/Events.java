@@ -16,6 +16,7 @@ import com.samsara.event.impl.EventSlowdown;
 import com.samsara.event.impl.EventSound;
 import com.samsara.event.impl.EventSprint;
 import com.samsara.event.impl.EventTick;
+import com.samsara.module.FeatureManager;
 import java.util.List;
 import net.minecraft.client.Minecraft;
 
@@ -28,22 +29,29 @@ public class Events {
    public static final EventSound SOUND = new EventSound();
    public static final EventPostMotion POST_MOTION = new EventPostMotion();
    public static final EventHurtCamera HURT_CAMERA = new EventHurtCamera();
-   public static final EventPacketReceive PACKET_RECEIVE = new EventPacketReceive();
    public static final EventRender2D RENDER_2D = new EventRender2D();
    public static final EventSlowdown SLOWDOWN = new EventSlowdown();
    public static final EventMoveInput MOVE_INPUT = new EventMoveInput();
    public static final EventRotation ROTATION = new EventRotation();
    public static final EventRenderNameTag RENDER_NAME_TAG = new EventRenderNameTag();
    public static final EventEntityOutline ENTITY_OUTLINE = new EventEntityOutline();
-   public static final EventPacketSend PACKET_SEND = new EventPacketSend();
-   // Initialize the list after every event field; List.of rejects nulls.
-   public static final List<Event> ALL_EVENTS = List.of(PRE_MOTION, POST_MOTION, ROTATION, TICK, RENDER_2D, HURT_CAMERA, MOVE_INPUT, POST_MOVE_INPUT, SLOWDOWN, PACKET_SEND, PACKET_RECEIVE, SPRINT, RENDER_NAME_TAG, ENTITY_OUTLINE, MOUSE_BUTTON, SOUND);
+   // Packet prototypes only select listener priorities; dispatch creates a separate payload for each packet.
+   private static final List<Event> EVENT_TYPES = List.of(PRE_MOTION, POST_MOTION, ROTATION, TICK, RENDER_2D, HURT_CAMERA,
+      MOVE_INPUT, POST_MOVE_INPUT, SLOWDOWN, new EventPacketSend(), new EventPacketReceive(), SPRINT,
+      RENDER_NAME_TAG, ENTITY_OUTLINE, MOUSE_BUTTON, SOUND);
+   private static final EventBus BUS = new EventBus(EVENT_TYPES);
+
+   static void dispatch(Event event) {
+      BUS.dispatch(event);
+   }
+
+   public static void initializeListeners() {
+      BUS.refresh(FeatureManager.getModules());
+   }
 
    public static void refreshListeners() {
       if (Minecraft.getInstance().player != null) {
-         for (Event event : ALL_EVENTS) {
-            event.sortModules();
-         }
+         initializeListeners();
       }
    }
 }

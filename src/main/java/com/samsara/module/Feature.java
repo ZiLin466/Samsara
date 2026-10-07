@@ -5,6 +5,7 @@ import com.samsara.event.Events;
 import com.samsara.setting.Setting;
 import com.samsara.ui.dynamicIsland.DynamicIslandManager;
 import java.util.ArrayList;
+import java.util.Collections;
 import java.util.List;
 import java.util.Objects;
 import net.minecraft.client.Minecraft;
@@ -17,7 +18,8 @@ public abstract class Feature {
    private final Category category;
    private final String name;
 
-   public List<Setting> settings = new ArrayList<>();
+   private final List<Setting> registeredSettings = new ArrayList<>();
+   public final List<Setting> settings = Collections.unmodifiableList(this.registeredSettings);
    private boolean enabled;
    private boolean pendingWorldEnable;
    private int defaultKey = 0;
@@ -31,6 +33,20 @@ public abstract class Feature {
    }
 
    public void onEvent(Event event) {
+   }
+
+   /** Runs at client tick HEAD even when disabled, for queued cleanup and connection tracking. */
+   public void clientTick() { }
+
+   /** Runs at client tick TAIL; collectors can outlive their visible module toggle. */
+   public void clientTickEnd() { }
+
+   public final void registerSetting(Setting setting) {
+      if (setting.getModule() != this) throw new IllegalArgumentException("Setting belongs to another module");
+      if (this.registeredSettings.stream().anyMatch(existing -> existing.getName().equals(setting.getName()))) {
+         throw new IllegalArgumentException("Duplicate setting: " + setting.getName());
+      }
+      this.registeredSettings.add(setting);
    }
 
    public int getDefaultKey() {

@@ -80,8 +80,9 @@ public class Eagle extends Feature {
       boolean conditionsMet = conditionsMet(Events.MOVE_INPUT, mc.player.getXRot(), mc.player.onGround(),
          isValidBlock(mc.player.getMainHandItem()) || isValidBlock(mc.player.getOffhandItem()));
       boolean permitted = !mc.player.getAbilities().flying && conditionsMet;
-      Vec3[] simulated = simulateMovement(Events.MOVE_INPUT);
-      double lookAhead = simulated[0].add(simulated[1].x, 0, simulated[1].z).subtract(mc.player.position()).horizontalDistance();
+      MovementPrediction simulated = simulateMovement(Events.MOVE_INPUT);
+      Vec3 nextVelocity = simulated.velocity();
+      double lookAhead = simulated.position().add(nextVelocity.x, 0, nextVelocity.z).subtract(mc.player.position()).horizontalDistance();
       if (!this.edgeActive) this.releaseDistance = Math.max(Math.max(this.sampledMin, this.sampledMax), lookAhead) + 0.08;
       boolean active = updateEdgeState(permitted,
          isCloseToEdge(Events.MOVE_INPUT, simulated, this.currentEdgeDistance),
@@ -144,9 +145,9 @@ public class Eagle extends Feature {
          && block.defaultBlockState().entityCanStandOnFace(mc.level, BlockPos.ZERO, mc.player, Direction.UP);
    }
 
-   private boolean isCloseToEdge(EventMoveInput input, Vec3[] simulated, double distance) {
+   private boolean isCloseToEdge(EventMoveInput input, MovementPrediction simulated, double distance) {
       Vec3 position = mc.player.position();
-      Vec3 nextVelocity = simulated[1];
+      Vec3 nextVelocity = simulated.velocity();
       boolean moving = input.isForward() != input.isBackward() || input.isLeft() != input.isRight();
       Vec3 direction = !moving && nextVelocity.horizontalDistanceSqr() > 0.003 * 0.003
          ? new Vec3(nextVelocity.x, 0, nextVelocity.z).normalize()
@@ -154,7 +155,7 @@ public class Eagle extends Feature {
       Vec3 from = position.add(0, -0.1, 0);
       Vec3 to = from.add(direction.scale(distance));
       return crossesEdge(from, to, collectSupportBoxes(from, to)) || wouldFallOff(position)
-         || wouldFallOff(simulated[0].add(nextVelocity.x, 0, nextVelocity.z));
+         || wouldFallOff(simulated.position().add(nextVelocity.x, 0, nextVelocity.z));
    }
 
    static float movementYaw(EventMoveInput input, float facingYaw) {
@@ -166,7 +167,9 @@ public class Eagle extends Feature {
       return facingYaw;
    }
 
-   private Vec3[] simulateMovement(EventMoveInput input) {
+   private record MovementPrediction(Vec3 position, Vec3 velocity) { }
+
+   private MovementPrediction simulateMovement(EventMoveInput input) {
       float friction = mc.level.getBlockState(mc.player.getBlockPosBelowThatAffectsMyMovement()).getBlock().getFriction();
       boolean water = mc.player.isInWater(), lava = mc.player.isInLava();
       double acceleration = water || lava ? 0.02 : mc.player.onGround()
@@ -187,7 +190,7 @@ public class Eagle extends Feature {
       if (mc.player.shouldDiscardFriction()) damping = 1;
       Vec3 nextVelocity = new Vec3(moved.x == motion.x ? motion.x * damping : 0,
          moved.y == motion.y ? motion.y : 0, moved.z == motion.z ? motion.z * damping : 0);
-      return new Vec3[]{mc.player.position().add(moved), nextVelocity};
+      return new MovementPrediction(mc.player.position().add(moved), nextVelocity);
    }
 
    private Vec3 collideMovement(Vec3 motion, AABB box) {
@@ -232,23 +235,25 @@ public class Eagle extends Feature {
    static boolean crossesEdge(Vec3 from, Vec3 to, List<AABB> supports) {
       Vec3 delta = to.subtract(from);
       if (delta.lengthSqr() <= 1.0E-12) return false;
-      var intervals = new ArrayList<double[]>();
+      var intervals = new ArrayList<SupportInterval>();
       for (AABB box : supports) {
-         double[] interval = supportInterval(from, delta, box);
+         SupportInterval interval = supportInterval(from, delta, box);
          if (interval != null) intervals.add(interval);
       }
-      intervals.sort(Comparator.comparingDouble(interval -> interval[0]));
+      intervals.sort(Comparator.comparingDouble(SupportInterval::start));
       double covered = 0;
       // Merge continuous support along the entire segment, including seams between blocks.
-      for (double[] interval : intervals) {
-         if (interval[0] > covered + 1.0E-7) return true;
-         covered = Math.max(covered, interval[1]);
+      for (SupportInterval interval : intervals) {
+         if (interval.start() > covered + 1.0E-7) return true;
+         covered = Math.max(covered, interval.end());
          if (covered >= 1 - 1.0E-7) return false;
       }
       return true;
    }
 
-   private static double[] supportInterval(Vec3 from, Vec3 delta, AABB box) {
+   private record SupportInterval(double start, double end) { }
+
+   private static SupportInterval supportInterval(Vec3 from, Vec3 delta, AABB box) {
       double start = 0, end = 1;
       for (int axis = 0; axis < 3; axis++) {
          double origin = axis == 0 ? from.x : axis == 1 ? from.y : from.z;
@@ -264,6 +269,6 @@ public class Eagle extends Feature {
             if (start > end) return null;
          }
       }
-      return new double[]{start, end};
+      return new SupportInterval(start, end);
    }
 }

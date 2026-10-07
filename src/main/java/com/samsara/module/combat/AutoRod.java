@@ -129,7 +129,7 @@ public final class AutoRod extends Feature {
    }
 
    /** Called even while disabled so deferred release and slot restoration finish at a tick boundary. */
-   public void clientTick() {
+   @Override public void clientTick() {
       if (mc.player != this.owner || mc.level != this.world || mc.player == null || !mc.player.isAlive()) {
          clear(); this.owner = mc.player; this.world = mc.level;
       }
@@ -180,7 +180,7 @@ public final class AutoRod extends Feature {
       this.aiming.applyMovementCorrection();
    }
    private void restoreRotation() {
-      if (enabled(FeatureManager.killAura) && FeatureManager.killAura.target != null) {
+      if (enabled(FeatureManager.killAura) && FeatureManager.killAura.getTarget() != null) {
          this.aiming.reset();
          return;
       }

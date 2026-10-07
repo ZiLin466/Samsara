@@ -8,6 +8,45 @@ import org.junit.jupiter.api.Test;
 import static org.junit.jupiter.api.Assertions.*;
 
 final class ModuleConfigCodecTest {
+   private static final class TextSetting extends Setting {
+      private String value = "default";
+      TextSetting(Feature owner) { super("Text", owner); }
+      @Override public com.google.gson.JsonElement snapshot(boolean defaults) {
+         return new com.google.gson.JsonPrimitive(defaults ? "default" : this.value);
+      }
+      @Override protected Runnable prepareValue(com.google.gson.JsonElement value) {
+         if (!value.isJsonPrimitive() || !value.getAsJsonPrimitive().isString()) {
+            throw new IllegalArgumentException("Invalid text");
+         }
+         String desired = value.getAsString();
+         return () -> this.value = desired;
+      }
+   }
+
+   @Test void newSettingTypesPersistWithoutAddingTypeBranchesToTheModuleCodec() {
+      var module = new Fixture("Extensible", Category.COMBAT);
+      var text = new TextSetting(module); text.value = "custom";
+      var saved = ModuleConfigCodec.snapshot(List.of(module), ModuleConfigCodec.Scope.ALL, false);
+      var defaults = ModuleConfigCodec.snapshot(List.of(module), ModuleConfigCodec.Scope.ALL, true);
+      assertEquals("default", defaults.getAsJsonObject("Extensible").getAsJsonObject("settings").get("Text").getAsString());
+      text.value = "changed";
+      var restore = ModuleConfigCodec.prepare(List.of(module), saved, ModuleConfigCodec.Scope.ALL);
+      assertEquals("changed", text.value); restore.run(); assertEquals("custom", text.value);
+      var values = saved.getAsJsonObject("Extensible").getAsJsonObject("settings");
+      values.addProperty("Flag", true); values.addProperty("Text", 12);
+      assertThrows(IllegalArgumentException.class, () -> ModuleConfigCodec.prepare(List.of(module), saved, ModuleConfigCodec.Scope.ALL));
+      assertFalse(module.flag.getValue());
+   }
+
+   @Test void registeredSettingsHaveStableOrderAndUniqueKeysWithoutExternalListMutation() {
+      var module = new Fixture("Settings", Category.COMBAT);
+      assertEquals(List.of("Flag", "Number", "Mode"), module.settings.stream().map(Setting::getName).toList());
+      assertThrows(UnsupportedOperationException.class, () -> module.settings.clear());
+      assertThrows(IllegalArgumentException.class, () -> new BooleanSetting("Flag", module, true));
+      var foreign = new Fixture("Foreign", Category.COMBAT);
+      assertThrows(IllegalArgumentException.class, () -> module.registerSetting(foreign.flag));
+      assertEquals(3, module.settings.size());
+   }
    static final class Fixture extends Feature {
       int enabledCalls;
       @Override public void onEnable() { enabledCalls++; }

@@ -4,6 +4,7 @@ import com.samsara.util.RotationUtil;
 import com.mojang.blaze3d.platform.InputConstants;
 import com.samsara.event.Event;
 import com.samsara.event.Events;
+import com.samsara.event.impl.EventPacketSend;
 import com.samsara.module.Category;
 import com.samsara.module.Feature;
 import com.samsara.module.FeatureManager;
@@ -41,9 +42,6 @@ import net.minecraft.world.phys.Vec3;
 import org.lwjgl.sdl.SDLMouse;
 
 public class KillAura extends Feature {
-   private static final double PREDICT_BLOCK_RANGE = 3.5;
-   private static final double PREDICT_BLOCK_TOLERANCE = 0.3;
-   private static final int PREDICT_BLOCK_STEPS = 16;
    private static final String WATCHDOG_LABEL = "Watchdog";
    private static final String AUTO_BLOCK_RMB_LABEL = "AutoBlock RMB";
    private static final String ATTACK_TEAMMATES_LABEL = "Attack Teammates";
@@ -66,10 +64,6 @@ public class KillAura extends Feature {
    private static final String SWAP2_LABEL = "Swap2";
    private static final String ATTACK_FIREBALLS_LABEL = "Attack Fireballs";
 
-   // Rotation samples use fractional ticks from a monotonic clock, independent of rendering interpolation.
-   private final Map<Player, double[]> blockRotations = new IdentityHashMap<>();
-   private final Map<Player, double[]> blockPositions = new IdentityHashMap<>();
-
    private final ModeSetting rotations = new ModeSetting(ROTATIONS_LABEL, this, HEAD_LABEL, new String[]{HEAD_LABEL, OPTIMAL_LABEL});
    private final ModeSetting autoBlock;
    private final BooleanSetting predict;
@@ -84,40 +78,14 @@ public class KillAura extends Feature {
    private final BooleanSetting attackTeammates;
    private final BooleanSetting attackFireballs;
 
+   private final AutoBlockController blocking = new AutoBlockController();
+   private final BlockPrediction prediction = new BlockPrediction();
+
    private float targetPitch;
    private float targetYaw;
    private int attackTicks;
-   private boolean blinkActive;
-   private boolean usingAutoBlockItem;
-   private int firstSwordSlot;
-   private boolean serverSlotChanged;
-   private boolean swapBlockPhase;
-   private boolean pendingPostMotionBlock;
-   private boolean suppressReleasePackets;
-   private int secondSwordSlot;
-   private int autoBlockTicks;
    private boolean alternateAttackDelay;
-   public boolean serverBlocking;
-   public boolean autoBlockActive;
-   private boolean predictedBlockThreat;
-   private Player blockThreatTarget;
-   private boolean predictiveBlockActive;
-   public Entity target;
-   private boolean alternateSword;
-   private int swapCycleTicks;
-
-   private void sendBlockPacket() {
-      if (this.target == null || this.autoBlock.is(NONE_LABEL) || !this.canAutoBlock()) return;
-      mc.getConnection().send(new ServerboundUseItemPacket(InteractionHand.MAIN_HAND, 0, Events.ROTATION.getYaw(), Events.ROTATION.getPitch()));
-      this.serverBlocking = true;
-   }
-
-   private void restoreSelectedSlot() {
-      if (this.serverSlotChanged) {
-         mc.getConnection().send(new ServerboundSetCarriedItemPacket(mc.player.getInventory().getSelectedSlot()));
-         this.serverSlotChanged = false;
-      }
-   }
+   private Entity target;
 
    private void attackTarget(float yaw, float pitch, boolean interactAfterAttack) {
       if (!FeatureManager.bedAura.rotatingToBed) {
@@ -134,169 +102,6 @@ public class KillAura extends Feature {
       }
    }
 
-   private void releaseBlock() {
-      this.suppressReleasePackets = false;
-      mc.getConnection().send(new ServerboundPlayerActionPacket(Action.RELEASE_USE_ITEM, BlockPos.ZERO, Direction.DOWN));
-      this.suppressReleasePackets = true;
-      this.serverBlocking = false;
-      stopAutoBlockItem();
-   }
-
-   private void startAutoBlockItem() {
-      mc.player.startUsingItem(InteractionHand.MAIN_HAND);
-      this.usingAutoBlockItem = true;
-   }
-
-   private void stopAutoBlockItem() {
-      if (this.usingAutoBlockItem && mc.player != null) mc.player.stopUsingItem();
-      this.usingAutoBlockItem = false;
-   }
-
-   private void updateAutoBlock() {
-      if (!this.canAutoBlock()) return;
-      this.suppressReleasePackets = false;
-      this.autoBlockActive = true;
-      switch (this.autoBlock.getValue()) {
-         case VANILLA_LABEL -> {
-            mc.getConnection().send(new ServerboundUseItemPacket(InteractionHand.MAIN_HAND, 0, mc.player.getYRot(), mc.player.getXRot()));
-            this.serverBlocking = true;
-         }
-         case CYCLE_LABEL -> {
-            this.suppressReleasePackets = true;
-            this.autoBlockTicks++;
-            if (this.autoBlockTicks < 3) {
-               return;
-            }
-
-            if (this.serverSlotChanged) {
-               this.sendSelectedSlot(mc.player.getInventory().getSelectedSlot());
-            }
-
-            this.attackTarget(this.targetYaw, this.targetPitch, true);
-            this.sendBlockPacket();
-            startAutoBlockItem();
-            PacketBlinkQueue.disable();
-            this.blinkActive = true;
-            if (!this.serverSlotChanged) {
-               this.sendSelectedSlot(mc.player.getInventory().getSelectedSlot() % 8 + 1);
-            }
-
-            PacketBlinkQueue.enable();
-            this.autoBlockTicks = 0;
-         }
-         case WATCHDOG_LABEL -> {
-            this.suppressReleasePackets = true;
-            this.autoBlockTicks++;
-            if (this.autoBlockTicks < 2) {
-               if (this.serverBlocking) {
-                  startAutoBlockItem();
-               }
-
-               return;
-            }
-
-            this.releaseBlock();
-            this.attackTarget(this.targetYaw, this.targetPitch, true);
-            this.sendBlockPacket();
-            startAutoBlockItem();
-            this.autoBlockTicks = 0;
-         }
-         case WATCHDOG2_LABEL -> {
-            this.suppressReleasePackets = true;
-            this.autoBlockTicks++;
-            if (this.autoBlockTicks < 2) {
-               if (this.serverBlocking) {
-                  startAutoBlockItem();
-               }
-
-               return;
-            }
-
-            this.releaseBlock();
-            boolean facingTarget = this.isTargetFacingPlayer(this.target, 45.0);
-            if (this.predict.getValue() || mc.player.hurtTime <= 5 && facingTarget && !((double)mc.player.distanceTo(this.target) > 3.0)) {
-               this.attackTarget(this.targetYaw, this.targetPitch, true);
-               this.sendBlockPacket();
-               startAutoBlockItem();
-            } else {
-               this.attackTarget(this.targetYaw, this.targetPitch, false);
-            }
-
-            this.autoBlockTicks = 0;
-         }
-         case SWAP_LABEL -> {
-            this.suppressReleasePackets = true;
-            this.autoBlockTicks++;
-            if (this.autoBlockTicks < 3) {
-               if (this.autoBlockTicks != 2 && this.serverBlocking) {
-                  startAutoBlockItem();
-               }
-
-               return;
-            }
-
-            this.findSwordSlots();
-            if (this.firstSwordSlot != -1 && this.secondSwordSlot != -1) {
-               int swordSlot = this.alternateSword ? this.secondSwordSlot : this.firstSwordSlot;
-               this.alternateSword = !this.alternateSword;
-               this.sendSelectedSlot(swordSlot);
-               if (mc.player.getInventory().getItem(swordSlot).is(ItemTags.SWORDS)) {
-                  this.attackTarget(this.targetYaw, this.targetPitch, true);
-                  this.sendBlockPacket();
-                  startAutoBlockItem();
-               }
-
-               this.autoBlockTicks = 0;
-            } else if (mc.player.getInventory().getItem(mc.player.getInventory().getSelectedSlot()).is(ItemTags.SWORDS)) {
-               this.attackTarget(this.targetYaw, this.targetPitch, false);
-            }
-         }
-         case SWAP2_LABEL -> {
-            this.autoBlockTicks++;
-            this.suppressReleasePackets = true;
-            if (this.serverBlocking) {
-               this.releaseBlock();
-            }
-
-            if (!this.serverSlotChanged && this.swapBlockPhase) {
-               this.sendSelectedSlot(mc.player.getInventory().getSelectedSlot() % 8 + 1);
-               return;
-            }
-
-            if (this.autoBlockTicks < 3) {
-               return;
-            }
-
-            if (this.serverSlotChanged) {
-               this.sendSelectedSlot(mc.player.getInventory().getSelectedSlot());
-               this.attackTarget(this.targetYaw, this.targetPitch, false);
-            }
-
-            this.swapCycleTicks++;
-            if (this.swapCycleTicks < 3) {
-               this.swapBlockPhase = true;
-               this.alternateSword = !this.alternateSword;
-               this.attackTarget(this.targetYaw, this.targetPitch, true);
-               this.sendBlockPacket();
-            } else {
-               this.swapBlockPhase = false;
-               this.alternateSword = !this.alternateSword;
-               if (this.alternateSword) {
-                  this.attackTarget(this.targetYaw, this.targetPitch, true);
-                  this.pendingPostMotionBlock = true;
-               } else {
-                  this.attackTarget(this.targetYaw, this.targetPitch, false);
-               }
-
-               this.swapCycleTicks = 0;
-            }
-
-            this.autoBlockTicks = 0;
-         }
-         default -> { }
-      }
-   }
-
    @Override
    public int getPriority(Event event) {
       return event == Events.ROTATION ? -2 : 0;
@@ -305,42 +110,7 @@ public class KillAura extends Feature {
    private void resetCombat() {
       this.target = null;
       resetBlockPrediction();
-      stopAutoBlock();
-   }
-
-   private void stopAutoBlock() {
-      this.predictiveBlockActive = false;
-      this.autoBlockActive = false;
-      this.suppressReleasePackets = false;
-      this.pendingPostMotionBlock = this.swapBlockPhase = this.alternateSword = false;
-      this.autoBlockTicks = this.swapCycleTicks = 0;
-      if (mc.player == null || mc.getConnection() == null) {
-         this.serverBlocking = this.serverSlotChanged = this.blinkActive = this.usingAutoBlockItem = false;
-         return;
-      }
-      if (this.serverSlotChanged) {
-         this.restoreSelectedSlot();
-      }
-
-      if (this.serverBlocking) {
-         this.releaseBlock();
-      }
-      stopAutoBlockItem();
-
-      if (this.blinkActive) {
-         PacketBlinkQueue.disable();
-         this.blinkActive = false;
-      }
-
-      this.suppressReleasePackets = false;
-   }
-
-   private void sendSelectedSlot(int slot) {
-      mc.getConnection().send(new ServerboundSetCarriedItemPacket(slot));
-      this.serverSlotChanged = true;
-      if (slot == mc.player.getInventory().getSelectedSlot()) {
-         this.serverSlotChanged = false;
-      }
+      this.blocking.stop();
    }
 
    @Override
@@ -358,231 +128,163 @@ public class KillAura extends Feature {
          this.prepareForAutoRod();
          return;
       }
-      if (event == Events.MOUSE_BUTTON && this.autoBlockRmb.getValue()
-          && Events.MOUSE_BUTTON.getButton() == InputConstants.MOUSE_BUTTON_RIGHT && Events.MOUSE_BUTTON.isReleased()
-          && (!this.predict.getValue() || !this.predictedBlockThreat)) {
-         stopAutoBlock();
-      }
-      if (event == Events.ROTATION) {
-         updateBlockPrediction();
-      }
-      if (this.predict.getValue() && (event == Events.POST_MOTION || event == Events.MOVE_INPUT || event == Events.TICK || event == Events.RENDER_2D
-          || event == Events.MOUSE_BUTTON && Events.MOUSE_BUTTON.getButton() == InputConstants.MOUSE_BUTTON_RIGHT)) {
+
+      if (event == Events.MOUSE_BUTTON) this.handleMouseButton(event);
+      else if (event == Events.ROTATION) this.updateCombatRotation();
+      else if (event == Events.POST_MOTION) this.blocking.finishMotion();
+      else if (this.predict.getValue() && (event == Events.MOVE_INPUT || event == Events.TICK || event == Events.RENDER_2D)) {
          refreshPredictAutoBlock();
-      }
-      if ((event == Events.POST_MOTION || event == Events.ROTATION)
-          && (!this.canAutoBlock() || this.autoBlock.is(NONE_LABEL) || !mc.player.getMainHandItem().is(ItemTags.SWORDS))) {
-         stopAutoBlock();
-      }
-      if (event == Events.POST_MOTION && this.pendingPostMotionBlock && this.target != null) {
-         this.pendingPostMotionBlock = false;
-         if (!this.autoBlock.is(WATCHDOG2_LABEL)) {
-            this.sendBlockPacket();
-         } else {
-            this.releaseBlock();
-         }
-      }
-
-      if (event == Events.MOUSE_BUTTON) {
-         if (mc.gui.screen() == null && this.target != null) {
-            event.setCancelled(true);
-         }
-      }
-
-      if (event == Events.ROTATION) {
-         this.setSuffix(this.autoBlock.is(NONE_LABEL) ? null : this.autoBlock.getValue());
-         this.autoBlockActive = false;
-         if (!this.attackCooldown.getValue() || mc.player.getAttackStrengthScale(0.0F) >= 1.0F) {
-            this.attackTicks++;
-         }
-
-         this.target = TargetFinder.nearest(this.rotationRange.getValue(), true, !this.attackTeammates.getValue(), entity -> {
-            this.updateTargetRotation(entity);
-            // Keep distant visible targets for rotations; reject occluded targets outside the wall range.
-            return this.raycastDistance(entity, this.targetYaw, this.targetPitch, this.rotationRange.getValue()) >= 0;
-         });
-         if (this.target == null && this.predictedBlockThreat) this.target = this.blockThreatTarget;
-
-         if (this.attackFireballs.getValue()) {
-            Entity entity = this.findFireball(3.0);
-            if (entity != null) {
-               this.updateTargetRotation(entity);
-               Events.ROTATION.setYaw(this.targetYaw);
-               Events.ROTATION.setPitch(this.targetPitch);
-               mc.gameMode.attack(mc.player, entity);
-               mc.player.swing(InteractionHand.MAIN_HAND, mc.player.getMainHandItem().getAttackAnimation(), false);
-               mc.getConnection().send(ServerboundPunchPacket.INSTANCE);
-               this.resetCombat();
-               return;
-            }
-         }
-
-         if (this.requireSword.getValue() && !InventoryUtil.isHoldingSword()) {
-            this.target = null;
-         }
-
-         if (this.target != null) {
-            this.updateTargetRotation(this.target);
-            Events.ROTATION.setYaw(this.targetYaw);
-            Events.ROTATION.setPitch(this.targetPitch);
-            double attackDelay2Value = this.alternateAttackDelay ? this.attackDelay2.getValue() : this.attackDelay.getValue();
-            if (!FeatureManager.velocity.blocksAttacks() && (double)this.attackTicks > attackDelay2Value && (!this.attackCooldown.getValue() || mc.player.getAttackStrengthScale(0.0F) >= 1.0F)) {
-               if (this.ignoreShield.getValue() && this.target instanceof Player player && player.isUsingItem() && player.getUseItem().is(Items.SHIELD)) {
-                  return;
-               }
-
-               if (!this.autoBlock.is(WATCHDOG_LABEL) && !this.autoBlock.is(WATCHDOG2_LABEL) && !this.autoBlock.is(SWAP_LABEL) && !this.autoBlock.is(SWAP2_LABEL) && !this.autoBlock.is(CYCLE_LABEL)
-                  || !this.canAutoBlock() && !this.serverBlocking) {
-                  this.attackTicks = 0;
-                  this.attackTarget(this.targetYaw, this.targetPitch, false);
-               }
-
-               this.alternateAttackDelay = !this.alternateAttackDelay;
-            }
-
-            if (!this.autoBlock.is(NONE_LABEL) && mc.player.getMainHandItem().is(ItemTags.SWORDS)) {
-               if (this.canAutoBlock()) {
-                  mc.options.keyUse.setDown(false);
-                  this.updateAutoBlock();
-                  if (this.predict.getValue()) synchronizePredictAutoBlock();
-               } else {
-                  stopAutoBlock();
-               }
-            } else {
-               stopAutoBlock();
-            }
-         } else {
-            this.resetCombat();
-         }
-      }
-
-      if (event == Events.PACKET_SEND && Events.PACKET_SEND.getPacket() instanceof ServerboundPlayerActionPacket && this.suppressReleasePackets) {
+      } else if (event instanceof EventPacketSend sending && sending.getPacket() instanceof ServerboundPlayerActionPacket && this.blocking.suppressesActionPackets()) {
          event.setCancelled(true);
       }
    }
 
-   public boolean hasAutoBlockAnimation() {
-      // Cyclic modes release or swap before reblocking; keep their working phase visible.
-      return hasAutoBlockMode() && isAutoBlockInputAllowed()
-         && (this.autoBlockActive || isAutoBlocking() || this.predict.getValue() && !this.autoBlockRmb.getValue());
+   private void handleMouseButton(Event event) {
+      if (this.autoBlockRmb.getValue()
+          && Events.MOUSE_BUTTON.getButton() == InputConstants.MOUSE_BUTTON_RIGHT && Events.MOUSE_BUTTON.isReleased()
+          && (!this.predict.getValue() || !this.prediction.hasThreat())) {
+         this.blocking.stop();
+      }
+      if (this.predict.getValue() && Events.MOUSE_BUTTON.getButton() == InputConstants.MOUSE_BUTTON_RIGHT) {
+         refreshPredictAutoBlock();
+      }
+      if (mc.gui.screen() == null && this.target != null) event.setCancelled(true);
    }
+
+   private void updateCombatRotation() {
+      updateBlockPrediction();
+      this.blocking.stopInvalidAutoBlock();
+
+      this.setSuffix(this.autoBlock.is(NONE_LABEL) ? null : this.autoBlock.getValue());
+      this.blocking.beginRotation();
+      if (!this.attackCooldown.getValue() || mc.player.getAttackStrengthScale(0.0F) >= 1.0F) {
+         this.attackTicks++;
+      }
+
+      this.target = TargetFinder.nearest(this.rotationRange.getValue(), true, !this.attackTeammates.getValue(), entity -> {
+         this.updateTargetRotation(entity);
+         // Keep distant visible targets for rotations; reject occluded targets outside the wall range.
+         return this.raycastDistance(entity, this.targetYaw, this.targetPitch, this.rotationRange.getValue()) >= 0;
+      });
+      if (this.target == null && this.prediction.hasThreat()) this.target = this.prediction.threatTarget();
+
+      if (this.attackFireballIfPresent()) return;
+
+      if (this.requireSword.getValue() && !InventoryUtil.isHoldingSword()) {
+         this.target = null;
+      }
+
+      if (this.target == null) {
+         this.resetCombat();
+         return;
+      }
+      this.attackSelectedTarget();
+   }
+
+   private boolean attackFireballIfPresent() {
+      if (!this.attackFireballs.getValue()) return false;
+      Entity entity = this.findFireball(3.0);
+      if (entity != null) {
+         this.updateTargetRotation(entity);
+         Events.ROTATION.setYaw(this.targetYaw);
+         Events.ROTATION.setPitch(this.targetPitch);
+         mc.gameMode.attack(mc.player, entity);
+         mc.player.swing(InteractionHand.MAIN_HAND, mc.player.getMainHandItem().getAttackAnimation(), false);
+         mc.getConnection().send(ServerboundPunchPacket.INSTANCE);
+         this.resetCombat();
+         return true;
+      }
+
+      return false;
+   }
+
+   private void attackSelectedTarget() {
+      this.updateTargetRotation(this.target);
+      Events.ROTATION.setYaw(this.targetYaw);
+      Events.ROTATION.setPitch(this.targetPitch);
+      double attackInterval = this.alternateAttackDelay ? this.attackDelay2.getValue() : this.attackDelay.getValue();
+      if (!FeatureManager.velocity.blocksAttacks() && (double)this.attackTicks > attackInterval && (!this.attackCooldown.getValue() || mc.player.getAttackStrengthScale(0.0F) >= 1.0F)) {
+         if (this.ignoreShield.getValue() && this.target instanceof Player player && player.isUsingItem() && player.getUseItem().is(Items.SHIELD)) {
+            return;
+         }
+
+         if (!this.blocking.usesAutoBlockAttackCycle() || !this.canAutoBlock() && !this.isServerBlocking()) {
+            this.attackTicks = 0;
+            this.attackTarget(this.targetYaw, this.targetPitch, false);
+         }
+
+         this.alternateAttackDelay = !this.alternateAttackDelay;
+      }
+
+      if (!this.autoBlock.is(NONE_LABEL) && mc.player.getMainHandItem().is(ItemTags.SWORDS) && this.canAutoBlock()) {
+         mc.options.keyUse.setDown(false);
+         this.blocking.updateMode();
+         if (this.predict.getValue()) this.blocking.synchronizePrediction();
+      } else {
+         this.blocking.stop();
+      }
+   }
+
+   public boolean hasAutoBlockAnimation() { return this.blocking.hasAnimation(); }
 
    public boolean hasAutoBlockMode() { return !this.autoBlock.is(NONE_LABEL); }
 
-   public boolean isAutoBlocking() { return this.serverBlocking || this.usingAutoBlockItem; }
+   public boolean isAutoBlocking() { return this.blocking.isBlocking(); }
+
+   public boolean isServerBlocking() { return this.blocking.serverBlocking; }
+
+   public Entity getTarget() { return this.target; }
 
    public boolean prepareForAutoRod() {
       if (!isEnabled()) return true;
       if (mc.player == null || mc.getConnection() == null) return false;
       resetBlockPrediction();
-      stopAutoBlock();
+      this.blocking.stop();
       return true;
    }
 
    private void resetBlockPrediction() {
-      this.predictedBlockThreat = false;
-      this.blockThreatTarget = null;
-      this.predictiveBlockActive = false;
-      this.blockRotations.clear();
-      this.blockPositions.clear();
+      this.prediction.reset();
+      this.blocking.resetPrediction();
    }
 
    public void onPredictEntityUpdate(Entity entity, boolean rotationUpdated, boolean positionUpdated, boolean teleport) {
       if (!isEnabled() || !this.predict.getValue() || !hasAutoBlockMode() || mc.player == null || mc.level == null
           || !(entity instanceof Player)) return;
-      if (entity instanceof Player player && player != mc.player) {
-         double now = predictionTime();
-         var latest = player.getClientPositionAndRotation();
-         if (teleport) {
-            this.blockRotations.remove(player);
-            this.blockPositions.remove(player);
-         }
-         if (rotationUpdated) this.blockRotations.put(player,
-            sampleBlockRotation(this.blockRotations.get(player), latest.yRot(), latest.xRot(), now));
-         if (positionUpdated) this.blockPositions.put(player,
-            sampleBlockMovement(this.blockPositions.get(player), latest.position(), now));
-      }
+      this.prediction.recordEntityUpdate(entity, rotationUpdated, positionUpdated, teleport);
       refreshPredictAutoBlock();
    }
 
    public void onPredictHeadUpdate(Entity entity, float yaw) {
       if (!isEnabled() || !this.predict.getValue() || !hasAutoBlockMode() || mc.player == null || mc.level == null
           || !(entity instanceof Player)) return;
-      if (entity instanceof Player player && player != mc.player) {
-         var previous = this.blockRotations.get(player);
-         float pitch = previous == null ? player.getClientPositionAndRotation().xRot() : (float)previous[1];
-         // Head packets interpolate separately; their received angle is already authoritative.
-         this.blockRotations.put(player, sampleBlockRotation(previous, yaw, pitch, predictionTime()));
-      }
+      this.prediction.recordHeadUpdate(entity, yaw);
       refreshPredictAutoBlock();
    }
 
    private void refreshPredictAutoBlock() {
       if (mc.player == null || mc.level == null || mc.getConnection() == null || !isAutoBlockInputAllowed()) {
          resetBlockPrediction();
-         stopAutoBlock();
+         this.blocking.stop();
          return;
       }
       updateBlockPrediction();
-      synchronizePredictAutoBlock();
+      this.blocking.synchronizePrediction();
    }
-
-   private void synchronizePredictAutoBlock() {
-      if (!hasAutoBlockMode() || !this.canAutoBlock() || this.target == null || this.target.isRemoved() || !this.target.isAlive()
-          || !mc.player.getMainHandItem().is(ItemTags.SWORDS)) {
-         stopAutoBlock();
-         return;
-      }
-      this.autoBlockActive = true;
-      if (!this.predictiveBlockActive) {
-         // A brief threat must block immediately, before the normal mode cycle can advance.
-         if (!this.serverBlocking) this.sendBlockPacket();
-         if (!this.usingAutoBlockItem) startAutoBlockItem();
-         this.predictiveBlockActive = true;
-      }
-   }
-
-   private static double predictionTime() { return System.nanoTime() / 50_000_000.0; }
 
    private void updateBlockPrediction() {
       if (!this.predict.getValue() || this.autoBlock.is(NONE_LABEL)) {
-         resetBlockPrediction();
+         this.resetBlockPrediction();
          return;
       }
-      this.blockRotations.keySet().removeIf(player -> player.isRemoved() || player.level() != mc.level);
-      this.blockPositions.keySet().removeIf(player -> player.isRemoved() || player.level() != mc.level);
-      double now = predictionTime();
-      var threat = TargetFinder.nearest(Double.POSITIVE_INFINITY, true, !this.attackTeammates.getValue(), entity -> {
-         if (!(entity instanceof Player player) || !player.isAlive() || player.isSleeping() || player.isSpectator()) return false;
-         var latest = player.getClientPositionAndRotation();
-         Vec3 position = latest.position();
-         double distanceSquared = mc.player.position().distanceToSqr(position);
-         if (distanceSquared > PREDICT_BLOCK_RANGE * PREDICT_BLOCK_RANGE) return false;
-         var rotation = this.blockRotations.computeIfAbsent(player,
-            ignored -> sampleBlockRotation(null, latest.yRot(), latest.xRot(), now));
-         var movement = this.blockPositions.computeIfAbsent(player, ignored -> sampleBlockMovement(null, position, now));
-         Vec3 eyes = position.add(0, player.getEyeHeight(), 0);
-         Vec3 velocity = now - movement[3] <= 3 ? new Vec3(movement[4], movement[5], movement[6]) : Vec3.ZERO;
-         return predictsMovingBlockThreat(distanceSquared, eyes, rotation, now, velocity,
-            mc.player.getDeltaMovement(), mc.player.getBoundingBox(), this.wallRange.getValue(), (origin, hit) -> mc.level.clip(
-               new ClipContext(origin, hit, ClipContext.Block.COLLIDER, ClipContext.Fluid.NONE, player)).getType() != HitResult.Type.MISS);
-      });
-      this.predictedBlockThreat = threat != null;
-      this.blockThreatTarget = threat instanceof Player player ? player : null;
+      this.prediction.update();
+      Player threat = this.prediction.threatTarget();
       if (threat != null && (this.target == null || this.target.isRemoved() || !this.target.isAlive())) this.target = threat;
-   }
-
-   private boolean isTargetFacingPlayer(Entity entity, double angleDegrees) {
-      Vec3 targetEyePosition = entity.getEyePosition(1.0F);
-      Vec3 targetLookDirection = entity.getViewVector(1.0F).normalize();
-      Vec3 directionToPlayer = mc.player.getEyePosition(1.0F).subtract(targetEyePosition).normalize();
-      double directionDot = targetLookDirection.dot(directionToPlayer);
-      return directionDot >= Math.cos(Math.toRadians(angleDegrees));
    }
 
    private boolean canAutoBlock() {
       return isAutoBlockInputAllowed() && shouldAutoBlock(this.predict.getValue(), this.autoBlockRmb.getValue(),
-         isManualAutoBlockRequested(), this.predictedBlockThreat);
+         isManualAutoBlockRequested(), this.prediction.hasThreat());
    }
 
    static boolean shouldAutoBlock(boolean predict, boolean rmbEnabled, boolean rightMouseDown, boolean threat) {
@@ -652,22 +354,6 @@ public class KillAura extends Feature {
       this.targetPitch = RotationUtil.quantize(pitch, mc.player.getXRot(), sensitivityStep);
    }
 
-   private void findSwordSlots() {
-      this.firstSwordSlot = -1;
-      this.secondSwordSlot = -1;
-
-      for (int slot = 0; slot < 9; slot++) {
-         if (mc.player.getInventory().getItem(slot).is(ItemTags.SWORDS)) {
-            if (this.firstSwordSlot != -1) {
-               this.secondSwordSlot = slot;
-               break;
-            }
-
-            this.firstSwordSlot = slot;
-         }
-      }
-   }
-
    public KillAura() {
       super(KILL_AURA_LABEL, Category.COMBAT);
       this.autoBlock = new ModeSetting(AUTO_BLOCK_LABEL, this, NONE_LABEL, new String[]{NONE_LABEL, VANILLA_LABEL, WATCHDOG_LABEL, WATCHDOG2_LABEL, SWAP_LABEL, SWAP2_LABEL, CYCLE_LABEL});
@@ -683,8 +369,6 @@ public class KillAura extends Feature {
       this.autoBlockRmb = new BooleanSetting(AUTO_BLOCK_RMB_LABEL, this, false);
       this.attackTeammates = new BooleanSetting(ATTACK_TEAMMATES_LABEL, this, true);
       this.attackFireballs = new BooleanSetting(ATTACK_FIREBALLS_LABEL, this, false);
-      this.firstSwordSlot = -1;
-      this.secondSwordSlot = -1;
    }
 
    private double raycastDistance(Entity entity, float yaw, float pitch, double range) {
@@ -701,59 +385,420 @@ public class KillAura extends Feature {
       return distance > wallRange && occluded.test(hit.get()) ? -0.1 : distance;
    }
 
-   static boolean predictsBlockThreat(double distanceSquared, Vec3 eyes, double[] current, double[] previous,
-                                     AABB target, double wallRange, Predicate<Vec3> occluded) {
-      var sample = sampleBlockRotation(previous, (float)current[0], (float)current[1], current[2]);
-      return predictsMovingBlockThreat(distanceSquared, eyes, sample, current[2], Vec3.ZERO, Vec3.ZERO,
-         target, wallRange, (origin, hit) -> occluded.test(hit));
+   private final class AutoBlockController {
+      private boolean blinkActive;
+      private boolean usingAutoBlockItem;
+      private boolean serverSlotChanged;
+      private boolean pendingPostMotionBlock;
+      private boolean suppressReleasePackets;
+      private boolean serverBlocking;
+      private boolean autoBlockActive;
+      private boolean predictiveBlockActive;
+      private boolean alternateSword;
+      private int autoBlockTicks;
+      private int swapBlockCycleCount;
+
+      private void beginRotation() { this.autoBlockActive = false; }
+      private void resetPrediction() { this.predictiveBlockActive = false; }
+      private boolean isBlocking() { return this.serverBlocking || this.usingAutoBlockItem; }
+      private boolean suppressesActionPackets() { return this.suppressReleasePackets; }
+
+      private void sendBlockPacket() {
+         if (KillAura.this.target == null || KillAura.this.autoBlock.is(NONE_LABEL) || !KillAura.this.canAutoBlock()) return;
+         mc.getConnection().send(new ServerboundUseItemPacket(InteractionHand.MAIN_HAND, 0, Events.ROTATION.getYaw(), Events.ROTATION.getPitch()));
+         this.serverBlocking = true;
+      }
+
+      private void restoreSelectedSlot() {
+         if (this.serverSlotChanged) {
+            mc.getConnection().send(new ServerboundSetCarriedItemPacket(mc.player.getInventory().getSelectedSlot()));
+            this.serverSlotChanged = false;
+         }
+      }
+
+      private void releaseBlock() {
+         this.suppressReleasePackets = false;
+         mc.getConnection().send(new ServerboundPlayerActionPacket(Action.RELEASE_USE_ITEM, BlockPos.ZERO, Direction.DOWN));
+         this.suppressReleasePackets = true;
+         this.serverBlocking = false;
+         stopAutoBlockItem();
+      }
+
+      private void startAutoBlockItem() {
+         mc.player.startUsingItem(InteractionHand.MAIN_HAND);
+         this.usingAutoBlockItem = true;
+      }
+
+      private void stopAutoBlockItem() {
+         if (this.usingAutoBlockItem && mc.player != null) mc.player.stopUsingItem();
+         this.usingAutoBlockItem = false;
+      }
+
+      private void updateMode() {
+         if (!KillAura.this.canAutoBlock()) return;
+         this.suppressReleasePackets = false;
+         this.autoBlockActive = true;
+         switch (KillAura.this.autoBlock.getValue()) {
+            case VANILLA_LABEL -> {
+               mc.getConnection().send(new ServerboundUseItemPacket(InteractionHand.MAIN_HAND, 0, mc.player.getYRot(), mc.player.getXRot()));
+               this.serverBlocking = true;
+            }
+            case CYCLE_LABEL -> this.updateCycleBlock();
+            case WATCHDOG_LABEL -> this.updateWatchdogBlock(false);
+            case WATCHDOG2_LABEL -> this.updateWatchdogBlock(true);
+            case SWAP_LABEL -> this.updateSwapBlock();
+            case SWAP2_LABEL -> this.updateSwap2Block();
+            default -> { }
+         }
+      }
+
+      private void updateCycleBlock() {
+         this.suppressReleasePackets = true;
+         this.autoBlockTicks++;
+         if (this.autoBlockTicks < 3) {
+            return;
+         }
+
+         if (this.serverSlotChanged) {
+            this.sendSelectedSlot(mc.player.getInventory().getSelectedSlot());
+         }
+
+         this.attackAndBlock();
+         PacketBlinkQueue.disable();
+         this.blinkActive = true;
+         if (!this.serverSlotChanged) {
+            this.sendSelectedSlot(mc.player.getInventory().getSelectedSlot() % 8 + 1);
+         }
+
+         PacketBlinkQueue.enable();
+         this.autoBlockTicks = 0;
+      }
+
+      private void updateWatchdogBlock(boolean conditionalBlock) {
+         this.suppressReleasePackets = true;
+         this.autoBlockTicks++;
+         if (this.autoBlockTicks < 2) {
+            if (this.serverBlocking) startAutoBlockItem();
+            return;
+         }
+
+         this.releaseBlock();
+         if (!conditionalBlock) {
+            this.attackAndBlock();
+         } else {
+            boolean facingTarget = this.isTargetFacingPlayer(KillAura.this.target, 45.0);
+            if (KillAura.this.predict.getValue() || mc.player.hurtTime <= 5 && facingTarget && !((double)mc.player.distanceTo(KillAura.this.target) > 3.0)) {
+               this.attackAndBlock();
+            } else {
+               KillAura.this.attackTarget(KillAura.this.targetYaw, KillAura.this.targetPitch, false);
+            }
+         }
+         this.autoBlockTicks = 0;
+      }
+
+      private void updateSwapBlock() {
+         this.suppressReleasePackets = true;
+         this.autoBlockTicks++;
+         if (this.autoBlockTicks < 3) {
+            if (this.autoBlockTicks != 2 && this.serverBlocking) {
+               startAutoBlockItem();
+            }
+
+            return;
+         }
+
+         SwordSlots slots = this.findSwordSlots();
+         if (slots.first() != -1 && slots.second() != -1) {
+            int swordSlot = this.alternateSword ? slots.second() : slots.first();
+            this.alternateSword = !this.alternateSword;
+            this.sendSelectedSlot(swordSlot);
+            if (mc.player.getInventory().getItem(swordSlot).is(ItemTags.SWORDS)) {
+               this.attackAndBlock();
+            }
+
+            this.autoBlockTicks = 0;
+         } else if (mc.player.getInventory().getItem(mc.player.getInventory().getSelectedSlot()).is(ItemTags.SWORDS)) {
+            KillAura.this.attackTarget(KillAura.this.targetYaw, KillAura.this.targetPitch, false);
+         }
+      }
+
+      private void updateSwap2Block() {
+         this.autoBlockTicks++;
+         this.suppressReleasePackets = true;
+         if (this.serverBlocking) {
+            this.releaseBlock();
+         }
+
+         if (!this.serverSlotChanged && this.swapBlockCycleCount > 0) {
+            this.sendSelectedSlot(mc.player.getInventory().getSelectedSlot() % 8 + 1);
+            return;
+         }
+
+         if (this.autoBlockTicks < 3) {
+            return;
+         }
+
+         if (this.serverSlotChanged) {
+            this.sendSelectedSlot(mc.player.getInventory().getSelectedSlot());
+            KillAura.this.attackTarget(KillAura.this.targetYaw, KillAura.this.targetPitch, false);
+         }
+
+         this.swapBlockCycleCount++;
+         if (this.swapBlockCycleCount < 3) {
+            this.alternateSword = !this.alternateSword;
+            KillAura.this.attackTarget(KillAura.this.targetYaw, KillAura.this.targetPitch, true);
+            this.sendBlockPacket();
+         } else {
+            this.alternateSword = !this.alternateSword;
+            if (this.alternateSword) {
+               KillAura.this.attackTarget(KillAura.this.targetYaw, KillAura.this.targetPitch, true);
+               this.pendingPostMotionBlock = true;
+            } else {
+               KillAura.this.attackTarget(KillAura.this.targetYaw, KillAura.this.targetPitch, false);
+            }
+
+            this.swapBlockCycleCount = 0;
+         }
+
+         this.autoBlockTicks = 0;
+      }
+
+      private void stop() {
+         this.predictiveBlockActive = false;
+         this.autoBlockActive = false;
+         this.suppressReleasePackets = false;
+         this.pendingPostMotionBlock = this.alternateSword = false;
+         this.autoBlockTicks = this.swapBlockCycleCount = 0;
+         if (mc.player == null || mc.getConnection() == null) {
+            this.serverBlocking = this.serverSlotChanged = this.blinkActive = this.usingAutoBlockItem = false;
+            return;
+         }
+         if (this.serverSlotChanged) {
+            this.restoreSelectedSlot();
+         }
+
+         if (this.serverBlocking) {
+            this.releaseBlock();
+         }
+         stopAutoBlockItem();
+
+         if (this.blinkActive) {
+            PacketBlinkQueue.disable();
+            this.blinkActive = false;
+         }
+
+         this.suppressReleasePackets = false;
+      }
+
+      private void sendSelectedSlot(int slot) {
+         mc.getConnection().send(new ServerboundSetCarriedItemPacket(slot));
+         this.serverSlotChanged = true;
+         if (slot == mc.player.getInventory().getSelectedSlot()) {
+            this.serverSlotChanged = false;
+         }
+      }
+
+      private boolean usesAutoBlockAttackCycle() {
+         return switch (KillAura.this.autoBlock.getValue()) {
+            case WATCHDOG_LABEL, WATCHDOG2_LABEL, SWAP_LABEL, SWAP2_LABEL, CYCLE_LABEL -> true;
+            default -> false;
+         };
+      }
+
+      private void finishMotion() {
+         if (KillAura.this.predict.getValue()) refreshPredictAutoBlock();
+         stopInvalidAutoBlock();
+         if (this.pendingPostMotionBlock && KillAura.this.target != null) {
+            this.pendingPostMotionBlock = false;
+            if (!KillAura.this.autoBlock.is(WATCHDOG2_LABEL)) this.sendBlockPacket();
+            else this.releaseBlock();
+         }
+      }
+
+      private void stopInvalidAutoBlock() {
+         if (!KillAura.this.canAutoBlock() || KillAura.this.autoBlock.is(NONE_LABEL) || !mc.player.getMainHandItem().is(ItemTags.SWORDS)) {
+            stop();
+         }
+      }
+
+      private boolean hasAnimation() {
+         // Cyclic modes release or swap before reblocking; keep their working phase visible.
+         return hasAutoBlockMode() && isAutoBlockInputAllowed()
+            && (this.autoBlockActive || isAutoBlocking() || KillAura.this.predict.getValue() && !KillAura.this.autoBlockRmb.getValue());
+      }
+
+      private void synchronizePrediction() {
+         if (!hasAutoBlockMode() || !KillAura.this.canAutoBlock() || KillAura.this.target == null || KillAura.this.target.isRemoved() || !KillAura.this.target.isAlive()
+             || !mc.player.getMainHandItem().is(ItemTags.SWORDS)) {
+            stop();
+            return;
+         }
+         this.autoBlockActive = true;
+         if (!this.predictiveBlockActive) {
+            // A brief threat must block immediately, before the normal mode cycle can advance.
+            if (!this.serverBlocking) this.sendBlockPacket();
+            if (!this.usingAutoBlockItem) startAutoBlockItem();
+            this.predictiveBlockActive = true;
+         }
+      }
+
+      private boolean isTargetFacingPlayer(Entity entity, double angleDegrees) {
+         Vec3 targetEyePosition = entity.getEyePosition(1.0F);
+         Vec3 targetLookDirection = entity.getViewVector(1.0F).normalize();
+         Vec3 directionToPlayer = mc.player.getEyePosition(1.0F).subtract(targetEyePosition).normalize();
+         double directionDot = targetLookDirection.dot(directionToPlayer);
+         return directionDot >= Math.cos(Math.toRadians(angleDegrees));
+      }
+
+      private SwordSlots findSwordSlots() {
+         int first = -1;
+         int second = -1;
+         for (int slot = 0; slot < 9; slot++) {
+            if (mc.player.getInventory().getItem(slot).is(ItemTags.SWORDS)) {
+               if (first != -1) {
+                  second = slot;
+                  break;
+               }
+               first = slot;
+            }
+         }
+         return new SwordSlots(first, second);
+      }
+
+      private void attackAndBlock() {
+         KillAura.this.attackTarget(KillAura.this.targetYaw, KillAura.this.targetPitch, true);
+         this.sendBlockPacket();
+         startAutoBlockItem();
+      }
+
+      private record SwordSlots(int first, int second) { }
    }
 
-   // Samples store yaw, pitch, time, yaw/tick and pitch/tick. Passive checks never replace them.
-   static double[] sampleBlockRotation(double[] previous, float yaw, float pitch, double now) {
-      double yawStep = 0, pitchStep = 0;
-      double elapsed = previous == null ? 0 : now - previous[2];
-      if (previous != null && previous.length >= 5 && elapsed >= 0 && elapsed < 0.5
-          && Math.abs(Mth.wrapDegrees(yaw - (float)previous[0])) < 0.001 && Math.abs(pitch - previous[1]) < 0.001) {
-         return previous;
-      }
-      if (elapsed > 0 && elapsed <= 2) {
-         double ticks = Math.max(0.5, elapsed);
-         yawStep = Mth.clamp(Mth.wrapDegrees(yaw - (float)previous[0]) / ticks, -60, 60);
-         pitchStep = Mth.clamp((pitch - previous[1]) / ticks, -45, 45);
-      }
-      return new double[]{yaw, pitch, now, yawStep, pitchStep};
-   }
+   private final class BlockPrediction {
+      private static final double PREDICT_BLOCK_RANGE = 3.5;
+      private static final double PREDICT_BLOCK_TOLERANCE = 0.3;
+      private static final int PREDICT_BLOCK_STEPS = 16;
+      private static final double PREDICT_BLOCK_HORIZON_TICKS = 2;
+      private static final double MIN_SAMPLE_INTERVAL_TICKS = 0.5;
+      private static final double MOVEMENT_HISTORY_TICKS = 3;
+      private static final double MAX_SAMPLE_DISPLACEMENT_SQUARED = 16;
+      private static final double MAX_YAW_PER_TICK = 60;
+      private static final double MAX_PITCH_PER_TICK = 45;
+      private static final double DUPLICATE_ROTATION_TOLERANCE = 0.001;
+      private static final double NANOS_PER_TICK = 50_000_000.0;
 
-   static double[] sampleBlockMovement(double[] previous, Vec3 position, double now) {
-      Vec3 velocity = Vec3.ZERO;
-      double elapsed = previous == null ? 0 : now - previous[3];
-      if (elapsed > 0 && elapsed <= 3) {
-         var change = position.subtract(previous[0], previous[1], previous[2]);
-         // A teleport is a new observation, rather than movement to extrapolate.
-         if (change.lengthSqr() <= 16) velocity = change.scale(1 / Math.max(0.5, elapsed));
-      }
-      return new double[]{position.x, position.y, position.z, now, velocity.x, velocity.y, velocity.z};
-   }
+      private final Map<Player, RotationSample> blockRotations = new IdentityHashMap<>();
+      private final Map<Player, MovementSample> blockPositions = new IdentityHashMap<>();
+      private Player blockThreatTarget;
 
-   static boolean predictsMovingBlockThreat(double distanceSquared, Vec3 eyes, double[] rotation, double now,
-                                           Vec3 attackerVelocity, Vec3 localVelocity, AABB target,
-                                           double wallRange, BiPredicate<Vec3, Vec3> occluded) {
-      if (distanceSquared > PREDICT_BLOCK_RANGE * PREDICT_BLOCK_RANGE) return false;
-      double age = now - rotation[2];
-      double yawStep = age >= 0 && age <= 2 ? rotation[3] : 0;
-      double pitchStep = age >= 0 && age <= 2 ? rotation[4] : 0;
-      // Sample the turn over the next two ticks so a fast sweep cannot skip the hitbox.
-      for (int step = 0; step <= PREDICT_BLOCK_STEPS; step++) {
-         double ticksAhead = step * 2.0 / PREDICT_BLOCK_STEPS;
-         float yaw = (float)(rotation[0] + yawStep * ticksAhead);
-         float pitch = (float)Mth.clamp(rotation[1] + pitchStep * ticksAhead, -90, 90);
-         Vec3 origin = eyes.add(attackerVelocity.scale(ticksAhead));
-         AABB predictedBox = target.move(localVelocity.scale(ticksAhead));
-         Vec3 direction = Vec3.directionFromRotation(pitch, yaw);
-         if (direction.dot(predictedBox.getCenter().subtract(origin)) <= 0) continue;
-         if (raycastDistance(origin, direction, predictedBox.inflate(PREDICT_BLOCK_TOLERANCE),
-             PREDICT_BLOCK_RANGE, wallRange, hit -> occluded.test(origin, hit)) >= 0) return true;
+      private boolean hasThreat() { return this.blockThreatTarget != null; }
+      private Player threatTarget() { return this.blockThreatTarget; }
+
+      private void reset() {
+         this.blockThreatTarget = null;
+         this.blockRotations.clear();
+         this.blockPositions.clear();
       }
-      return false;
+
+      private void update() {
+         this.blockRotations.keySet().removeIf(player -> player.isRemoved() || player.level() != mc.level);
+         this.blockPositions.keySet().removeIf(player -> player.isRemoved() || player.level() != mc.level);
+         double now = predictionTime();
+         var threat = TargetFinder.nearest(Double.POSITIVE_INFINITY, true, !KillAura.this.attackTeammates.getValue(), entity -> {
+            if (!(entity instanceof Player player) || !player.isAlive() || player.isSleeping() || player.isSpectator()) return false;
+            var latest = player.getClientPositionAndRotation();
+            Vec3 position = latest.position();
+            double distanceSquared = mc.player.position().distanceToSqr(position);
+            if (distanceSquared > PREDICT_BLOCK_RANGE * PREDICT_BLOCK_RANGE) return false;
+            var rotation = this.blockRotations.computeIfAbsent(player,
+               ignored -> sampleBlockRotation(null, latest.yRot(), latest.xRot(), now));
+            var movement = this.blockPositions.computeIfAbsent(player, ignored -> sampleBlockMovement(null, position, now));
+            Vec3 eyes = position.add(0, player.getEyeHeight(), 0);
+            Vec3 velocity = now - movement.tick() <= MOVEMENT_HISTORY_TICKS ? movement.velocity() : Vec3.ZERO;
+            return predictsMovingBlockThreat(distanceSquared, eyes, rotation, now, velocity,
+               mc.player.getDeltaMovement(), mc.player.getBoundingBox(), KillAura.this.wallRange.getValue(), (origin, hit) -> mc.level.clip(
+                  new ClipContext(origin, hit, ClipContext.Block.COLLIDER, ClipContext.Fluid.NONE, player)).getType() != HitResult.Type.MISS);
+         });
+         this.blockThreatTarget = threat instanceof Player player ? player : null;
+      }
+
+      private void recordEntityUpdate(Entity entity, boolean rotationUpdated, boolean positionUpdated, boolean teleport) {
+         if (entity instanceof Player player && player != mc.player) {
+            double now = predictionTime();
+            var latest = player.getClientPositionAndRotation();
+            if (teleport) {
+               this.blockRotations.remove(player);
+               this.blockPositions.remove(player);
+            }
+            if (rotationUpdated) this.blockRotations.put(player,
+               sampleBlockRotation(this.blockRotations.get(player), latest.yRot(), latest.xRot(), now));
+            if (positionUpdated) this.blockPositions.put(player,
+               sampleBlockMovement(this.blockPositions.get(player), latest.position(), now));
+         }
+      }
+
+      private void recordHeadUpdate(Entity entity, float yaw) {
+         if (entity instanceof Player player && player != mc.player) {
+            var previous = this.blockRotations.get(player);
+            float pitch = previous == null ? player.getClientPositionAndRotation().xRot() : (float)previous.pitch();
+            // Head packets interpolate separately; their received angle is already authoritative.
+            this.blockRotations.put(player, sampleBlockRotation(previous, yaw, pitch, predictionTime()));
+         }
+      }
+
+      private static double predictionTime() { return System.nanoTime() / NANOS_PER_TICK; }
+
+      private static RotationSample sampleBlockRotation(RotationSample previous, float yaw, float pitch, double now) {
+         double yawStep = 0, pitchStep = 0;
+         double elapsed = previous == null ? 0 : now - previous.tick();
+         if (previous != null && elapsed >= 0 && elapsed < MIN_SAMPLE_INTERVAL_TICKS
+             && Math.abs(Mth.wrapDegrees(yaw - (float)previous.yaw())) < DUPLICATE_ROTATION_TOLERANCE
+             && Math.abs(pitch - previous.pitch()) < DUPLICATE_ROTATION_TOLERANCE) {
+            return previous;
+         }
+         if (elapsed > 0 && elapsed <= PREDICT_BLOCK_HORIZON_TICKS) {
+            double ticks = Math.max(MIN_SAMPLE_INTERVAL_TICKS, elapsed);
+            yawStep = Mth.clamp(Mth.wrapDegrees(yaw - (float)previous.yaw()) / ticks, -MAX_YAW_PER_TICK, MAX_YAW_PER_TICK);
+            pitchStep = Mth.clamp((pitch - previous.pitch()) / ticks, -MAX_PITCH_PER_TICK, MAX_PITCH_PER_TICK);
+         }
+         return new RotationSample(yaw, pitch, now, yawStep, pitchStep);
+      }
+
+      private static MovementSample sampleBlockMovement(MovementSample previous, Vec3 position, double now) {
+         Vec3 velocity = Vec3.ZERO;
+         double elapsed = previous == null ? 0 : now - previous.tick();
+         if (elapsed > 0 && elapsed <= MOVEMENT_HISTORY_TICKS) {
+            var change = position.subtract(previous.position());
+            // A teleport is a new observation, rather than movement to extrapolate.
+            if (change.lengthSqr() <= MAX_SAMPLE_DISPLACEMENT_SQUARED) velocity = change.scale(1 / Math.max(MIN_SAMPLE_INTERVAL_TICKS, elapsed));
+         }
+         return new MovementSample(position, now, velocity);
+      }
+
+      private static boolean predictsMovingBlockThreat(double distanceSquared, Vec3 eyes, RotationSample rotation, double now,
+                                              Vec3 attackerVelocity, Vec3 localVelocity, AABB target,
+                                              double wallRange, BiPredicate<Vec3, Vec3> occluded) {
+         if (distanceSquared > PREDICT_BLOCK_RANGE * PREDICT_BLOCK_RANGE) return false;
+         double age = now - rotation.tick();
+         double yawStep = age >= 0 && age <= PREDICT_BLOCK_HORIZON_TICKS ? rotation.yawPerTick() : 0;
+         double pitchStep = age >= 0 && age <= PREDICT_BLOCK_HORIZON_TICKS ? rotation.pitchPerTick() : 0;
+         // Sample the turn over the next two ticks so a fast sweep cannot skip the hitbox.
+         for (int step = 0; step <= PREDICT_BLOCK_STEPS; step++) {
+            double ticksAhead = step * PREDICT_BLOCK_HORIZON_TICKS / PREDICT_BLOCK_STEPS;
+            float yaw = (float)(rotation.yaw() + yawStep * ticksAhead);
+            float pitch = (float)Mth.clamp(rotation.pitch() + pitchStep * ticksAhead, -90, 90);
+            Vec3 origin = eyes.add(attackerVelocity.scale(ticksAhead));
+            AABB predictedBox = target.move(localVelocity.scale(ticksAhead));
+            Vec3 direction = Vec3.directionFromRotation(pitch, yaw);
+            if (direction.dot(predictedBox.getCenter().subtract(origin)) <= 0) continue;
+            if (raycastDistance(origin, direction, predictedBox.inflate(PREDICT_BLOCK_TOLERANCE),
+                PREDICT_BLOCK_RANGE, wallRange, hit -> occluded.test(origin, hit)) >= 0) return true;
+         }
+         return false;
+      }
+
+      // Passive checks never replace samples; time is measured in fractional ticks on a monotonic clock.
+      private record RotationSample(double yaw, double pitch, double tick, double yawPerTick, double pitchPerTick) { }
+      private record MovementSample(Vec3 position, double tick, Vec3 velocity) { }
    }
 }

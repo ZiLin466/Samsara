@@ -2,6 +2,7 @@ package com.samsara.module.visual;
 
 import com.samsara.event.Event;
 import com.samsara.event.Events;
+import com.samsara.event.impl.EventPacketReceive;
 import com.samsara.module.Category;
 import com.samsara.module.Feature;
 import com.samsara.setting.BooleanSetting;
@@ -48,7 +49,7 @@ public class Ambience extends Feature {
          this.appliedLevel = mc.level;
       }
 
-      if (event == Events.PACKET_RECEIVE && Events.PACKET_RECEIVE.getPacket() instanceof ClientboundSetTimePacket) {
+      if (event instanceof EventPacketReceive receiving && receiving.getPacket() instanceof ClientboundSetTimePacket) {
          event.setCancelled(true);
       }
 

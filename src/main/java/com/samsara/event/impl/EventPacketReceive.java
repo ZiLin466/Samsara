@@ -3,19 +3,20 @@ package com.samsara.event.impl;
 import com.samsara.event.Event;
 import net.minecraft.network.protocol.Packet;
 
-public class EventPacketReceive extends Event {
-   private Packet packet;
+public final class EventPacketReceive extends Event {
+   private Packet<?> packet;
 
-   public EventPacketReceive reset(Packet packet) {
+   public EventPacketReceive() { }
+
+   public EventPacketReceive(Packet<?> packet) {
       this.packet = packet;
-      return this;
    }
 
-   public Packet getPacket() {
+   public Packet<?> getPacket() {
       return this.packet;
    }
 
-   public void setPacket(Packet packet) {
+   public void setPacket(Packet<?> packet) {
       this.packet = packet;
    }
 }

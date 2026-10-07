@@ -2,6 +2,7 @@ package com.samsara.module.player;
 
 import com.samsara.event.Event;
 import com.samsara.event.Events;
+import com.samsara.event.impl.EventPacketSend;
 import com.samsara.module.Category;
 import com.samsara.module.Feature;
 import com.samsara.setting.BooleanSetting;
@@ -60,7 +61,7 @@ public class LagRange extends Feature {
 
    @Override
    public void onEvent(Event event) {
-      if (event == Events.PACKET_SEND && Events.PACKET_SEND.getPacket() instanceof ServerboundAttackPacket attackPacket) {
+      if (event instanceof EventPacketSend sending && sending.getPacket() instanceof ServerboundAttackPacket attackPacket) {
          if (this.lagWhenClose.getValue() && mc.player.distanceTo(Objects.requireNonNull(mc.level.getEntity(attackPacket.entityId()))) < 2.0F) {
             return;
          }

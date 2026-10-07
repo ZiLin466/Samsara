@@ -52,15 +52,13 @@ public class MixinMinecraft {
 
    @Inject(method = "tick", at = @At("TAIL"))
    private void samsara$trackSessionAndSave(CallbackInfo callback) {
-      com.samsara.module.visual.Hud.SessionHud.SessionTracker.tick();
+      FeatureManager.clientTickEnd();
       com.samsara.config.ConfigManager.tick();
    }
 
    @Inject(method = "tick", at = @At("HEAD"))
    private void samsara$initializeRestoredWorldModules(CallbackInfo callback) {
-      if (this.modulesInitialized) FeatureManager.getModules().forEach(com.samsara.module.Feature::initializeWorldState);
-      if (this.modulesInitialized && FeatureManager.velocity != null) FeatureManager.velocity.clientTick();
-      if (this.modulesInitialized && FeatureManager.autoRod != null) FeatureManager.autoRod.clientTick();
+      if (this.modulesInitialized) FeatureManager.clientTick();
    }
 
    @Inject(method = "close", at = @At("HEAD"))

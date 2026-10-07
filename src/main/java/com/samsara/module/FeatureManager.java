@@ -65,7 +65,6 @@ public class FeatureManager {
    public static AntiBot antiBot;
    public static KillAura killAura;
    public static Scoreboard scoreboard;
-   private static List<Feature> sortedModules;
    public static AntiFire antiFire;
    public static BedAura bedAura;
    public static LongJump longJump;
@@ -75,15 +74,27 @@ public class FeatureManager {
    public static NameTags nameTags;
    public static ChestStealer chestStealer;
    public static Whitelist whitelist;
-   private static List<Feature> modules;
    public static KeepSprint keepSprint;
    public static AntiSwim antiSwim;
    public static Blink blink;
    public static Stasis stasis;
 
+   private static List<Feature> modules;
+   private static List<Feature> sortedModules;
+
    public static void loadEnabled() {
       sortedModules = new ArrayList<>(modules);
       sortModules();
+   }
+
+   public static void clientTick() {
+      for (Feature feature : modules) feature.initializeWorldState();
+      for (Feature feature : modules) feature.clientTick();
+   }
+
+   public static void clientTickEnd() {
+      if (modules == null) return;
+      for (Feature feature : modules) feature.clientTickEnd();
    }
 
    public static void registerModules() {

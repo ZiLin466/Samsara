@@ -211,7 +211,7 @@ public class BedAura extends Feature {
             return;
          }
 
-         if ((FeatureManager.killAura.target != null || FeatureManager.killAura.serverBlocking) && !this.allowKillAura.getValue() || FeatureManager.scaffold.isEnabled()) {
+         if ((FeatureManager.killAura.getTarget() != null || FeatureManager.killAura.isServerBlocking()) && !this.allowKillAura.getValue() || FeatureManager.scaffold.isEnabled()) {
             this.resetDigging();
             return;
          }

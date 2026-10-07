@@ -1,10 +1,9 @@
 package com.samsara.config;
 
 import com.google.gson.JsonObject;
-import com.google.gson.JsonArray;
 import com.samsara.module.Category;
 import com.samsara.module.Feature;
-import com.samsara.setting.*;
+import com.samsara.setting.Setting;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.function.Consumer;
@@ -29,14 +28,7 @@ public final class ModuleConfigCodec {
          moduleState.addProperty("hidden", !defaults && module.isHidden());
          for (Setting setting : module.settings) {
             if (scope == Scope.GAMEPLAY && module instanceof com.samsara.module.combat.TargetSettings && setting.getName().equals("Visual")) continue;
-            if (setting instanceof BooleanSetting flag) settings.addProperty(setting.getName(), defaults ? flag.getDefaultValue() : flag.getValue());
-            else if (setting instanceof NumberSetting number) settings.addProperty(setting.getName(), defaults ? number.getDefaultValue() : number.getValue());
-            else if (setting instanceof ModeSetting mode) settings.addProperty(setting.getName(), defaults ? mode.getDefaultValue() : mode.getValue());
-            else if (setting instanceof MultiSelectSetting choices) {
-               var selected = new JsonArray();
-               (defaults ? choices.defaultValues() : choices.selectedValues()).forEach(selected::add);
-               settings.add(setting.getName(), selected);
-            }
+            settings.add(setting.getName(), setting.snapshot(defaults));
          }
          moduleState.add("settings", settings); root.add(module.getName(), moduleState);
       }
@@ -69,9 +61,8 @@ public final class ModuleConfigCodec {
                var values = moduleState.getAsJsonObject("settings");
                for (Setting setting : module.settings) {
                   if (scope == Scope.GAMEPLAY && module instanceof com.samsara.module.combat.TargetSettings && setting.getName().equals("Visual")) continue;
-                  if (!values.has(setting.getName()) && !(setting instanceof MultiSelectSetting)) continue;
                   try {
-                     prepareSetting(settings, setting, values);
+                     settings.add(setting.prepareRestore(values));
                   } catch (RuntimeException error) {
                      if (!startup) throw error;
                      warning.accept(module.getName()+" / "+setting.getName()+": "+error.getMessage());
@@ -97,33 +88,4 @@ public final class ModuleConfigCodec {
       return () -> { settings.forEach(Runnable::run); lifecycle.forEach(Runnable::run); };
    }
 
-   private static void prepareSetting(List<Runnable> actions, Setting setting, JsonObject values) {
-      var value = values.get(setting.getName());
-      if (setting instanceof BooleanSetting bool) {
-         if (!value.isJsonPrimitive() || !value.getAsJsonPrimitive().isBoolean()) throw new IllegalArgumentException("Invalid boolean");
-         boolean desired = value.getAsBoolean(); actions.add(() -> bool.setValue(desired));
-      } else if (setting instanceof NumberSetting number) {
-         double desired = value.getAsDouble();
-         if (!Double.isFinite(desired)) throw new IllegalArgumentException("Non-finite setting");
-         actions.add(() -> number.setValue(desired));
-      } else if (setting instanceof ModeSetting mode) {
-         String selected = mode.canonical(value.getAsString());
-         actions.add(() -> mode.setValue(selected));
-      } else if (setting instanceof MultiSelectSetting choices) {
-         List<String> selected;
-         if (value == null) selected = choices.legacySelection(values);
-         else {
-            if (!value.isJsonArray()) throw new IllegalArgumentException("Invalid selection array");
-            var entries = new ArrayList<String>();
-            for (var entry : value.getAsJsonArray()) {
-               if (!entry.isJsonPrimitive() || !entry.getAsJsonPrimitive().isString()) {
-                  throw new IllegalArgumentException("Invalid choice");
-               }
-               entries.add(entry.getAsString());
-            }
-            selected = choices.canonical(entries);
-         }
-         actions.add(() -> choices.setSelected(selected));
-      }
-   }
 }

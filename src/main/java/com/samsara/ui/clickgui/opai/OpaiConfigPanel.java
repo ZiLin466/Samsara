@@ -1,5 +1,6 @@
 package com.samsara.ui.clickgui.opai;
 
+import com.samsara.config.ConfigRepository;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.HashMap;
@@ -287,7 +288,7 @@ final class OpaiConfigPanel {
    }
    void create(boolean blank) {
       try {
-         String name = OpaiConfigRepository.validName(this.input);
+         String name = ConfigRepository.validName(this.input);
          if (this.names.stream().anyMatch(item -> item.equalsIgnoreCase(name))) throw new IllegalArgumentException("Name already exists");
          this.backend.create(name, blank);
          refresh();

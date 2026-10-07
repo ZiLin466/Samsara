@@ -25,7 +25,7 @@ final class MovementInputTest {
          }
       };
       var enabled = Feature.class.getDeclaredField("enabled"); enabled.setAccessible(true); enabled.set(fixture, true);
-      modules.add(fixture); Events.MOVE_INPUT.sortModules();
+      modules.add(fixture); Events.initializeListeners();
       try {
          Method method = MixinKeyboardInput.class.getDeclaredMethod("samsara$movementInput", Input.class);
          method.setAccessible(true);
@@ -34,6 +34,6 @@ final class MovementInputTest {
          assertFalse(original.jump()); assertTrue(changed.jump());
          assertTrue(changed.forward()); assertTrue(changed.sprint());
          assertFalse(changed.backward()); assertFalse(changed.left()); assertFalse(changed.right());
-      } finally { modules.remove(fixture); Events.MOVE_INPUT.sortModules(); }
+      } finally { modules.remove(fixture); Events.initializeListeners(); }
    }
 }

@@ -2,6 +2,7 @@ package com.samsara.module.movement;
 
 import com.samsara.event.Event;
 import com.samsara.event.Events;
+import com.samsara.event.impl.EventPacketSend;
 import com.samsara.module.Category;
 import com.samsara.module.Feature;
 import com.samsara.setting.BooleanSetting;
@@ -51,12 +52,12 @@ public class Blink extends Feature {
 
    @Override
    public void onEvent(Event event) {
-      if (event == Events.PACKET_SEND) {
+      if (event instanceof EventPacketSend sending) {
          if (this.flushing || mc.player == null) {
             return;
          }
 
-         Packet packet = Events.PACKET_SEND.getPacket();
+         Packet packet = sending.getPacket();
          if (packet instanceof ServerboundHelloPacket || packet instanceof ClientIntentionPacket) {
             return;
          }

@@ -57,14 +57,13 @@ public class Scaffold extends Feature {
    private final NumberSetting sneakDelay;
 
    private final float[] yawOffsets;
-   private final PlacementTarget placementTarget;
    private final float[] pitchOffsets;
 
    private float rotationPitch;
    private int placedBlocks;
    private int previousSlot;
    private boolean jumpStartedOnGround;
-   private boolean rotationUpdated;
+   private RotationUpdate rotationUpdate = RotationUpdate.PENDING;
    private float rotationYaw;
    private int bridgeY;
    private float targetPitch;
@@ -72,9 +71,8 @@ public class Scaffold extends Feature {
    private float targetYaw;
    private boolean pendingWatchdogJump;
    private boolean rightMousePressed;
-   private boolean rotationAligned;
 
-   private float[] placementRotation(BlockHitResult blockHit) {
+   private PlacementRotation placementRotation(BlockHitResult blockHit) {
       Vec3 eyePosition = mc.player.getEyePosition();
       Vec3 position = blockHit.getLocation();
       double deltaX = position.x - eyePosition.x;
@@ -83,11 +81,11 @@ public class Scaffold extends Feature {
       double horizontalDistance = Math.sqrt(deltaX * deltaX + deltaZ * deltaZ);
       float pitch = (float)(-Math.toDegrees(Math.atan2(deltaY, horizontalDistance)));
       return switch (this.rotations.getValue()) {
-         case BACKWARD_LABEL -> new float[]{MoveDirectionUtil.movementYaw() - 180.0F, pitch};
-         case OFFSET_LABEL -> new float[]{this.backwardOffsetYaw(), 83.0F};
+         case BACKWARD_LABEL -> new PlacementRotation(MoveDirectionUtil.movementYaw() - 180.0F, pitch);
+         case OFFSET_LABEL -> new PlacementRotation(this.backwardOffsetYaw(), 83.0F);
          case RAYCAST_LABEL -> this.findRaycastRotation(blockHit, MoveDirectionUtil.movementYaw() - 180.0F);
          case RAYCAST2_LABEL -> this.findRaycastRotation(blockHit, this.targetYaw);
-         default -> new float[]{(float)Math.toDegrees(Math.atan2(deltaZ, deltaX)) - 90.0F, pitch};
+         default -> new PlacementRotation((float)Math.toDegrees(Math.atan2(deltaZ, deltaX)) - 90.0F, pitch);
       };
    }
 
@@ -107,8 +105,7 @@ public class Scaffold extends Feature {
    }
 
    private void updateRotation(float yaw, float pitch) {
-      if (!this.rotationUpdated) {
-         this.rotationUpdated = true;
+      if (this.rotationUpdate == RotationUpdate.PENDING) {
          float rotationStep = (float)(this.rotationSpeed.getValue() * 20.0 - Math.random());
          if (this.jumpStartedOnGround && this.fastMode.is(WATCHDOG_LABEL)) {
             rotationStep = (float)(89.0 - Math.random());
@@ -134,14 +131,14 @@ public class Scaffold extends Feature {
          this.rotationYaw = playerYaw + Mth.wrapDegrees(this.rotationYaw - playerYaw);
          this.rotationPitch += pitchDelta;
          if (!((double)Math.abs(Mth.wrapDegrees(this.rotationYaw - yaw)) > 0.1) && !((double)Math.abs(Mth.wrapDegrees(this.rotationPitch - pitch)) > 0.1)) {
-            this.rotationAligned = true;
+            this.rotationUpdate = RotationUpdate.ALIGNED;
          } else {
-            this.rotationAligned = false;
+            this.rotationUpdate = RotationUpdate.MISALIGNED;
          }
       }
    }
 
-   private float[] findRaycastRotation(BlockHitResult targetHit, float baseYaw) {
+   private PlacementRotation findRaycastRotation(BlockHitResult targetHit, float baseYaw) {
       if (this.fastMode.is(WATCHDOG3_LABEL)) {
          baseYaw = MoveDirectionUtil.movementYaw() + 90.0F;
       }
@@ -154,14 +151,13 @@ public class Scaffold extends Feature {
             float pitch = Mth.clamp(basePitch + pitchOffset, -90.0F, 90.0F);
             BlockHitResult candidateHit = this.raycastBlock(yaw, pitch, 4.5F);
             if (candidateHit.getBlockPos().equals(targetHit.getBlockPos()) && candidateHit.getDirection() == targetHit.getDirection()) {
-               return new float[]{yaw, pitch};
+               return new PlacementRotation(yaw, pitch);
             }
          }
       }
 
-      this.rotationAligned = false;
-      this.rotationUpdated = true;
-      return new float[]{this.targetYaw, this.targetPitch};
+      this.rotationUpdate = RotationUpdate.MISALIGNED;
+      return new PlacementRotation(this.targetYaw, this.targetPitch);
    }
 
    private BlockHitResult raycastBlock(float yaw, float pitch, float range) {
@@ -181,7 +177,6 @@ public class Scaffold extends Feature {
       this.watchdogTower = new BooleanSetting(WATCHDOG_TOWER_LABEL, this, false);
       this.sneak = new BooleanSetting(SNEAK_LABEL, this, false);
       this.sneakDelay = new NumberSetting(SNEAK_DELAY_LABEL, this, 0.0, 0.0, 25.0, 1.0);
-      this.placementTarget = new PlacementTarget();
       this.previousSlot = -1;
       this.yawOffsets = searchOffsets(180);
       this.pitchOffsets = searchOffsets(90);
@@ -214,16 +209,15 @@ public class Scaffold extends Feature {
    }
 
    private PlacementTarget getPlaceData(BlockPos targetPosition) {
+      if (!mc.level.getBlockState(targetPosition).canBeReplaced()) return null;
       double nearestDistance = Double.MAX_VALUE;
-      PlacementTarget nearestPlacement = null;
+      BlockPos nearestSupport = null;
+      Direction nearestFace = null;
 
       for (int offsetX = -3; offsetX <= 3; offsetX++) {
          for (int offsetY = -2; offsetY <= 0; offsetY++) {
             for (int offsetZ = -3; offsetZ <= 3; offsetZ++) {
                BlockPos candidatePosition = targetPosition.offset(offsetX, offsetY, offsetZ);
-               if (!mc.level.getBlockState(targetPosition).canBeReplaced()) {
-                  return null;
-               }
 
                if (!mc.level.isEmptyBlock(candidatePosition)) {
                   Direction face = this.placementFace(candidatePosition, targetPosition);
@@ -231,8 +225,8 @@ public class Scaffold extends Feature {
                      double distanceSquared = mc.player.distanceToSqr((double)candidatePosition.getX() + 0.5, (double)candidatePosition.getY() + 0.5, (double)candidatePosition.getZ() + 0.5);
                      if (distanceSquared < nearestDistance && face != Direction.DOWN) {
                         nearestDistance = distanceSquared;
-                        this.placementTarget.set(candidatePosition, face);
-                        nearestPlacement = this.placementTarget;
+                        nearestSupport = candidatePosition;
+                        nearestFace = face;
                      }
                   }
                }
@@ -240,130 +234,136 @@ public class Scaffold extends Feature {
          }
       }
 
-      return nearestPlacement;
+      return nearestSupport == null ? null : new PlacementTarget(nearestSupport, nearestFace);
    }
 
    @Override
    public void onEvent(Event event) {
-      if (event == Events.POST_MOTION) {
-         DynamicIslandManager.sampleScaffoldMovement();
+      if (event == Events.POST_MOTION) DynamicIslandManager.sampleScaffoldMovement();
+      else if (event == Events.MOUSE_BUTTON) this.handleMouseButton(event);
+      else if (event == Events.ROTATION) this.updatePlacementRotation();
+      else if (event == Events.PRE_MOTION) this.updateBodyRotation();
+      else if (event == Events.TICK) this.selectBlockSlot();
+      else if (event == Events.POST_MOVE_INPUT) this.updateBridgeInput();
+   }
+
+   private void handleMouseButton(Event event) {
+      if (mc.gui.screen() == null) {
+         event.setCancelled(true);
       }
 
-      if (event == Events.MOUSE_BUTTON) {
-         if (mc.gui.screen() == null) {
-            event.setCancelled(true);
-         }
+      if (Events.MOUSE_BUTTON.getButton() == 1) {
+         this.rightMousePressed = Events.MOUSE_BUTTON.isPressed();
+      }
+   }
 
-         if (Events.MOUSE_BUTTON.getButton() == 1) {
-            this.rightMousePressed = Events.MOUSE_BUTTON.isPressed();
-         }
+   private void updatePlacementRotation() {
+      if (this.keepY.getValue() && mc.options.keyJump.isDown()) {
+         this.bridgeY = (int)mc.player.getY() - 1;
       }
 
-      if (event == Events.ROTATION) {
-         boolean shouldSneak = true;
-         if (this.keepY.getValue() && mc.options.keyJump.isDown()) {
-            this.bridgeY = (int)mc.player.getY() - 1;
-         }
-
-         if (this.ticksSincePlacement > 0) {
-            this.ticksSincePlacement--;
-         }
-
-         if ((this.fastMode.is(WATCHDOG_LABEL) || this.fastMode.is(WATCHDOG2_LABEL) || this.fastMode.is(TELLY_LABEL)) && mc.player.onGround() && (!this.tellyRmb.getValue() || this.rightMousePressed)) {
-            float initialMovementYaw = MoveDirectionUtil.movementYaw();
-            Events.ROTATION.setYaw(initialMovementYaw);
-            this.rotationYaw = initialMovementYaw;
-            this.jumpStartedOnGround = mc.player.onGround();
-            return;
-         }
-
-         this.rotationUpdated = false;
-         BlockPos blockPosition = mc.player.blockPosition().below();
-         if (this.keepY.getValue()) {
-            blockPosition = blockPosition.atY(this.bridgeY);
-         }
-
-         if (mc.level.isEmptyBlock(blockPosition) && shouldSneak) {
-            int blockSlot = this.findBlockSlot();
-            if (blockSlot != -1) {
-               PlacementTarget placement = this.getPlaceData(blockPosition);
-               if (placement != null) {
-                  Vec3 position = Vec3.atCenterOf(placement.position);
-                  BlockHitResult blockHit = new BlockHitResult(position, placement.face, placement.position, false);
-                  float[] angles = this.placementRotation(blockHit);
-                  this.updateRotation(angles[0], angles[1]);
-                  this.targetYaw = angles[0];
-                  this.targetPitch = angles[1];
-                  if (this.watchdogTower.getValue() && mc.options.keyJump.isDown() && mc.player.onGround()) {
-                     this.rotationAligned = false;
-                  }
-
-                  if (this.rotationAligned) {
-                     mc.gameMode.useItemOn(mc.player, InteractionHand.MAIN_HAND, blockHit);
-                     mc.player.swing(InteractionHand.MAIN_HAND, net.minecraft.world.item.component.SwingAnimation.DEFAULT, false);
-                     this.placedBlocks++;
-                     this.ticksSincePlacement = 10;
-                  }
-               }
-            }
-         }
-
-         if (this.fastMode.is(WATCHDOG3_LABEL)) {
-            float movementYaw = MoveDirectionUtil.movementYaw();
-            float diagonalYaw = movementYaw + 45.0F;
-            float yawDifference = Math.abs(Mth.wrapDegrees(diagonalYaw - this.rotationYaw));
-            if (this.ticksSincePlacement == (yawDifference > 60.0F ? 8 : 9) && !mc.options.keyJump.isDown() && this.jumpStartedOnGround) {
-               this.rotationYaw = movementYaw + 45.0F;
-            }
-
-            if (mc.player.onGround()) {
-               this.bridgeY = (int)(mc.player.getY() - 1.0);
-            }
-         } else {
-            this.updateRotation(this.targetYaw, this.targetPitch);
-         }
-
-         if (this.watchdogTower.getValue() && mc.player.onGround() && mc.options.keyJump.isDown()) {
-            this.rotationYaw = MoveDirectionUtil.movementYaw();
-         }
-
-         Events.ROTATION.setYaw(this.rotationYaw);
-         Events.ROTATION.setPitch(this.rotationPitch);
-         if (!this.fastMode.is(WATCHDOG3_LABEL)) {
-            this.jumpStartedOnGround = mc.player.onGround();
-         }
+      if (this.ticksSincePlacement > 0) {
+         this.ticksSincePlacement--;
       }
 
-      if (event == Events.PRE_MOTION && (this.fastMode.is(WATCHDOG3_LABEL) || this.watchdogTower.getValue() && mc.options.keyJump.isDown() && !mc.player.onGround())) {
+      if ((this.fastMode.is(WATCHDOG_LABEL) || this.fastMode.is(WATCHDOG2_LABEL) || this.fastMode.is(TELLY_LABEL)) && mc.player.onGround() && (!this.tellyRmb.getValue() || this.rightMousePressed)) {
+         float initialMovementYaw = MoveDirectionUtil.movementYaw();
+         Events.ROTATION.setYaw(initialMovementYaw);
+         this.rotationYaw = initialMovementYaw;
+         this.jumpStartedOnGround = mc.player.onGround();
+         return;
+      }
+
+      this.rotationUpdate = RotationUpdate.PENDING;
+      BlockPos blockPosition = mc.player.blockPosition().below();
+      if (this.keepY.getValue()) {
+         blockPosition = blockPosition.atY(this.bridgeY);
+      }
+
+      this.placeBlockIfNeeded(blockPosition);
+
+      if (this.fastMode.is(WATCHDOG3_LABEL)) {
+         float movementYaw = MoveDirectionUtil.movementYaw();
+         float diagonalYaw = movementYaw + 45.0F;
+         float yawDifference = Math.abs(Mth.wrapDegrees(diagonalYaw - this.rotationYaw));
+         if (this.ticksSincePlacement == (yawDifference > 60.0F ? 8 : 9) && !mc.options.keyJump.isDown() && this.jumpStartedOnGround) {
+            this.rotationYaw = movementYaw + 45.0F;
+         }
+
+         if (mc.player.onGround()) {
+            this.bridgeY = (int)(mc.player.getY() - 1.0);
+         }
+      } else {
+         this.updateRotation(this.targetYaw, this.targetPitch);
+      }
+
+      if (this.watchdogTower.getValue() && mc.player.onGround() && mc.options.keyJump.isDown()) {
+         this.rotationYaw = MoveDirectionUtil.movementYaw();
+      }
+
+      Events.ROTATION.setYaw(this.rotationYaw);
+      Events.ROTATION.setPitch(this.rotationPitch);
+      if (!this.fastMode.is(WATCHDOG3_LABEL)) {
+         this.jumpStartedOnGround = mc.player.onGround();
+      }
+   }
+
+   private void placeBlockIfNeeded(BlockPos blockPosition) {
+      if (!mc.level.isEmptyBlock(blockPosition)) return;
+      int blockSlot = this.findBlockSlot();
+      if (blockSlot == -1) return;
+      PlacementTarget placement = this.getPlaceData(blockPosition);
+      if (placement == null) return;
+
+      Vec3 position = Vec3.atCenterOf(placement.position());
+      BlockHitResult blockHit = new BlockHitResult(position, placement.face(), placement.position(), false);
+      PlacementRotation angles = this.placementRotation(blockHit);
+      this.updateRotation(angles.yaw(), angles.pitch());
+      this.targetYaw = angles.yaw();
+      this.targetPitch = angles.pitch();
+      if (this.watchdogTower.getValue() && mc.options.keyJump.isDown() && mc.player.onGround()) {
+         this.rotationUpdate = RotationUpdate.MISALIGNED;
+      }
+
+      if (this.rotationUpdate == RotationUpdate.ALIGNED) {
+         mc.gameMode.useItemOn(mc.player, InteractionHand.MAIN_HAND, blockHit);
+         mc.player.swing(InteractionHand.MAIN_HAND, net.minecraft.world.item.component.SwingAnimation.DEFAULT, false);
+         this.placedBlocks++;
+         this.ticksSincePlacement = 10;
+      }
+   }
+
+   private void updateBodyRotation() {
+      if (this.fastMode.is(WATCHDOG3_LABEL) || this.watchdogTower.getValue() && mc.options.keyJump.isDown() && !mc.player.onGround()) {
          float backwardYaw = MoveDirectionUtil.movementYaw() - 180.0F;
          Minecraft.getInstance().player.yHeadRot = backwardYaw;
          Minecraft.getInstance().player.yBodyRot = backwardYaw;
       }
+   }
 
-      if (event == Events.TICK) {
-         int placementSlot = this.findBlockSlot();
-         if (placementSlot != -1 && mc.player.getInventory().getSelectedSlot() != placementSlot) {
-            mc.player.getInventory().setSelectedSlot(placementSlot);
-         }
+   private void selectBlockSlot() {
+      int placementSlot = this.findBlockSlot();
+      if (placementSlot != -1 && mc.player.getInventory().getSelectedSlot() != placementSlot) {
+         mc.player.getInventory().setSelectedSlot(placementSlot);
+      }
+   }
+
+   private void updateBridgeInput() {
+      if (this.fastMode.is(WATCHDOG3_LABEL) && !this.jumpStartedOnGround) {
+         mc.player.input.makeJump();
+         this.jumpStartedOnGround = true;
       }
 
-      if (event == Events.POST_MOVE_INPUT) {
-         if (this.fastMode.is(WATCHDOG3_LABEL) && !this.jumpStartedOnGround) {
-            mc.player.input.makeJump();
-            this.jumpStartedOnGround = true;
-         }
+      if ((this.fastMode.is(TELLY_LABEL) || this.fastMode.is(WATCHDOG_LABEL) || this.fastMode.is(WATCHDOG2_LABEL))
+         && (mc.player.input.getMoveVector().x != 0.0F || mc.player.input.getMoveVector().y != 0.0F)
+         && (!this.tellyRmb.getValue() || this.rightMousePressed)) {
+         mc.player.input.makeJump();
+      }
 
-         if ((this.fastMode.is(TELLY_LABEL) || this.fastMode.is(WATCHDOG_LABEL) || this.fastMode.is(WATCHDOG2_LABEL))
-            && (mc.player.input.getMoveVector().x != 0.0F || mc.player.input.getMoveVector().y != 0.0F)
-            && (!this.tellyRmb.getValue() || this.rightMousePressed)) {
-            mc.player.input.makeJump();
-         }
-
-         if (this.sneak.getValue()) {
-            Input input = mc.player.input.keyPresses;
-            if (mc.player.tickCount % (int)(this.sneakDelay.getValue() + 1.0) == 0) {
-               mc.player.input.keyPresses = new Input(input.forward(), input.backward(), input.left(), input.right(), input.jump(), true, input.sprint());
-            }
+      if (this.sneak.getValue()) {
+         Input input = mc.player.input.keyPresses;
+         if (mc.player.tickCount % (int)(this.sneakDelay.getValue() + 1.0) == 0) {
+            mc.player.input.keyPresses = new Input(input.forward(), input.backward(), input.left(), input.right(), input.jump(), true, input.sprint());
          }
       }
    }
@@ -378,7 +378,8 @@ public class Scaffold extends Feature {
       this.targetPitch = 83.0F;
       this.rotationPitch = 83.0F;
       this.jumpStartedOnGround = false;
-      this.rotationUpdated = this.rotationAligned = this.pendingWatchdogJump = this.rightMousePressed = false;
+      this.rotationUpdate = RotationUpdate.PENDING;
+      this.pendingWatchdogJump = this.rightMousePressed = false;
       this.ticksSincePlacement = this.placedBlocks = 0;
    }
 
@@ -392,7 +393,8 @@ public class Scaffold extends Feature {
          mc.player.xRotO = mc.player.getXRot();
       }
       this.previousSlot = -1;
-      this.rotationUpdated = this.rotationAligned = this.pendingWatchdogJump = this.rightMousePressed = false;
+      this.rotationUpdate = RotationUpdate.PENDING;
+      this.pendingWatchdogJump = this.rightMousePressed = false;
       this.ticksSincePlacement = this.placedBlocks = 0;
    }
 
@@ -409,18 +411,11 @@ public class Scaffold extends Feature {
       }
    }
 
-   public static class PlacementTarget {
-      public Direction face;
-      public BlockPos position;
+   private enum RotationUpdate { PENDING, ALIGNED, MISALIGNED }
 
-      public void set(BlockPos position, Direction face) {
-         this.position = position;
-         this.face = face;
-      }
+   private record PlacementRotation(float yaw, float pitch) { }
 
-      public PlacementTarget() {
-      }
-   }
+   private record PlacementTarget(BlockPos position, Direction face) { }
 
    public static class MoveDirectionUtil implements Wrapper {
       public static float movementYaw() {

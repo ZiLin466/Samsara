@@ -2,6 +2,7 @@ package com.samsara.module.combat;
 
 import com.samsara.event.Event;
 import com.samsara.event.Events;
+import com.samsara.event.impl.EventPacketSend;
 import com.samsara.module.Category;
 import com.samsara.module.Feature;
 import com.samsara.setting.ModeSetting;
@@ -34,7 +35,7 @@ public class SprintReset extends Feature {
          this.setSuffix(this.mode.getValue());
       }
 
-      if (event == Events.PACKET_SEND && Events.PACKET_SEND.getPacket() instanceof ServerboundAttackPacket attackPacket) {
+      if (event instanceof EventPacketSend sending && sending.getPacket() instanceof ServerboundAttackPacket attackPacket) {
          Entity entity = mc.level.getEntity(attackPacket.entityId());
          if (entity != null && mc.player.isSprinting() && this.resetTicksRemaining <= 0) {
             this.releaseTicksRemaining = (int)this.releaseDelay.getValue();
