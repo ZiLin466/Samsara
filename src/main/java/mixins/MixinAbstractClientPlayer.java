@@ -16,33 +16,34 @@ import org.spongepowered.asm.mixin.injection.callback.CallbackInfoReturnable;
 
 @Mixin({AbstractClientPlayer.class})
 public class MixinAbstractClientPlayer {
-   @Unique
-   private static final Texture skyCapeTexture = new ResourceTexture(
-      Identifier.fromNamespaceAndPath(MixinAbstractClientPlayer.SAMSARA_LABEL, MixinAbstractClientPlayer.CAPE4_LABEL),
-      Identifier.fromNamespaceAndPath(MixinAbstractClientPlayer.SAMSARA_LABEL, MixinAbstractClientPlayer.CAPE4_PNG_LABEL)
-   );
    private static final String CAPE4_LABEL = "cape4";
    private static final String CAPE3_PNG_LABEL = "cape3.png";
    private static final String CAPE2_LABEL = "cape2";
    private static final String CAT_LABEL = "Cat";
    private static final String CAPE2_PNG_LABEL = "cape2.png";
    private static final String CAPE_LABEL = "cape";
+   private static final String SKY_LABEL = "Sky";
+   private static final String CRYPTIX_LABEL = "Cryptix";
+   private static final String CAPE4_PNG_LABEL = "cape4.png";
+   private static final String SAMSARA_LABEL = "samsara";
+   private static final String CAPE_PNG_LABEL = "cape.png";
+   private static final String CAPE3_LABEL = "cape3";
+   private static final String PUSHY_LABEL = "Pushy";
+
+   @Unique
+   private static final Texture skyCapeTexture = new ResourceTexture(
+      Identifier.fromNamespaceAndPath(MixinAbstractClientPlayer.SAMSARA_LABEL, MixinAbstractClientPlayer.CAPE4_LABEL),
+      Identifier.fromNamespaceAndPath(MixinAbstractClientPlayer.SAMSARA_LABEL, MixinAbstractClientPlayer.CAPE4_PNG_LABEL)
+   );
    @Unique
    private static final Texture cryptixCapeTexture = new ResourceTexture(
       Identifier.fromNamespaceAndPath(MixinAbstractClientPlayer.SAMSARA_LABEL, CAPE_LABEL),
       Identifier.fromNamespaceAndPath(MixinAbstractClientPlayer.SAMSARA_LABEL, MixinAbstractClientPlayer.CAPE_PNG_LABEL)
    );
-   private static final String SKY_LABEL = "Sky";
-   private static final String CRYPTIX_LABEL = "Cryptix";
-   private static final String CAPE4_PNG_LABEL = "cape4.png";
-   private static final String SAMSARA_LABEL = "samsara";
    @Unique
    private static final Texture catCapeTexture = new ResourceTexture(Identifier.fromNamespaceAndPath(SAMSARA_LABEL, CAPE2_LABEL), Identifier.fromNamespaceAndPath(SAMSARA_LABEL, CAPE2_PNG_LABEL));
-   private static final String CAPE_PNG_LABEL = "cape.png";
-   private static final String CAPE3_LABEL = "cape3";
    @Unique
    private static final Texture pushyCapeTexture = new ResourceTexture(Identifier.fromNamespaceAndPath(SAMSARA_LABEL, CAPE3_LABEL), Identifier.fromNamespaceAndPath(SAMSARA_LABEL, CAPE3_PNG_LABEL));
-   private static final String PUSHY_LABEL = "Pushy";
 
    @Inject(
       method = {"getSkin"},

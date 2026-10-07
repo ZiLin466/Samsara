@@ -21,10 +21,6 @@ import static org.lwjgl.nanovg.NanoVG.*;
 
 /** Keeps NanoVG's path and glyph generation while submitting through the game's GPU API. */
 public final class NanoVGBackend implements AutoCloseable {
-   private static final ValueLayout.OfInt INT = ValueLayout.JAVA_INT;
-   private static final ValueLayout.OfFloat FLOAT = ValueLayout.JAVA_FLOAT;
-   private static final AddressLayout POINTER = ValueLayout.ADDRESS;
-   private static final MemoryLayout COMPOSITE = MemoryLayout.structLayout(INT, INT, INT, INT);
    private static final int PATH_SIZE = 56;
    private static final String VERTEX = """
       #version 450
@@ -77,6 +73,12 @@ public final class NanoVGBackend implements AutoCloseable {
          color=result*clip*(type==3 ? 1.0 : edge);
       }
       """;
+
+   private static final ValueLayout.OfInt INT = ValueLayout.JAVA_INT;
+   private static final ValueLayout.OfFloat FLOAT = ValueLayout.JAVA_FLOAT;
+   private static final AddressLayout POINTER = ValueLayout.ADDRESS;
+   private static final MemoryLayout COMPOSITE = MemoryLayout.structLayout(INT, INT, INT, INT);
+
    private final GpuDevice device;
    private final Arena arena = Arena.ofShared();
    private final ArrayList<Draw> draws = new ArrayList<>();
@@ -86,6 +88,7 @@ public final class NanoVGBackend implements AutoCloseable {
    private final MemorySegment params;
    private final java.lang.invoke.MethodHandle create;
    private final java.lang.invoke.MethodHandle delete;
+
    private long context;
    private int imageId;
    private float width, height;

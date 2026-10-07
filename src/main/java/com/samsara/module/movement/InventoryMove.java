@@ -10,9 +10,10 @@ import net.minecraft.client.gui.screens.ChatScreen;
 import net.minecraft.world.phys.Vec3;
 
 public class InventoryMove extends Feature {
-   private NumberSetting motion;
    private static final String INV_MOVE_LABEL = "InvMove";
    private static final String MOTION_LABEL = "Motion";
+
+   private NumberSetting motion;
 
    @Override
    public void onEvent(Event event) {

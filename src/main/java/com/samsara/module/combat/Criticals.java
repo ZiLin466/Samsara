@@ -13,12 +13,14 @@ import net.minecraft.network.protocol.game.ServerboundMovePlayerPacket.PosRot;
 import net.minecraft.network.protocol.game.ServerboundMovePlayerPacket.Rot;
 
 public class Criticals extends Feature {
-   private double movementTimeBalanceMillis;
    private static final String CRITICALS_LABEL = "Criticals";
    private static final String PACKET_LABEL = "Packet";
    private static final String MODE_LABEL = "Mode";
-   private ModeSetting mode;
    private static final String TIMER_LABEL = "Timer";
+
+   private ModeSetting mode;
+
+   private double movementTimeBalanceMillis;
    private long lastMovementTimeMillis;
 
    private void sendCriticalJumpPackets() {

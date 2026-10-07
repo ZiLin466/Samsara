@@ -20,12 +20,14 @@ public class PlayerEsp extends Feature {
    private static final int HEALTH_BAR_OFFSET = 4;
    private static final String HEALTH_BAR_LABEL = "Health bar";
    private static final String PLAYER_ESP_LABEL = "PlayerESP";
+   private static final String TWO_DIMENSIONAL_LABEL = "2D";
+   private static final String OUTLINE_LABEL = "Outline";
+
    private final BooleanSetting twoDimensional;
    private final BooleanSetting healthBar;
    private final BooleanSetting outline;
+
    private final MutableVector3d projectedPosition;
-   private static final String TWO_DIMENSIONAL_LABEL = "2D";
-   private static final String OUTLINE_LABEL = "Outline";
 
    public PlayerEsp() {
       super(PLAYER_ESP_LABEL, Category.VISUAL);

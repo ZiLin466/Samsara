@@ -15,11 +15,12 @@ public class Theme extends Feature {
    private static final String CHERRY_LABEL = "Cherry";
    private static final String DEFAULT_LABEL = "Default";
    private static final String FLOWER_LABEL = "Flower";
-   public final ModeSetting theme;
    private static final String SPEED_LABEL = "Speed";
    private static final String GOLD_LABEL = "Gold";
-   public final NumberSetting speed;
    private static final String EMERALD_LABEL = "Emerald";
+
+   public final ModeSetting theme;
+   public final NumberSetting speed;
 
    public Theme() {
       super(THEME_LABEL, Category.VISUAL);

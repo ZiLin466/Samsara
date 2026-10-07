@@ -10,17 +10,20 @@ import java.util.Objects;
 import net.minecraft.client.Minecraft;
 
 public abstract class Feature {
+   private static final String EMPTY_SUFFIX = "";
+
    protected static final Minecraft mc = Minecraft.getInstance();
+
+   private final Category category;
+   private final String name;
+
    public List<Setting> settings = new ArrayList<>();
    private boolean enabled;
    private boolean pendingWorldEnable;
    private int defaultKey = 0;
-   private final Category category;
    private int keyCode;
-   private final String name;
    private String suffix;
    private boolean hidden;
-   private static final String EMPTY_SUFFIX = "";
    private String displayName;
 
    public String getDisplayName() {

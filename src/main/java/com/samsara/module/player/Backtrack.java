@@ -19,14 +19,17 @@ import net.minecraft.world.phys.Vec3;
 
 public class Backtrack extends Feature {
    private static final String BACKTRACK_LABEL = "Backtrack";
-   private boolean trackingTarget;
-   private final NumberSetting ticks;
    private static final String TICKS_LABEL = "Ticks";
-   private int trackingTicks;
-   private final NumberSetting range;
    private static final String RANGE_LABEL = "Range";
-   private Vec3 initialTargetPosition;
+
+   private final NumberSetting range;
+   private final NumberSetting ticks;
+
    private final Queue queuedPackets;
+
+   private boolean trackingTarget;
+   private int trackingTicks;
+   private Vec3 initialTargetPosition;
 
    @Override
    public void onEvent(Event event) {

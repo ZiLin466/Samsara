@@ -20,12 +20,14 @@ import net.minecraft.world.phys.Vec2;
 public class Disabler extends Feature {
    private static final String WATCHDOG_INV_MOVE_LABEL = "Watchdog InvMove";
    private static final String KEEP_ALIVE_PACKET_LABEL = "KeepAlive Packet";
-   private final BooleanSetting watchdogInvMove;
-   private final BooleanSetting sprintPacket;
    private static final String DISABLER_LABEL = "Disabler";
-   int ticks;
-   private final BooleanSetting keepAlivePacket = new BooleanSetting(KEEP_ALIVE_PACKET_LABEL, this, false);
    private static final String SPRINT_PACKET_LABEL = "Sprint Packet";
+
+   private final BooleanSetting keepAlivePacket = new BooleanSetting(KEEP_ALIVE_PACKET_LABEL, this, false);
+   private final BooleanSetting sprintPacket;
+   private final BooleanSetting watchdogInvMove;
+
+   int ticks;
 
    @Override
    public void onEvent(Event event) {

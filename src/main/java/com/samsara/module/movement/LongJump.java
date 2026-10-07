@@ -23,23 +23,26 @@ import net.minecraft.world.item.Items;
 
 public class LongJump extends Feature {
    private static final String MODE_LABEL = "Mode";
+   private static final String FIREBALL_LABEL = "Fireball";
+   private static final String FIREBALL2_LABEL = "Fireball2";
+   private static final String LONG_JUMP_LABEL = "LongJump";
+   private static final String FIREBALL_DELAY_LABEL = "Fireball Delay";
+   private static final String SHOW_PROGRESS_LABEL = "Show Progress";
+
+   private ModeSetting mode;
    private NumberSetting fireballDelay;
+   private BooleanSetting showProgress;
+
+   public final List<TimedPacket> delayedPackets;
+
    private double previousProgress;
    private int jumpTicks;
    private int progressAlpha;
-   private ModeSetting mode;
-   private static final String FIREBALL_LABEL = "Fireball";
-   private static final String FIREBALL2_LABEL = "Fireball2";
    private int delayTicksElapsed;
-   public final List<TimedPacket> delayedPackets;
    private boolean delayingPackets;
    private double progress;
-   private static final String LONG_JUMP_LABEL = "LongJump";
-   private BooleanSetting showProgress;
-   private static final String FIREBALL_DELAY_LABEL = "Fireball Delay";
    private int previousProgressAlpha;
    private int previousSlot;
-   private static final String SHOW_PROGRESS_LABEL = "Show Progress";
 
    private void updatePacketDelay() {
       this.previousProgress = this.progress;

@@ -15,16 +15,18 @@ import net.minecraft.world.phys.Vec2;
 public class SprintReset extends Feature {
    private static final String W_TAP_MODE = "WTap";
    private static final String MODE_LABEL = "Mode";
-   private final ModeSetting mode;
    private static final String DEFAULT_MODE = "WTap";
    private static final String RESET_DELAY_LABEL = "Reset Delay";
-   private final NumberSetting releaseDelay;
    private static final String SPRINT_RESET_LABEL = "SprintReset";
    private static final String RELEASE_DELAY_LABEL = "Release Delay";
+   private static final String S_TAP_LABEL = "STap";
+
+   private final NumberSetting releaseDelay;
+   private final NumberSetting resetDelay;
+   private final ModeSetting mode;
+
    private int resetTicksRemaining;
    private int releaseTicksRemaining;
-   private final NumberSetting resetDelay;
-   private static final String S_TAP_LABEL = "STap";
 
    @Override
    public void onEvent(Event event) {

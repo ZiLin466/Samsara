@@ -58,6 +58,7 @@ import org.joml.Vector3f;
 public final class AutoRod extends Feature {
    private static final List<String> DEFAULT_IGNORED_ITEMS = List.of(
       "minecraft:bow", "minecraft:crossbow", "minecraft:trident", "minecraft:fire_charge", "minecraft:ender_pearl");
+
    private final ModeSetting gravity = mode("Gravity Type", "Linear", "Linear", "Projectile");
    private final NumberSetting minRange = number("Min Range", 3.5, 2, 10, .1);
    private final NumberSetting maxRange = number("Max Range", 5, 2, 10, .1);
@@ -70,7 +71,6 @@ public final class AutoRod extends Feature {
       new String[]{"Click", "Weapon", "Vanilla Name", "Not Breaking"}, List.of());
    private final MultiSelectSetting ignores = new MultiSelectSetting("Ignores", this,
       new String[]{"Open Inventory", "Using Item", "Holding Consumable"}, List.of());
-   private final MultiSelectSetting ignoredItems;
    private final MultiSelectSetting priority = new MultiSelectSetting("Target Priority", this,
       new String[]{"Type", "Distance", "Health", "Direction", "Hurt Time", "Age"}, List.of("Type", "Distance"));
    private final NumberSetting fov = number("Target FOV", 180, 0, 180, 1);
@@ -84,9 +84,12 @@ public final class AutoRod extends Feature {
    private final NumberSetting cooldownMin = number("Cooldown", 4, 1, 50, 1);
    private final NumberSetting cooldownMax = number("Cooldown Max", 8, 1, 50, 1);
    private final BooleanSetting targetRendering = new BooleanSetting("Target Rendering", this, true);
+   private final MultiSelectSetting ignoredItems;
+
    private final Aim aiming = new Aim(this);
    private final Cycle<LivingEntity> cycle = new Cycle<>();
    private final Slot silentSlot = new Slot();
+
    private LivingEntity target;
    private FishingHook bobber;
    private int availableSlot = -2, castSlot = -2;
@@ -393,14 +396,16 @@ public final class AutoRod extends Feature {
          }
       }
       private static final Minecraft mc = Minecraft.getInstance();
+
       private final MultiSelectSetting exemptParts;
-      private final BooleanSetting exemptNearest, delay, lazy, gaussian;
       private final NumberSetting exemptHorizontal, exemptVertical, delayMin, delayMax, lazyMin, lazyMax;
+      private final BooleanSetting exemptNearest, delay, lazy, gaussian;
       private final NumberSetting gaussianYawMin, gaussianYawMax, gaussianPitchMin, gaussianPitchMax, gaussianChance, gaussianSpeedMin, gaussianSpeedMax, gaussianTolerance;
-      private final ModeSetting smoothing, movementCorrection;
       private final NumberSetting yawMin, yawMax, pitchMin, pitchMax, steepness, midpoint;
-      private final NumberSetting yawAccelMin, yawAccelMax, pitchAccelMin, pitchAccelMax, accelErrorYaw, accelErrorPitch, constantErrorYaw, constantErrorPitch, resetTicks, resetThreshold;
       private final BooleanSetting accelerationError, constantError, sigmoidDeceleration;
+      private final NumberSetting yawAccelMin, yawAccelMax, pitchAccelMin, pitchAccelMax, accelErrorYaw, accelErrorPitch, constantErrorYaw, constantErrorPitch, resetTicks, resetThreshold;
+      private final ModeSetting smoothing, movementCorrection;
+
       private Rotation lastRotation;
       private float previousYawSpeed, previousPitchSpeed;
       private int remainingRotationTicks;

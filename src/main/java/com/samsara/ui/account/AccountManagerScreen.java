@@ -24,15 +24,16 @@ import net.minecraft.network.chat.Component;
 import net.minecraft.world.entity.player.PlayerSkin;
 
 public final class AccountManagerScreen extends Screen implements TerminalPage {
-   private final Screen parent;
    private AccountStore store;
    private String status = "选择账号后登录；双击账号可直接登录";
-   private final Filters filters = new Filters();
    private UUID selected;
    private EditBox search;
    private AccountsList list;
    private Button login, favorite, delete, up, down, random;
    private boolean wasBusy;
+
+   private final Screen parent;
+   private final Filters filters = new Filters();
    public AccountManagerScreen(Screen parent) { super(Component.literal("账号设置")); this.parent = parent; }
    @Override protected void init() {
       AccountSessions.captureLauncher();
@@ -162,6 +163,7 @@ public final class AccountManagerScreen extends Screen implements TerminalPage {
    static final class Filters {
       String query = "";
       boolean premium, favorites;
+
       final EnumSet<SavedAccount.Type> types = EnumSet.allOf(SavedAccount.Type.class);
       List<SavedAccount> apply(AccountStore store) { return store.filtered(query, premium, favorites, types); }
       void reveal(SavedAccount account) {

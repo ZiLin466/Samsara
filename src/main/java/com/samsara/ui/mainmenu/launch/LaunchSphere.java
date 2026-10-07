@@ -13,8 +13,9 @@ final class LaunchSphere {
    private final List<float[]> vertices = new ArrayList<>();
    private final List<int[]> faces = new ArrayList<>();
    private final List<int[]> edges = new ArrayList<>();
-   private float[][] projected;
    private final NVGColor color = NVGColor.create();
+
+   private float[][] projected;
 
    void load(Function<String, byte[]> resources) {
       if (vertices.isEmpty()) {

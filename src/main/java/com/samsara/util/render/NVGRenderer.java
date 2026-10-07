@@ -16,13 +16,13 @@ import static org.lwjgl.nanovg.NanoVGGL3.*;
 public final class NVGRenderer {
 
    private static long VG = 0;
-   private static NanoVGBackend gpuBackend;
-   private static final NanoVGStencilBuffer STENCIL = new NanoVGStencilBuffer();
 
+   private static final NanoVGStencilBuffer STENCIL = new NanoVGStencilBuffer();
    public static final NVGPaint NVG_PAINT = NVGPaint.create();
    public static final NVGColor NVG_COLOR_1 = NVGColor.create();
    public static final NVGColor NVG_COLOR_2 = NVGColor.create();
 
+   private static NanoVGBackend gpuBackend;
    private static boolean frameStarted;
    private static boolean failed;
    public static float globalAlpha = 1;

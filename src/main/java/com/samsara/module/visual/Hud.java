@@ -68,14 +68,14 @@ import static org.lwjgl.nanovg.NanoVG.*;
 public class Hud extends Feature {
 
    public final MultiSelectSetting widgets = new MultiSelectSetting("Widgets", this, Widget.labels(), List.of(Widget.labels()));
+   private final ModeSetting arraylistMode;
+
    private final InventoryHud inventoryHud = new InventoryHud();
    private final TargetHud targetHud;
    private final SessionHud sessionHud = new SessionHud();
    private final PotionStatus potionStatus = new PotionStatus();
-   private final ModeSetting arraylistMode;
    private final ArraylistSettings defaultSettings;
    private final ArraylistSettings opaiSettings;
-
    private final List<ArraylistEntry> entries = new ArrayList<>();
    private final List<ArraylistEntry> visibleEntries = new ArrayList<>();
    private final List<OpaiArraylistLayout.Row> opaiRows = new ArrayList<>();
@@ -295,8 +295,11 @@ public class Hud extends Feature {
 
    public static final class ArraylistEntry implements Comparable<ArraylistEntry> {
       public static final float OFFSET = 12;
-      private final Feature module;
+
       private final ModeSetting suffixMode;
+
+      private final Feature module;
+
       private ArraylistMotion motion = new ArraylistMotion();
       private String text = "";
       private OpaiArraylistLayout.Metrics opaiText;
@@ -350,10 +353,11 @@ public class Hud extends Feature {
    /** Analytic critically damped motion: real time and velocity survive rapid reversals. */
    public static final class ArraylistMotion {
       public static final class Spring {
-         private double value, velocity, target;
-         private long last = -1;
          private final double rate;
          private final boolean immediateDeparture;
+
+         private double value, velocity, target;
+         private long last = -1;
          public Spring(double value, double rate) { this(value, rate, false); }
          public Spring(double value, double rate, boolean immediateDeparture) {
             this.value = this.target = value; this.rate = rate; this.immediateDeparture = immediateDeparture;
@@ -691,42 +695,35 @@ public class Hud extends Feature {
    }
 
    public static final class TargetHud {
-      public final ModeSetting mode;
-      private final BooleanSetting showArmor;
-      private final OpaiTargetHudHealth opaiHealth = new OpaiTargetHudHealth();
-      private Player opaiTarget;
-      private OpaiTargetHudPainter.Bounds opaiBounds;
       private static final String HP4_LABEL = "HP: 4";
-      private float trailingHealth;
-      private String targetName;
       private static final String SHOW_WIN_OR_LOSS_LABEL = "Show Win or Loss";
-      private Player lastTarget;
-      private final BooleanSetting outline;
       private static final String HEALTH_ANIMATION_LABEL = "Health Animation";
       private static final String HP16_LABEL = "HP: 16";
       private static final String HP13_LABEL = "HP: 13";
-      private float health;
       private static final String HP20_LABEL = "HP: 20";
       private static final String HP19_LABEL = "HP: 19";
-      private final BooleanSetting healthAnimation;
       private static final String HP10_LABEL = "HP: 10";
-      private Player skinTarget;
-      private final BooleanSetting themeColor;
-      private int alpha;
       private static final String HP5_LABEL = "HP: 5";
       private static final String HP2_LABEL = "HP: 2";
       private static final String HP11_LABEL = "HP: 11";
       private static final String HP9_LABEL = "HP: 9";
-      private int previousAlpha;
-      private float previousHealth;
       private static final String HP15_LABEL = "HP: 15";
-      private final BooleanSetting showWinOrLoss;
       private static final String HP18_LABEL = "HP: 18";
       private static final String WIN_LABEL = "\u00a7aW";
       private static final String OUTLINE_LABEL = "Outline";
       private static final String HP3_LABEL = "HP: 3";
       private static final String HP17_LABEL = "HP: 17";
-      private Identifier skinTexture;
+      private static final String EMPTY_NAME = "";
+      private static final String THEME_COLOR_LABEL = "Theme Color";
+      private static final String HP8_LABEL = "HP: 8";
+      private static final String HP0_LABEL = "HP: 0";
+      private static final String HP7_LABEL = "HP: 7";
+      private static final String HP12_LABEL = "HP: 12";
+      private static final String LOSS_LABEL = "\u00a7cL";
+      private static final String HP14_LABEL = "HP: 14";
+      private static final String HP6_LABEL = "HP: 6";
+      private static final String HP1_LABEL = "HP: 1";
+
       private static final String[] healthLabels = new String[]{
          TargetHud.HP0_LABEL,
          TargetHud.HP1_LABEL,
@@ -750,18 +747,29 @@ public class Hud extends Feature {
          HP19_LABEL,
          HP20_LABEL
       };
-      private static final String EMPTY_NAME = "";
-      private static final String THEME_COLOR_LABEL = "Theme Color";
-      private static final String HP8_LABEL = "HP: 8";
-      private static final String HP0_LABEL = "HP: 0";
-      private static final String HP7_LABEL = "HP: 7";
-      private static final String HP12_LABEL = "HP: 12";
-      private static final String LOSS_LABEL = "\u00a7cL";
-      private static final String HP14_LABEL = "HP: 14";
+
+      public final ModeSetting mode;
+      private final BooleanSetting showArmor;
+      private final BooleanSetting themeColor;
+      private final BooleanSetting outline;
+      private final BooleanSetting showWinOrLoss;
+      private final BooleanSetting healthAnimation;
+
+      private final OpaiTargetHudHealth opaiHealth = new OpaiTargetHudHealth();
+
+      private Player opaiTarget;
+      private OpaiTargetHudPainter.Bounds opaiBounds;
+      private float trailingHealth;
+      private String targetName;
+      private Player lastTarget;
+      private float health;
+      private Player skinTarget;
+      private int alpha;
+      private int previousAlpha;
+      private float previousHealth;
+      private Identifier skinTexture;
       private int targetNameWidth;
-      private static final String HP6_LABEL = "HP: 6";
       private int height;
-      private static final String HP1_LABEL = "HP: 1";
       private int width;
       private float previousTrailingHealth;
 
@@ -1120,14 +1128,15 @@ public class Hud extends Feature {
       public static final class OpaiTargetHudSurface implements OpaiTargetHudPainter.Surface {
          private static final Style FONT = Style.EMPTY.withFont(new FontDescription.Resource(
             Identifier.fromNamespaceAndPath("samsara", "terminal-google")));
+         private static final EquipmentSlot[] ARMOR = {
+            EquipmentSlot.HEAD, EquipmentSlot.CHEST, EquipmentSlot.LEGS, EquipmentSlot.FEET
+         };
+
          private final float fontScale;
          private final String panelResource;
          private final int panelWidth, panelHeight;
          private final float panelRadius;
          private final float opacity;
-         private static final EquipmentSlot[] ARMOR = {
-            EquipmentSlot.HEAD, EquipmentSlot.CHEST, EquipmentSlot.LEGS, EquipmentSlot.FEET
-         };
          private final Minecraft mc = Minecraft.getInstance();
          private final GuiGraphicsExtractor graphics;
          private final Player player;
@@ -1576,9 +1585,10 @@ public class Hud extends Feature {
          }
 
          private static final class Entry {
-            PotionStatusData.Effect effect;
             final Slide slide;
             final Space space;
+
+            PotionStatusData.Effect effect;
             boolean present,justRemoved;
             float exitY,width;
             Entry(PotionStatusData.Effect effect,long now,boolean firstGroup) {
@@ -1670,10 +1680,11 @@ public class Hud extends Feature {
       }
 
       public static final class PotionStatusSurface implements PotionStatusPainter.Surface {
+         private static final java.util.Map<String,int[]> TEXTURE_SIZES=new java.util.HashMap<>();
+
          private final GuiGraphicsExtractor graphics;
          private final OpaiTargetHudSurface text;
          private final float opacity;
-         private static final java.util.Map<String,int[]> TEXTURE_SIZES=new java.util.HashMap<>();
          public PotionStatusSurface(GuiGraphicsExtractor graphics,float opacity) {
             this.graphics=graphics;this.opacity=opacity;
             this.text=new OpaiTargetHudSurface(graphics,null,PotionStatusPainter.FONT_SIZE,"textures/hud/potion/glass.png",80,20,3.75f,opacity);

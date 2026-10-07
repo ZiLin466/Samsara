@@ -6,8 +6,9 @@ import com.samsara.setting.NumberSetting;
 
 public class KeepSprint extends Feature {
    private static final String KEEP_SPRINT_LABEL = "KeepSprint";
-   private NumberSetting speed;
    private static final String SPEED_LABEL = "Speed";
+
+   private NumberSetting speed;
 
    public KeepSprint() {
       super(KEEP_SPRINT_LABEL, Category.MOVEMENT);

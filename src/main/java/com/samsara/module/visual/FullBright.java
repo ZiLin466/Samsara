@@ -7,8 +7,9 @@ import com.samsara.module.Feature;
 import mixins.OptionInstanceAccessor;
 
 public class FullBright extends Feature {
-   private double previousGamma;
    private static final String FULL_BRIGHT_LABEL = "FullBright";
+
+   private double previousGamma;
 
    public FullBright() {
       super(FULL_BRIGHT_LABEL, Category.VISUAL);

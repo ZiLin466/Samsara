@@ -14,12 +14,14 @@ import org.lwjgl.glfw.GLFW;
 
 public class ClickGui extends Feature {
    private static final String CLICK_GUI_LABEL = "ClickGUI";
-   private Screen activeScreen;
-   private OpaiClickGuiScreen opaiScreen;
-   private NeverloseClickGuiScreen neverloseScreen;
+
    public final ModeSetting style = new ModeSetting("Style", this, "Opai", new String[]{"Modern", "Opai", "Neverlose"});
    public final ModeSetting renderMode = new ModeSetting("Interface", this, "LiquidGlass", new String[]{"LiquidGlass", "Normal"});
    public final ModeSetting opaiColor = new ModeSetting("Opai Color", this, "Lavender", new String[]{"Lavender", "Light Pink"});
+
+   private Screen activeScreen;
+   private OpaiClickGuiScreen opaiScreen;
+   private NeverloseClickGuiScreen neverloseScreen;
 
    /** HUDs read the saved ClickGUI choice every frame, even while the GUI is closed. */
    public static OpaiStyle.Palette currentOpaiPalette() {

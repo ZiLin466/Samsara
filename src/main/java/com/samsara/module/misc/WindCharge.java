@@ -12,14 +12,16 @@ import net.minecraft.world.InteractionHand;
 import net.minecraft.world.item.Items;
 
 public class WindCharge extends Feature {
-   private final BooleanSetting jump;
-   private int previousSlot;
    private static final String WIND_CHARGE_LABEL = "WindCharge";
    private static final String JUMP_LABEL = "Jump";
-   private float aimPitch;
    private static final String ROTATION_SPEED_LABEL = "RotationSpeed";
-   private boolean pendingJump;
+
    private final NumberSetting rotationSpeed = new NumberSetting(ROTATION_SPEED_LABEL, this, 5.0, 1.0, 10.0, 0.1);
+   private final BooleanSetting jump;
+
+   private int previousSlot;
+   private float aimPitch;
+   private boolean pendingJump;
 
    @Override
    public void onDisable() {

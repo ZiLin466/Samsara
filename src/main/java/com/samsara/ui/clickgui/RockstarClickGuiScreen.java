@@ -45,11 +45,9 @@ public class RockstarClickGuiScreen extends Screen implements NanoGui {
    private static final float CARD_H = 28.0f;
    private static final float CARD_STEP_X = 183.5f;
    private static final float CARD_STEP_Y = 34.0f;
-
    private static final float CARDS_X = 127.0f;
    private static final float SETTINGS_W = 152.0f;
    private static final float SETTINGS_MAX_H = 200.0f;
-
    private static final int WINDOW_BG = 0xF20C0D12;
    private static final int SIDEBAR_BG = 0x8C23252E;
    private static final int CARD_BASE = 0x0FFFFFFF;
@@ -62,7 +60,6 @@ public class RockstarClickGuiScreen extends Screen implements NanoGui {
    private static final int TEXT_MUTED = 0xB3FFFFFF;
    private static final int TEXT_FAINT = 0x4DFFFFFF;
    private static final int SEP = 0x0AFFFFFF;
-
    private static final int GLASS_TEXT = 0xE52A344A;
    private static final int GLASS_TEXT_MUTED = 0xA83F4B66;
    private static final int GLASS_TEXT_FAINT = 0x713F4B66;
@@ -81,15 +78,17 @@ public class RockstarClickGuiScreen extends Screen implements NanoGui {
    };
    private static final String[] CATEGORY_NAMES = {"Combat", "Movement", "Visuals", "Player", "Other"};
 
-   private final Style style;
    private ModeSetting renderMode;
+   private NumberSetting draggingSlider;
+
+   private final Style style;
    private final List<CategorySection> sections = new ArrayList<>();
    private final List<SettingsWindow> windows = new ArrayList<>();
-
    private final Animation menuAnimation = new Animation(Easing.EASE_OUT_QUART, 400);
    private final Animation sidebarPill = new Animation(Easing.EASE_OUT_QUART, 150);
-   private CategorySection currentSection;
+   private final com.samsara.ui.hud.editor.HudEditButton hudEdit = new com.samsara.ui.hud.editor.HudEditButton();
 
+   private CategorySection currentSection;
    private float winX;
    private float winY;
    private boolean dragWindow;
@@ -98,24 +97,21 @@ public class RockstarClickGuiScreen extends Screen implements NanoGui {
    private boolean closing;
    private Screen closeDestination;
    private float hudEditOpacity;
-   private final com.samsara.ui.hud.editor.HudEditButton hudEdit = new com.samsara.ui.hud.editor.HudEditButton();
    private boolean initialized;
-
    private float scrollValue;
    private float scrollTarget;
    private float maxScroll;
    private long lastFrameTime;
-
    private String search = "";
-   private boolean searchFocused;
 
+   private final Animation configsAnim = new Animation(Easing.EASE_OUT_QUART, 300);
+
+   private boolean searchFocused;
    private ModuleCard bindingCard;
    private SettingsWindow draggingSettings;
    private float settingsDragX;
    private float settingsDragY;
-   private NumberSetting draggingSlider;
    private SettingsWindow sliderWindow;
-   private final Animation configsAnim = new Animation(Easing.EASE_OUT_QUART, 300);
    private boolean configsOpen;
    private float configsX;
    private float configsY;

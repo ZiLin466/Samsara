@@ -33,28 +33,30 @@ import net.minecraft.world.phys.Vec3;
 
 public class BedAura extends Feature {
    private static final String RANGE_LABEL = "Range";
-   private int previousSlot;
-   private float diggingProgress;
-   private final BooleanSetting onlySSRotate;
-   private final BooleanSetting surrounding;
    private static final String BREAK_DELAY_LABEL = "Break Delay";
-   private float previousDiggingProgress;
-   private final NumberSetting breakDelay;
-   private final NumberSetting speed;
-   private int breakDelayTicks;
    private static final String BED_AURA_LABEL = "BedAura";
    private static final String SPEED_LABEL = "Speed";
-   private BlockPos diggingPosition;
-   public int searchTicks;
-   private BlockPos targetBedPosition;
-   public boolean rotatingToBed;
    private static final String WATCHDOG_MODE_LABEL = "Watchdog Mode";
    private static final String ONLY_SSROTATE_LABEL = "Only S/S Rotate";
    private static final String SURROUNDING_LABEL = "Surrounding";
    private static final String ALLOW_KILL_AURA_LABEL = "Allow KillAura";
-   private final BooleanSetting allowKillAura;
+
    private final NumberSetting range = new NumberSetting(RANGE_LABEL, this, 5.0, 1.0, 8.0, 0.5);
+   private final NumberSetting speed;
+   private final NumberSetting breakDelay;
+   private final BooleanSetting surrounding;
+   private final BooleanSetting allowKillAura;
+   private final BooleanSetting onlySSRotate;
    private final BooleanSetting watchdogMode;
+
+   private int previousSlot;
+   private float diggingProgress;
+   private float previousDiggingProgress;
+   private int breakDelayTicks;
+   private BlockPos diggingPosition;
+   public int searchTicks;
+   private BlockPos targetBedPosition;
+   public boolean rotatingToBed;
    private ClientLevel diggingLevel;
    private BlockState diggingState;
    private float diggingGoal = 1;

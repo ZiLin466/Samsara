@@ -21,20 +21,21 @@ import net.minecraft.client.gui.screens.Screen;
 import net.minecraft.network.chat.Component;
 
 public class TokenLoginScreen extends Screen {
-   private static final org.slf4j.Logger LOG = org.slf4j.LoggerFactory.getLogger("samsara-auth");
-   private static final HttpClient HTTP = HttpClient.newHttpClient();
-   private record Profile(String name, String id) { }
    private static final String TOKEN_LOGIN_LABEL = "Token Login";
    private static final String PROFILE_ID_KEY = "id";
    private static final String TOKEN_LABEL = "Token";
    private static final String UUID_GROUP_REPLACEMENT = "$1-$2-$3-$4-$5";
    private static final String BACK_LABEL = "Back";
-   private EditBox tokenInput;
    private static final String AUTHORIZATION_HEADER = "Authorization";
    private static final String PROFILE_NAME_KEY = "name";
    private static final String PROFILE_ENDPOINT = "https://api.minecraftservices.com/minecraft/profile";
    private static final String UUID_GROUP_PATTERN = "(\\w{8})(\\w{4})(\\w{4})(\\w{4})(\\w{12})";
    private static final String LOGIN_LABEL = "Login";
+
+   private static final org.slf4j.Logger LOG = org.slf4j.LoggerFactory.getLogger("samsara-auth");
+   private static final HttpClient HTTP = HttpClient.newHttpClient();
+   private record Profile(String name, String id) { }
+   private EditBox tokenInput;
 
    protected void init() {
       this.tokenInput = new EditBox(this.font, this.width / 2 - 100, this.height / 2 - 20, 200, 20, Component.literal(TOKEN_LABEL));

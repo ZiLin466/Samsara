@@ -16,18 +16,19 @@ import org.joml.Quaternionf;
 import org.lwjgl.sdl.SDLMouse;
 
 public class Animations extends Feature {
+   private static final String SCALE_LABEL = "Scale";
+   private static final String X_LABEL = "X";
+   private static final String Z_LABEL = "Z";
+   private static final String Y_LABEL = "Y";
+   private static final String ANIMATIONS_LABEL = "Animations";
+
    public final ModeSetting blockingAnimation = new ModeSetting("Blocking Animation", this, "1.7", com.samsara.module.visual.Animations.BlockingAnimation.STYLES);
    public final BooleanSetting fakeBlock = new BooleanSetting("Fake Block", this, false);
    public final NumberSetting blockY = new NumberSetting("Block Y", this, 0.1, 0.05, 0.3, 0.05);
    public final NumberSetting swingScale = new NumberSetting("Swing Scale", this, 0.9, 0.1, 1.0, 0.1);
-   public NumberSetting x;
-   private static final String SCALE_LABEL = "Scale";
    public NumberSetting scale = new NumberSetting(SCALE_LABEL, this, 1.0, 0.1, 2.0, 0.1);
-   private static final String X_LABEL = "X";
-   private static final String Z_LABEL = "Z";
+   public NumberSetting x;
    public NumberSetting y;
-   private static final String Y_LABEL = "Y";
-   private static final String ANIMATIONS_LABEL = "Animations";
    public NumberSetting z;
 
    public Animations() {

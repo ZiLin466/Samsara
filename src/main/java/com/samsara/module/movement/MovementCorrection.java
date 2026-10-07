@@ -13,12 +13,13 @@ import net.minecraft.world.phys.Vec2;
 
 public class MovementCorrection extends Feature {
    private static final String MOVE_FIX_LABEL = "MoveFix";
-   private final BooleanSetting usePrevYaw;
    private static final String USE_PREV_YAW_LABEL = "Use PrevYaw";
    private static final String SILENT_LABEL = "Silent";
-   private final ModeSetting mode;
    private static final String MODE_LABEL = "Mode";
    private static final String STRICT_LABEL = "Strict";
+
+   private final ModeSetting mode;
+   private final BooleanSetting usePrevYaw;
 
    private float movementDirectionRadians(float yaw, float forward, float strafe) {
       if (forward == 0.0F && strafe == 0.0F) {

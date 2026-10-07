@@ -7,11 +7,12 @@ import org.joml.Matrix4f;
 import org.joml.Vector4f;
 
 public class WorldToScreenProjector implements Wrapper {
-   private static double cameraX;
    private static final Matrix4f viewProjection = new Matrix4f();
+   private static final Vector4f projectedPosition = new Vector4f();
+
+   private static double cameraX;
    private static int screenWidth;
    private static double cameraZ;
-   private static final Vector4f projectedPosition = new Vector4f();
    private static int screenHeight;
    private static double cameraY;
 

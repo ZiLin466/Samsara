@@ -7,8 +7,10 @@ public final class LaunchTimeline {
    public static final double EMBLEM_START = 12.133333333;
    public static final double MENU_START = 12.483333333;
    public static final double DURATION = 13.4;
-   private long started = -1;
+
    private final boolean alreadySeen;
+
+   private long started = -1;
 
    public LaunchTimeline() { this(false); }
    public LaunchTimeline(boolean alreadySeen) { this.alreadySeen = alreadySeen; }

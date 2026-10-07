@@ -11,18 +11,21 @@ import org.lwjgl.glfw.GLFW;
 
 public class FeatureButton {
    private static final String BIND_LABEL = "Bind: ";
-   public boolean expanded;
    private static final String EMPTY_TEXT = "";
    private static final String PRESS_KEY_LABEL = "Press key...";
-   public int height = 15;
-   private NumberSetting draggedSlider;
    private static final String DISABLED_LABEL = "\u00a7cOFF";
-   public final Feature feature;
-   public int width;
    private static final String ENABLED_LABEL = "\u00a7aON";
+   private static final String NONE_LABEL = "NONE";
+
+   private NumberSetting draggedSlider;
+
+   public final Feature feature;
+
+   public boolean expanded;
+   public int height = 15;
+   public int width;
    public int x;
    public int y;
-   private static final String NONE_LABEL = "NONE";
    public boolean listeningForKey;
 
    public boolean containsMouse(double mouseX, double mouseY) {

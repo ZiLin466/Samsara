@@ -6,10 +6,11 @@ import com.samsara.setting.NumberSetting;
 
 public class Scoreboard extends Feature {
    private static final String X_LABEL = "X";
-   public final NumberSetting y;
-   public final NumberSetting x = new NumberSetting(X_LABEL, this, 0.0, 0.0, 1000.0, 1.0);
    private static final String SCOREBOARD_LABEL = "Scoreboard";
    private static final String Y_LABEL = "Y";
+
+   public final NumberSetting x = new NumberSetting(X_LABEL, this, 0.0, 0.0, 1000.0, 1.0);
+   public final NumberSetting y;
 
    public Scoreboard() {
       super(SCOREBOARD_LABEL, Category.VISUAL);

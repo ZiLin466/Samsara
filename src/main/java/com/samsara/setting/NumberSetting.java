@@ -3,13 +3,15 @@ package com.samsara.setting;
 import com.samsara.module.Feature;
 
 public class NumberSetting extends Setting {
-   private double value;
+   private static final String DECIMAL_SEPARATOR_PATTERN = "\\.";
+
    private final double minimum;
-   private double defaultValue;
    private final double step;
    private final double maximum;
    private final double decimalMultiplier;
-   private static final String DECIMAL_SEPARATOR_PATTERN = "\\.";
+
+   private double value;
+   private double defaultValue;
 
    public double getValue() {
       return this.value;

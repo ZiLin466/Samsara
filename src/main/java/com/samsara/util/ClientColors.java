@@ -5,32 +5,35 @@ import java.awt.Color;
 import net.minecraft.util.Mth;
 
 public class ClientColors {
-   private static int firstRed;
    private static final String SAKURA_LABEL = "Sakura";
-   private static int secondAlpha;
    private static final String INFERNO_LABEL = "Inferno";
    private static final String EMERALD_LABEL = "Emerald";
-   private static long frameTimeMillis;
-   private static String cachedTheme;
-   private static boolean rainbow;
-   private static int secondBlue;
    private static final float HUE_OFFSET_PER_DEGREE = 0.0027777778F;
    private static final double HUE_CYCLE_PER_MILLISECOND = 1.6666666666666666E-4;
    private static final double SECONDS_PER_MILLISECOND = 0.001;
-   private static float rainbowHue;
    private static final String CHERRY_LABEL = "Cherry";
-   private static int firstGreen;
-   private static int firstColor = -1;
    private static final String GOLD_LABEL = "Gold";
    private static final String NOVA_LABEL = "Nova";
-   private static int firstAlpha;
-   private static int secondColor = -1;
-   private static double gradientPhase;
-   private static int secondGreen;
    private static final String RAINBOW_LABEL = "Rainbow";
-   private static int firstBlue;
    private static final String OCEAN_LABEL = "Ocean";
+
+   private static int firstColor = -1;
+   private static int firstAlpha;
+   private static int firstRed;
+   private static int firstGreen;
+   private static int firstBlue;
+
+   private static int secondColor = -1;
+   private static int secondAlpha;
    private static int secondRed;
+   private static int secondGreen;
+   private static int secondBlue;
+
+   private static String cachedTheme;
+   private static boolean rainbow;
+   private static float rainbowHue;
+   private static long frameTimeMillis;
+   private static double gradientPhase;
 
    public static void updateTheme() {
       String themeName = FeatureManager.theme.theme.getValue();

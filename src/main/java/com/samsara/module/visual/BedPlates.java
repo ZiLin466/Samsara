@@ -18,11 +18,14 @@ import net.minecraft.world.level.block.state.BlockState;
 import net.minecraft.world.level.block.state.properties.BedPart;
 
 public class BedPlates extends Feature {
-   private MutableBlockPos searchPosition;
    private static final String RANGE_LABEL = "Range";
-   private NumberSetting range = new NumberSetting(RANGE_LABEL, this, 16.0, 8.0, 32.0, 1.0);
-   private final List<BedEntry> beds;
    private static final String BED_PLATES_LABEL = "BedPlates";
+
+   private NumberSetting range = new NumberSetting(RANGE_LABEL, this, 16.0, 8.0, 32.0, 1.0);
+
+   private final List<BedEntry> beds;
+
+   private MutableBlockPos searchPosition;
 
    @Override
    public void onEvent(Event event) {

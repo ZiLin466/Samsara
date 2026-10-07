@@ -7,8 +7,9 @@ import net.fabricmc.loader.api.FabricLoader;
 
 public final class FontRepository {
 
-   private static final Map<String, NVGTextRenderer> FONTS = new HashMap<>();
    private static final String RESOURCE_PREFIX = "assets/samsara/fonts/";
+
+   private static final Map<String, NVGTextRenderer> FONTS = new HashMap<>();
 
    private FontRepository() {
    }

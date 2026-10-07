@@ -25,48 +25,53 @@ import net.minecraft.world.phys.BlockHitResult;
 import net.minecraft.world.phys.Vec3;
 
 public class Scaffold extends Feature {
-   private final NumberSetting rotationSpeed;
    private static final String KEEP_Y_LABEL = "Keep Y";
    private static final String ROTATION_SPEED_LABEL = "Rotation Speed";
    private static final String SCAFFOLD_LABEL = "Scaffold";
-   private float rotationPitch;
-   private int placedBlocks;
-   private final ModeSetting rotations;
-   private final float[] yawOffsets;
-   private int previousSlot;
-   private boolean jumpStartedOnGround;
-   private final BooleanSetting watchdogTower;
-   private boolean rotationUpdated;
-   private float rotationYaw;
    private static final String TELLY_RMB_LABEL = "Telly RMB";
-   private final PlacementTarget placementTarget;
-   private int bridgeY;
    private static final String BACKWARD_LABEL = "Backward";
    private static final String RAYCAST2_LABEL = "Raycast2";
-   private float targetPitch;
-   private final BooleanSetting tellyRmb;
-   private final NumberSetting sneakDelay;
-   private int ticksSincePlacement;
-   private final BooleanSetting keepY;
    private static final String TELLY_LABEL = "Telly";
    private static final String ROTATIONS_LABEL = "Rotations";
    private static final String WATCHDOG_TOWER_LABEL = "Watchdog Tower";
    private static final String SNEAK_LABEL = "Sneak";
    private static final String HIT_VEC_LABEL = "HitVec";
-   private float targetYaw;
    private static final String OFFSET_LABEL = "Offset";
    private static final String SNEAK_DELAY_LABEL = "Sneak Delay";
-   private boolean pendingWatchdogJump;
    private static final String DISABLED_LABEL = "Disabled";
    private static final String WATCHDOG3_LABEL = "Watchdog3";
    private static final String FAST_MODE_LABEL = "Fast Mode";
    private static final String RAYCAST_LABEL = "Raycast";
-   private boolean rightMousePressed;
-   private final ModeSetting fastMode;
-   private final BooleanSetting sneak;
    private static final String WATCHDOG2_LABEL = "Watchdog2";
    private static final String WATCHDOG_LABEL = "Watchdog";
+   private static final int FINE_SEARCH_LIMIT_DEGREES = 20;
+   private static final int COARSE_SEARCH_STEP_DEGREES = 2;
+
+   private final ModeSetting rotations;
+   private final NumberSetting rotationSpeed;
+   private final ModeSetting fastMode;
+   private final BooleanSetting tellyRmb;
+   private final BooleanSetting keepY;
+   private final BooleanSetting watchdogTower;
+   private final BooleanSetting sneak;
+   private final NumberSetting sneakDelay;
+
+   private final float[] yawOffsets;
+   private final PlacementTarget placementTarget;
    private final float[] pitchOffsets;
+
+   private float rotationPitch;
+   private int placedBlocks;
+   private int previousSlot;
+   private boolean jumpStartedOnGround;
+   private boolean rotationUpdated;
+   private float rotationYaw;
+   private int bridgeY;
+   private float targetPitch;
+   private int ticksSincePlacement;
+   private float targetYaw;
+   private boolean pendingWatchdogJump;
+   private boolean rightMousePressed;
    private boolean rotationAligned;
 
    private float[] placementRotation(BlockHitResult blockHit) {
@@ -182,8 +187,6 @@ public class Scaffold extends Feature {
       this.pitchOffsets = searchOffsets(90);
    }
 
-   private static final int FINE_SEARCH_LIMIT_DEGREES = 20;
-   private static final int COARSE_SEARCH_STEP_DEGREES = 2;
 
    private static float[] searchOffsets(int maximumDegrees) {
       int pairCount = FINE_SEARCH_LIMIT_DEGREES

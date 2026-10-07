@@ -9,11 +9,12 @@ import com.samsara.setting.NumberSetting;
 import mixins.MultiPlayerGameModeAccessor;
 
 public class FastMine extends Feature {
-   private final BooleanSetting removeDelay;
-   private final NumberSetting speed;
    private static final String REMOVE_DELAY_LABEL = "Remove Delay";
    private static final String FAST_MINE_LABEL = "FastMine";
    private static final String SPEED_LABEL = "Speed";
+
+   private final NumberSetting speed;
+   private final BooleanSetting removeDelay;
 
    @Override
    public void onEvent(Event event) {

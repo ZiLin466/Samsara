@@ -15,8 +15,6 @@ import net.minecraft.network.chat.Style;
 import net.minecraft.util.FormattedCharSequence;
 
 public final class AccountLoginScreen extends Screen implements TerminalPage {
-   private final AccountManagerScreen parent;
-   private final boolean direct;
    private SavedAccount.Type type;
    private AccountSessions.MicrosoftMethod method = AccountSessions.MicrosoftMethod.WEB_VIEW;
    private boolean onlineId, generate, closed;
@@ -24,6 +22,9 @@ public final class AccountLoginScreen extends Screen implements TerminalPage {
    private String status = "", code = "", url = "";
    private int fieldsY;
    private Button submit;
+
+   private final AccountManagerScreen parent;
+   private final boolean direct;
    private final List<Button> controls = new ArrayList<>();
    public AccountLoginScreen(AccountManagerScreen parent, boolean direct) {
       super(Component.literal(direct ? "Token 登录" : "添加账号")); this.parent=parent; this.direct=direct;

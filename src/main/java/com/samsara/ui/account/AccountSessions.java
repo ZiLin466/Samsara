@@ -40,10 +40,11 @@ public final class AccountSessions {
       @Override public String toString() { return message; }
    }
    private static final class Operation { volatile boolean cancelled; Thread thread; }
+   private static final AccountAuthClient AUTH = new AccountAuthClient(HttpClient.newBuilder().connectTimeout(Duration.ofSeconds(10)).build());
+
    private static volatile Operation current;
    private static Session launcher;
    private static MinecraftServicesDiscoveryService officialDiscovery;
-   private static final AccountAuthClient AUTH = new AccountAuthClient(HttpClient.newBuilder().connectTimeout(Duration.ofSeconds(10)).build());
    private AccountSessions() { }
    public static void captureLauncher() {
       if (launcher != null) return;

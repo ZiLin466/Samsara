@@ -12,17 +12,20 @@ import net.minecraft.client.KeyMapping;
 import net.minecraft.world.phys.HitResult.Type;
 
 public class AutoClicker extends Feature {
-   private final BooleanSetting breakBlocks;
    private static final String MIN_CPS_LABEL = "Min CPS";
    private static final String MAX_CPS_LABEL = "Max CPS";
    private static final String AUTO_CLICKER_LABEL = "AutoClicker";
-   private final NumberSetting maxCps;
-   private final NumberSetting minCps = new NumberSetting(MIN_CPS_LABEL, this, 8.0, 1.0, 20.0, 1.0);
-   private final BooleanSetting randomize;
-   private long lastClickTimeMillis;
-   private final Random random;
    private static final String RANDOMIZE_LABEL = "Randomize";
    private static final String BREAK_BLOCKS_LABEL = "Break Blocks";
+
+   private final NumberSetting minCps = new NumberSetting(MIN_CPS_LABEL, this, 8.0, 1.0, 20.0, 1.0);
+   private final NumberSetting maxCps;
+   private final BooleanSetting randomize;
+   private final BooleanSetting breakBlocks;
+
+   private final Random random;
+
+   private long lastClickTimeMillis;
 
    @Override
    public void onEvent(Event event) {

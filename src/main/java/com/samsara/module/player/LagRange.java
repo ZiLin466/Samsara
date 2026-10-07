@@ -14,15 +14,17 @@ import net.minecraft.world.entity.LivingEntity;
 import net.minecraft.world.phys.Vec3;
 
 public class LagRange extends Feature {
-   private int blinkTicksElapsed;
    private static final String BLINK_TICKS_LABEL = "Blink Ticks";
-   private final NumberSetting blinkTicks;
-   private double cachedBlinkTicks;
    private static final String RANGE_LABEL = "Range";
    private static final String LAG_WHEN_CLOSE_LABEL = "Lag When Close";
-   private final NumberSetting range = new NumberSetting(RANGE_LABEL, this, 6.0, 4.0, 8.0, 0.5);
    private static final String LAG_RANGE_LABEL = "LagRange";
+
+   private final NumberSetting range = new NumberSetting(RANGE_LABEL, this, 6.0, 4.0, 8.0, 0.5);
+   private final NumberSetting blinkTicks;
    private final BooleanSetting lagWhenClose;
+
+   private int blinkTicksElapsed;
+   private double cachedBlinkTicks;
    private Vec3 previousPlayerPosition;
    private boolean blinkActive;
 

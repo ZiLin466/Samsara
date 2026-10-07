@@ -18,6 +18,14 @@ final class OpaiConfigPanel {
       void openFolder() throws Exception;
    }
    enum Page { CONFIGS, ADD, SETTINGS, TARGETS }
+   private static final float INSET = 8, LIST_ROW = 24, BUTTON_H = 18;
+   private static final float CHIP_H = 11.75f;
+   private static final float CHIP_TEXT_SIZE = 7.25f;
+   private static final float CHIP_RADIUS = 3.875f;
+   private static final float CHIP_RIGHT_OVERHANG = 1.125f;
+   private static final float CHIP_PADDING = 3.75f;
+   private static final int CHIP_BACKGROUND = 0xFF131316;
+
    private final OpaiTargetsPanel targets = new OpaiTargetsPanel();
    private final Backend backend;
    private final OpaiMotion height = new OpaiMotion(0, 40);
@@ -27,6 +35,7 @@ final class OpaiConfigPanel {
    private final Map<String, OpaiFeedback> feedback = new HashMap<>();
    private final Map<String, OpaiMotion> selectionAnims = new HashMap<>();
    private final List<String> names = new ArrayList<>();
+
    private Page page = Page.CONFIGS, outgoing;
    private String selected, input = "", message = "";
    private int cursor, selection;
@@ -36,13 +45,6 @@ final class OpaiConfigPanel {
    private boolean expanded, focused;
    private float dragX, dragY, scrollbarGrab;
    private boolean dragging, draggingScrollbar, movedHeader;
-   private static final float INSET = 8, LIST_ROW = 24, BUTTON_H = 18;
-   private static final float CHIP_H = 11.75f;
-   private static final float CHIP_TEXT_SIZE = 7.25f;
-   private static final float CHIP_RADIUS = 3.875f;
-   private static final float CHIP_RIGHT_OVERHANG = 1.125f;
-   private static final float CHIP_PADDING = 3.75f;
-   private static final int CHIP_BACKGROUND = 0xFF131316;
 
    OpaiConfigPanel(Backend backend) { this.backend = backend; }
 

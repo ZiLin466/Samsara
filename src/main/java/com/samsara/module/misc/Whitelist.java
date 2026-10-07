@@ -10,9 +10,10 @@ import net.minecraft.network.protocol.game.ClientboundSystemChatPacket;
 import net.minecraft.world.phys.Vec3;
 
 public class Whitelist extends Feature {
-   public boolean bedSpawnKnown;
    private static final String PROTECT_YOUR_BED_AND_DESTROY_THE_ENEMY_BEDS_LABEL = "Protect your bed and destroy the enemy beds.";
    private static final String MODULE_NAME = "Whitelist";
+
+   public boolean bedSpawnKnown;
    private boolean awaitingBedSpawnPosition;
    public Vec3 bedSpawnPosition;
 

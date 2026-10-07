@@ -9,13 +9,14 @@ import net.minecraft.client.Minecraft;
 import net.minecraft.client.gui.GuiGraphicsExtractor;
 
 public class CategoryPanel {
-   private final List<FeatureButton> featureButtons;
-   public int x;
-   public boolean expanded;
    protected final int width = 100;
 
-   public int y;
+   private final List<FeatureButton> featureButtons;
    public final String title;
+
+   public int x;
+   public boolean expanded;
+   public int y;
 
    public boolean containsPanel(double mouseX, double mouseY) {
       return mouseX >= (double)this.x && mouseX <= (double)(this.x + 100) && mouseY >= (double)this.y && mouseY <= (double)(this.y + 15);

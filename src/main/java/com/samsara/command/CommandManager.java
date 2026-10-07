@@ -6,8 +6,9 @@ import java.util.List;
 
 public class CommandManager {
    private static final String ARGUMENT_SEPARATOR = " ";
-   private static List<Command> commands = new ArrayList<>();
    private static final String COMMAND_PREFIX = ".";
+
+   private static List<Command> commands = new ArrayList<>();
 
    public static Command getCommand(String alias) {
       for (Command command : commands) {

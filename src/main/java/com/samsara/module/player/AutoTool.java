@@ -11,10 +11,12 @@ import net.minecraft.world.level.block.state.BlockState;
 import net.minecraft.world.phys.BlockHitResult;
 
 public class AutoTool extends Feature {
-   private final BooleanSetting swapBack;
    private static final String AUTO_TOOL_LABEL = "AutoTool";
-   private int previousSlot;
    private static final String SWAP_BACK_LABEL = "Swap Back";
+
+   private final BooleanSetting swapBack;
+
+   private int previousSlot;
 
    public AutoTool() {
       super(AUTO_TOOL_LABEL, Category.PLAYER);

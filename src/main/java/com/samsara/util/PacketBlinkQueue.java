@@ -5,8 +5,9 @@ import java.util.List;
 import net.minecraft.network.protocol.Packet;
 
 public class PacketBlinkQueue implements Wrapper {
-   private static boolean enabled;
    private static final List<Packet> queuedPackets = new ArrayList<>();
+
+   private static boolean enabled;
    private static boolean flushing;
 
    public static boolean enqueue(Packet packet) {

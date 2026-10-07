@@ -8,9 +8,10 @@ import com.samsara.setting.NumberSetting;
 import com.samsara.util.TimerController;
 
 public class Timer extends Feature {
-   private final NumberSetting speed;
    private static final String TIMER_LABEL = "Timer";
    private static final String SPEED_LABEL = "Speed";
+
+   private final NumberSetting speed;
 
    @Override
    public void onDisable() {

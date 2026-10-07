@@ -46,11 +46,15 @@ public class OpaiClickGuiScreen extends Screen implements NanoGui {
    };
    private static final String[] CATEGORY_NAMES = {"Combat", "Movement", "Player", "Visual", "Misc"};
 
+   private NumberSetting draggingSlider;
    private final ModeSetting colorSetting;
+
    private OpaiStyle.Palette palette = OpaiStyle.LAVENDER;
+
    private final List<OpaiColumn> columns = new ArrayList<>();
    private final OpaiMotion menuAnimation = new OpaiMotion(0, 30);
    private final OpaiConfigPanel configs = new OpaiConfigPanel(new OpaiConfigRepository());
+
    private EditBox configName;
    private double openedAt;
    private float menuScale = 1;
@@ -60,6 +64,12 @@ public class OpaiClickGuiScreen extends Screen implements NanoGui {
    private float transformCenterY;
    private boolean configFront;
    private float colW = COL_W;
+
+   private final Map<BooleanSetting, OpaiMotion> toggleAnims = new HashMap<>();
+   private final Map<NumberSetting, OpaiMotion> sliderAnims = new HashMap<>();
+   private final Map<Setting, OpaiFeedback> controlFeedback = new HashMap<>();
+   private final com.samsara.ui.hud.editor.HudEditButton hudEdit = new com.samsara.ui.hud.editor.HudEditButton();
+
    private float maxBodyH;
    private float horizontalScroll;
    private float maxHorizontalScroll;
@@ -69,16 +79,11 @@ public class OpaiClickGuiScreen extends Screen implements NanoGui {
    private float dragY;
    private OpaiColumn draggedScrollbar;
    private float scrollbarGrab;
-   private NumberSetting draggingSlider;
    private OpaiRow sliderRow;
    private OpaiColumn sliderColumn;
    private OpaiRow bindingRow;
-   private final Map<BooleanSetting, OpaiMotion> toggleAnims = new HashMap<>();
-   private final Map<NumberSetting, OpaiMotion> sliderAnims = new HashMap<>();
-   private final Map<Setting, OpaiFeedback> controlFeedback = new HashMap<>();
    private boolean closing;
    private Screen closeDestination;
-   private final com.samsara.ui.hud.editor.HudEditButton hudEdit = new com.samsara.ui.hud.editor.HudEditButton();
    private boolean initialized;
    private boolean detached = true;
    private int layoutWidth, layoutHeight;
@@ -1125,6 +1130,8 @@ public class OpaiClickGuiScreen extends Screen implements NanoGui {
    }
 
    private static final class OpaiRow {
+      Setting openMode;
+
       final Feature module;
       final String name;
       final OpaiMotion hover = new OpaiMotion(0, 30);
@@ -1134,8 +1141,8 @@ public class OpaiClickGuiScreen extends Screen implements NanoGui {
       final Map<Setting, OpaiMotion> modes = new HashMap<>();
       final Map<Setting, Float> modeScroll = new HashMap<>();
       final Map<Option, OpaiFeedback> optionFeedback = new HashMap<>();
+
       boolean expanded;
-      Setting openMode;
 
       OpaiRow(Feature module) {
          this.module = module;

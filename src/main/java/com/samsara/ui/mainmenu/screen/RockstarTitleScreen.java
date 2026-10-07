@@ -37,20 +37,20 @@ import org.lwjgl.system.MemoryUtil;
 import static org.lwjgl.nanovg.NanoVG.*;
 
 public class RockstarTitleScreen extends Screen {
-   private static final org.slf4j.Logger LOG = org.slf4j.LoggerFactory.getLogger("samsara-menu");
-   private static final DateTimeFormatter TIME_FORMAT = DateTimeFormatter.ofPattern("HH:mm", Locale.ENGLISH);
-   private static final DateTimeFormatter DATE_FORMAT = DateTimeFormatter.ofPattern("EEEE, MMMM d", Locale.ENGLISH);
-
    private static final int GRADIENT_TOP = 0xFF161A28;
    private static final int GRADIENT_BOTTOM = 0xFF05030C;
    private static final int WHITE = 0xFFFFFFFF;
    private static final int BUTTON_BG = 0xFF3A3A3A;
-
    private static final float BUTTON_SIZE = 30.0f;
    private static final float BUTTON_GAP = 6.0f;
    private static final float CLOCK_FONT = 65.0f;
    private static final float DATE_FONT = 16.0f;
    private static final float HINT_FONT = 10.0f;
+   private static final float MSDF_PX_PER_EM = 64.0f;
+
+   private static final org.slf4j.Logger LOG = org.slf4j.LoggerFactory.getLogger("samsara-menu");
+   private static final DateTimeFormatter TIME_FORMAT = DateTimeFormatter.ofPattern("HH:mm", Locale.ENGLISH);
+   private static final DateTimeFormatter DATE_FORMAT = DateTimeFormatter.ofPattern("EEEE, MMMM d", Locale.ENGLISH);
 
    private enum Glyph {
       SINGLE,
@@ -73,22 +73,22 @@ public class RockstarTitleScreen extends Screen {
       }
    }
 
-   private final List<MenuButton> buttons = new ArrayList<>();
-   private final Animation activeAnimation = new Animation(Easing.EASE_IN_OUT_QUART, 1000);
-   private boolean active;
+   private static final java.util.Map<Integer, double[]> msdfGlyphs = new java.util.HashMap<>();
 
    private static boolean wallpaperLoaded;
    private static volatile int wallpaperImage;
    private static boolean windowChromeApplied;
    private static boolean msdfLoaded;
    private static volatile int msdfImage;
-   private static final java.util.Map<Integer, double[]> msdfGlyphs = new java.util.HashMap<>();
    private static int msdfAtlasWidth;
    private static int msdfAtlasHeight;
-   private static final float MSDF_PX_PER_EM = 64.0f;
-
    private static double mouseX;
    private static double mouseY;
+
+   private final List<MenuButton> buttons = new ArrayList<>();
+   private final Animation activeAnimation = new Animation(Easing.EASE_IN_OUT_QUART, 1000);
+
+   private boolean active;
 
    public RockstarTitleScreen() {
       super(Component.literal("Main Menu"));

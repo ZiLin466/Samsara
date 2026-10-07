@@ -14,18 +14,20 @@ import net.minecraft.world.clock.WorldClocks;
 
 public class Ambience extends Feature {
    private static final String MINECRAFT_ENTITY_PLAYER_ATTACK_CRIT_LABEL = "minecraft:entity.player.attack.crit";
-   public final NumberSetting time;
-   private final BooleanSetting cancelHitSound;
    private static final String MINECRAFT_ENTITY_PLAYER_ATTACK_SWEEP_LABEL = "minecraft:entity.player.attack.sweep";
    private static final String TIME_LABEL = "Time";
    private static final String MINECRAFT_ENTITY_PLAYER_ATTACK_WEAK_LABEL = "minecraft:entity.player.attack.weak";
    private static final String MINECRAFT_ENTITY_PLAYER_ATTACK_NODAMAGE_LABEL = "minecraft:entity.player.attack.nodamage";
    private static final String CANCEL_HIT_SOUND_LABEL = "Cancel Hit Sound";
-   private int appliedTime;
    private static final String MINECRAFT_ENTITY_PLAYER_ATTACK_KNOCKBACK_LABEL = "minecraft:entity.player.attack.knockback";
    private static final String AMBIENCE_LABEL = "Ambience";
-   private ClientLevel appliedLevel;
    private static final String MINECRAFT_ENTITY_PLAYER_ATTACK_STRONG_LABEL = "minecraft:entity.player.attack.strong";
+
+   private final BooleanSetting cancelHitSound;
+   public final NumberSetting time;
+
+   private int appliedTime;
+   private ClientLevel appliedLevel;
 
    @Override
    public void onEvent(Event event) {

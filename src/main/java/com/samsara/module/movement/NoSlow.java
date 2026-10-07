@@ -16,19 +16,21 @@ public class NoSlow extends Feature {
    private static final String ALWAYS_LABEL = "Always";
    private static final String NO_GROUND_LABEL = "NoGround";
    private static final String BLOCK_LABEL = "Block";
-   private NumberSetting speed;
-   private BooleanSetting rotate;
-   private ModeSetting block;
    private static final String SECOND_TICK_LABEL = "SecondTick";
-   private BooleanSetting noGround;
    private static final String SPEED_LABEL = "Speed";
    private static final String DISABLED_LABEL = "Disabled";
    private static final String FORCE_SPRINTING_LABEL = "Force Sprinting";
-   private ModeSetting swap;
-   private BooleanSetting forceSprinting;
    private static final String FIRST_TICK_LABEL = "FirstTick";
    private static final String ROTATE_LABEL = "Rotate";
    private static final String SWAP_LABEL = "Swap";
+
+   private NumberSetting speed;
+   private BooleanSetting forceSprinting;
+   private BooleanSetting rotate;
+   private BooleanSetting noGround;
+   private ModeSetting swap;
+   private ModeSetting block;
+
    private int itemUseTicks;
 
    public NoSlow() {

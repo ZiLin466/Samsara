@@ -15,13 +15,14 @@ import java.util.List;
 public class BindCommand extends Command {
    private static final String NO_KEY_ALIAS = "none";
    private static final String UNBIND_LABEL = "unbind";
-   private static final List bindableKeys = collectBindableKeys();
    private static final String UNBOUND_KEY_LABEL = "NONE";
    private static final String KEY_LABEL = "KEY_";
    private static final String COMMAND_NAME = "Bind";
    private static final String PRIMARY_ALIAS = "bind";
    private static final String BIND_NAME_KEY_LABEL = "bind <name> <key>";
    private static final String B_LABEL = "b";
+
+   private static final List bindableKeys = collectBindableKeys();
 
    private static List collectBindableKeys() {
       ArrayList keyNames = new ArrayList();

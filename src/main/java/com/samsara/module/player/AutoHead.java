@@ -10,10 +10,12 @@ import net.minecraft.world.InteractionHand;
 import net.minecraft.world.item.Items;
 
 public class AutoHead extends Feature {
-   private int previousSlot;
-   private final NumberSetting health;
    private static final String AUTO_HEAD_LABEL = "AutoHead";
    private static final String HEALTH_LABEL = "Health";
+
+   private final NumberSetting health;
+
+   private int previousSlot;
    private boolean pendingUse;
 
    public AutoHead() {

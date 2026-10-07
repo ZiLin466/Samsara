@@ -6,10 +6,11 @@ import java.util.List;
 public final class NeverloseLayout {
    public static final float WIDTH = 760, HEIGHT = 620, SIDEBAR = 180, HEADER = 64;
    public static final float RADIUS = 4;
+   public static final float ROW = 29, SECTION_HEADER = 28, GAP = 18, OPTION = 25;
+
    public static final Rect WINDOW = new Rect(0, 0, WIDTH, HEIGHT);
    // Hide the backdrop's inner rounded corners beneath the opaque content panel.
    public static final Rect SIDEBAR_BACKDROP = new Rect(0, 0, SIDEBAR + RADIUS, HEIGHT);
-   public static final float ROW = 29, SECTION_HEADER = 28, GAP = 18, OPTION = 25;
    public static final Rect CONTENT = new Rect(202, 84, 536, 516);
    public static final Rect SEARCH = new Rect(202, 19, 330, 27);
    public static final Rect SAVE = new Rect(544, 19, 70, 27);

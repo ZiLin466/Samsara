@@ -651,8 +651,10 @@ public final class NeverloseClickGuiScreen extends Screen implements NanoGui {
    }
    private final class Popup {
       final Setting setting;
-      Rect anchor, bounds;
+
       final Motion motion = new Motion(0, 36);
+
+      Rect anchor, bounds;
       boolean open = true;
       float scroll;
       int highlight = -1;
