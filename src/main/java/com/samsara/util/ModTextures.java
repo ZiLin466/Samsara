@@ -9,6 +9,7 @@ import net.minecraft.client.renderer.texture.DynamicTexture;
 import net.minecraft.resources.Identifier;
 
 public final class ModTextures {
+   private static final org.slf4j.Logger LOG = org.slf4j.LoggerFactory.getLogger("samsara-textures");
    private static final Set<Identifier> REGISTERED = new HashSet<>();
 
    private ModTextures() {
@@ -42,13 +43,13 @@ public final class ModTextures {
 
       try (InputStream in = ModTextures.class.getResourceAsStream(resource)) {
          if (in == null) {
-            System.out.println("[Samsara] texture: resource missing " + resource);
+            LOG.warn("Texture resource missing: {}", resource);
             return null;
          }
 
          return NativeImage.read(in);
-      } catch (Exception e) {
-         System.out.println("[Samsara] texture: failed to read " + resource + " (" + e + ")");
+      } catch (Exception error) {
+         LOG.warn("Unable to read texture: {}", resource, error);
          return null;
       }
    }

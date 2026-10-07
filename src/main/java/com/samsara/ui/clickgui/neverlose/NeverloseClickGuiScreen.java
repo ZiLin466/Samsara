@@ -108,7 +108,7 @@ public final class NeverloseClickGuiScreen extends Screen implements NanoGui {
          .filter(module -> query.isEmpty() || module.getName().toLowerCase(Locale.ROOT).replace(" ", "").contains(query)
             || module.settings.stream().anyMatch(setting -> setting.isVisible()
                && setting.getDisplayName().toLowerCase(Locale.ROOT).replace(" ", "").contains(query)))
-         .sorted(Comparator.<Feature>comparingInt(module -> module == FeatureManager.f26 ? 0 : module == FeatureManager.f28 ? 1 : 2)
+         .sorted(Comparator.<Feature>comparingInt(module -> module == FeatureManager.killAura ? 0 : module == FeatureManager.velocity ? 1 : 2)
             .thenComparing(Feature::getName, String.CASE_INSENSITIVE_ORDER)).toList();
    }
 
@@ -153,21 +153,21 @@ public final class NeverloseClickGuiScreen extends Screen implements NanoGui {
          List<Row> rows = new ArrayList<>();
          float y = section.y() + SECTION_HEADER;
          if (module != FeatureManager.targets) {
-            Rect r = new Rect(section.x(), y, section.width(), ROW);
-            rows.add(row(Kind.ENABLED, r, "Enabled", "", module, module.isEnabled() ? 1 : 0, 45, time));
-            addRowTarget(r, section, state, module, null, Action.ENABLED);
+            Rect rowBounds = new Rect(section.x(), y, section.width(), ROW);
+            rows.add(row(Kind.ENABLED, rowBounds, "Enabled", "", module, module.isEnabled() ? 1 : 0, 45, time));
+            addRowTarget(rowBounds, section, state, module, null, Action.ENABLED);
             y += ROW;
          }
          for (Setting setting : settings.get(i)) {
-            Rect r = new Rect(section.x(), y, section.width(), ROW);
+            Rect rowBounds = new Rect(section.x(), y, section.width(), ROW);
             if (setting instanceof BooleanSetting value) {
-               rows.add(row(Kind.BOOLEAN, r, setting.getDisplayName(), "", setting, value.m215() ? 1 : 0, 45, time));
-               addRowTarget(r, section, state, module, setting, Action.BOOLEAN);
+               rows.add(row(Kind.BOOLEAN, rowBounds, setting.getDisplayName(), "", setting, value.getValue() ? 1 : 0, 45, time));
+               addRowTarget(rowBounds, section, state, module, setting, Action.BOOLEAN);
             } else if (setting instanceof NumberSetting value) {
-               float fraction = value.m219() <= value.m218() ? 0 : (float)((value.m220() - value.m218()) / (value.m219() - value.m218()));
-               rows.add(row(Kind.NUMBER, r, setting.getDisplayName(), BigDecimal.valueOf(value.m220()).stripTrailingZeros().toPlainString(),
+               float fraction = value.getMaximum() <= value.getMinimum() ? 0 : (float)((value.getValue() - value.getMinimum()) / (value.getMaximum() - value.getMinimum()));
+               rows.add(row(Kind.NUMBER, rowBounds, setting.getDisplayName(), BigDecimal.valueOf(value.getValue()).stripTrailingZeros().toPlainString(),
                   setting, fraction, 24, time));
-               addRowTarget(r, section, state, module, setting, Action.NUMBER);
+               addRowTarget(rowBounds, section, state, module, setting, Action.NUMBER);
             } else if (setting instanceof ChoiceSetting choices) {
                String label = choices.selectionLabel();
                if (choices.multiple()) {
@@ -176,8 +176,8 @@ public final class NeverloseClickGuiScreen extends Screen implements NanoGui {
                   for (int index = 0; index < options.length; index++) if (choices.selected(index)) selected.add(options[index]);
                   label = selected.isEmpty() ? "None" : String.join(", ", selected);
                }
-               rows.add(row(Kind.CHOICE, r, setting.getDisplayName(), label, setting, 0, 20, time));
-               addRowTarget(r, section, state, module, setting, Action.CHOICE);
+               rows.add(row(Kind.CHOICE, rowBounds, setting.getDisplayName(), label, setting, 0, 20, time));
+               addRowTarget(rowBounds, section, state, module, setting, Action.CHOICE);
             }
             y += ROW;
          }
@@ -192,14 +192,14 @@ public final class NeverloseClickGuiScreen extends Screen implements NanoGui {
       updatePopup(time);
    }
 
-   private Row row(Kind kind, Rect r, String label, String value, Object key, float target, double rate, double time) {
-      boolean hovered = r.intersect(CONTENT).contains(mouseX, mouseY) && popup == null;
+   private Row row(Kind kind, Rect rowBounds, String label, String value, Object key, float target, double rate, double time) {
+      boolean hovered = rowBounds.intersect(CONTENT).contains(mouseX, mouseY) && popup == null;
       float progress = controls.computeIfAbsent(key, ignored -> new Motion(target, rate)).to(target, time);
       float feedback = hover.computeIfAbsent(key, ignored -> new Motion(0, 24)).to(
          hovered || draggingSlider != null && draggingSlider.setting == key ? 1 : 0, time);
       Double pulse = pulses.get(key);
       if (pulse != null) feedback = Math.max(feedback, (float)Math.exp(-18 * (time - pulse)));
-      return new Row(kind, r, label, value, Math.clamp(progress, 0, 1), feedback, hovered);
+      return new Row(kind, rowBounds, label, value, Math.clamp(progress, 0, 1), feedback, hovered);
    }
 
    private void addRowTarget(Rect row, Rect section, ModuleState state, Feature module, Setting setting, Action action) {
@@ -221,10 +221,10 @@ public final class NeverloseClickGuiScreen extends Screen implements NanoGui {
       Rect clip = new Rect(CONTENT.x(), 156, CONTENT.width(), CONTENT.bottom() - 156);
       for (int i = 0; i < names.size(); i++) {
          String name = names.get(i);
-         Rect r = new Rect(CONTENT.x(), 161 + i * 66 - scroll, CONTENT.width(), 54);
-         entries.add(new Config(r, name, "Gameplay configuration", name.equals(preset), name.equals(deleteCandidate) && now() < deleteUntil));
+         Rect configBounds = new Rect(CONTENT.x(), 161 + i * 66 - scroll, CONTENT.width(), 54);
+         entries.add(new Config(configBounds, name, "Gameplay configuration", name.equals(preset), name.equals(deleteCandidate) && now() < deleteUntil));
          for (int action = 0; action < 3; action++) {
-            Rect button = new Rect(r.right() - 202 + action * 66, r.y() + 14, 58, 25);
+            Rect button = new Rect(configBounds.right() - 202 + action * 66, configBounds.y() + 14, 58, 25);
             targets.add(new Target(button.intersect(clip), button, null, null, Action.values()[Action.LOAD.ordinal() + action], name));
          }
       }
@@ -361,7 +361,7 @@ public final class NeverloseClickGuiScreen extends Screen implements NanoGui {
             }
             case BIND -> { if (button == 0 || button == 2) binding = target.module; }
             case ENABLED -> { if (button == 0) target.module.toggle(); }
-            case BOOLEAN -> { if (button == 0) { BooleanSetting value = (BooleanSetting)target.setting; value.m217(!value.m215()); } }
+            case BOOLEAN -> { if (button == 0) { BooleanSetting value = (BooleanSetting)target.setting; value.setValue(!value.getValue()); } }
             case NUMBER -> { if (button == 0 && control(target.bounds).contains(mouseX, mouseY)) { draggingSlider = target; updateSlider(); } }
             case CHOICE -> { if (button == 0) openPopup(target.setting, control(target.bounds)); }
             case LOAD -> { if (button == 0) { pulses.put("load:" + target.name, now()); load(target.name); } }
@@ -402,7 +402,7 @@ public final class NeverloseClickGuiScreen extends Screen implements NanoGui {
    private void updateSlider() {
       if (draggingSlider == null || !draggingSlider.setting.isVisible()) { draggingSlider = null; return; }
       NumberSetting setting = (NumberSetting)draggingSlider.setting;
-      setting.m223(setting.m218() + fraction(mouseX, slider(draggingSlider.bounds)) * (setting.m219() - setting.m218()));
+      setting.setValue(setting.getMinimum() + fraction(mouseX, slider(draggingSlider.bounds)) * (setting.getMaximum() - setting.getMinimum()));
    }
 
    private void updateScrollbar() {
@@ -582,13 +582,13 @@ public final class NeverloseClickGuiScreen extends Screen implements NanoGui {
    private void save(String name) {
       pulses.put("save", now());
       try {
-         if (name.isEmpty()) ConfigManager.saveState(); else { ConfigManager.m32(name); preset = name; }
+         if (name.isEmpty()) ConfigManager.saveState(); else { ConfigManager.saveConfig(name); preset = name; }
          show(name.isEmpty() ? "Local state saved" : "Saved " + name, false); refreshConfigs();
       } catch (RuntimeException error) { show(error.getMessage() == null ? "Could not save configuration" : error.getMessage(), true); }
    }
 
    private void load(String name) {
-      try { ConfigManager.m33(name); preset = name; show("Loaded " + name, false); refresh(now()); }
+      try { ConfigManager.loadConfig(name); preset = name; show("Loaded " + name, false); refresh(now()); }
       catch (RuntimeException error) { show(error.getMessage() == null ? "Could not load configuration" : error.getMessage(), true); }
    }
 
@@ -596,8 +596,8 @@ public final class NeverloseClickGuiScreen extends Screen implements NanoGui {
       pulses.put("create", now());
       try {
          String name = ConfigManager.validName(configName.getValue());
-         if (ConfigManager.m38(name)) { show("A configuration with that name already exists", true); return; }
-         ConfigManager.m32(name); preset = name; configName.setValue(""); configName.setFocused(false);
+         if (ConfigManager.configExists(name)) { show("A configuration with that name already exists", true); return; }
+         ConfigManager.saveConfig(name); preset = name; configName.setValue(""); configName.setFocused(false);
          show("Created " + name, false); refreshConfigs(); refresh(now());
       } catch (RuntimeException error) { show(error.getMessage() == null ? "Could not create configuration" : error.getMessage(), true); }
    }
@@ -607,7 +607,7 @@ public final class NeverloseClickGuiScreen extends Screen implements NanoGui {
          deleteCandidate = name; deleteUntil = now() + 3; show("Click Confirm to delete " + name, false); return;
       }
       try {
-         if (!ConfigManager.m36(name)) { show("Could not delete configuration", true); return; }
+         if (!ConfigManager.deleteConfig(name)) { show("Could not delete configuration", true); return; }
          if (preset.equals(name)) preset = "";
          deleteCandidate = ""; show("Deleted " + name, false); refreshConfigs(); refresh(now());
       } catch (RuntimeException error) { show("Could not delete configuration", true); }

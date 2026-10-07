@@ -4,7 +4,7 @@ package com.samsara.ui.mainmenu.launch;
 final class IntroMotion {
    private IntroMotion() { }
 
-   static float mix(float a, float b, float p) { return a + (b - a) * p; }
+   static float mix(float from, float to, float p) { return from + (to - from) * p; }
 
    static float ramp(double time, double start, double end) {
       return LaunchTimeline.phase(time, start, end - start);
@@ -41,8 +41,8 @@ final class IntroMotion {
       return (float)pairs[pairs.length - 1];
    }
 
-   private static float cubic(float u, float a, float b) {
+   private static float cubic(float u, float firstControlPoint, float secondControlPoint) {
       float v = 1 - u;
-      return 3 * v * v * u * a + 3 * v * u * u * b + u * u * u;
+      return 3 * v * v * u * firstControlPoint + 3 * v * u * u * secondControlPoint + u * u * u;
    }
 }

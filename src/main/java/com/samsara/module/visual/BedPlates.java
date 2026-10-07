@@ -6,9 +6,8 @@ import com.samsara.event.impl.EventRender2D;
 import com.samsara.module.Category;
 import com.samsara.module.Feature;
 import com.samsara.setting.NumberSetting;
-import com.samsara.util.Vector3d;
+import com.samsara.util.MutableVector3d;
 import com.samsara.util.WorldToScreenProjector;
-import java.nio.charset.StandardCharsets;
 import java.util.ArrayList;
 import java.util.List;
 import net.minecraft.core.BlockPos.MutableBlockPos;
@@ -19,42 +18,42 @@ import net.minecraft.world.level.block.state.BlockState;
 import net.minecraft.world.level.block.state.properties.BedPart;
 
 public class BedPlates extends Feature {
-   private MutableBlockPos f609;
-   private static final String f607 = "Range";
-   private NumberSetting f608 = new NumberSetting(f607, this, 16.0, 8.0, 32.0, 1.0);
-   private final List<BedEntry> f610;
-   private static final String f606 = "BedPlates";
+   private MutableBlockPos searchPosition;
+   private static final String RANGE_LABEL = "Range";
+   private NumberSetting range = new NumberSetting(RANGE_LABEL, this, 16.0, 8.0, 32.0, 1.0);
+   private final List<BedEntry> beds;
+   private static final String BED_PLATES_LABEL = "BedPlates";
 
    @Override
-   public void onEvent(Event var1) {
-      if (var1 == Events.f3) {
-         this.f610.clear();
-         BlockPos var2 = mc.player.blockPosition();
-         int var3 = var2.getX();
-         int var4 = var2.getY();
-         int var5 = var2.getZ();
-         int var6 = (int)this.f608.m220();
-         int var7 = var6 * var6;
+   public void onEvent(Event event) {
+      if (event == Events.ROTATION) {
+         this.beds.clear();
+         BlockPos playerPosition = mc.player.blockPosition();
+         int playerX = playerPosition.getX();
+         int playerY = playerPosition.getY();
+         int playerZ = playerPosition.getZ();
+         int searchRange = (int)this.range.getValue();
+         int rangeSquared = searchRange * searchRange;
 
-         for (int var8 = -var6; var8 <= var6; var8++) {
-            if (var8 * var8 <= var7) {
-               int var9 = var3 + var8;
+         for (int offsetX = -searchRange; offsetX <= searchRange; offsetX++) {
+            if (offsetX * offsetX <= rangeSquared) {
+               int searchX = playerX + offsetX;
 
-               for (int var10 = -var6; var10 <= var6; var10++) {
-                  if (var8 * var8 + var10 * var10 <= var7) {
-                     int var11 = var5 + var10;
+               for (int offsetZ = -searchRange; offsetZ <= searchRange; offsetZ++) {
+                  if (offsetX * offsetX + offsetZ * offsetZ <= rangeSquared) {
+                     int searchZ = playerZ + offsetZ;
 
-                     for (int var12 = -4; var12 <= 4; var12++) {
-                        int var13 = var4 + var12;
-                        this.f609.set(var9, var13, var11);
-                        BlockState var14 = mc.level.getBlockState(this.f609);
-                        if (var14.getBlock() instanceof BedBlock && var14.getValue(BedBlock.PART) == BedPart.FOOT) {
-                           this.f609.set(var9, var13 + 1, var11);
-                           BlockState var15 = mc.level.getBlockState(this.f609);
-                           if (!var15.isAir()) {
-                              ItemStack var16 = new ItemStack(var15.getBlock().asItem());
-                              if (!var16.isEmpty()) {
-                                 this.f610.add(new BedEntry(var9, var13, var11, var16));
+                     for (int offsetY = -4; offsetY <= 4; offsetY++) {
+                        int searchY = playerY + offsetY;
+                        this.searchPosition.set(searchX, searchY, searchZ);
+                        BlockState bedState = mc.level.getBlockState(this.searchPosition);
+                        if (bedState.getBlock() instanceof BedBlock && bedState.getValue(BedBlock.PART) == BedPart.FOOT) {
+                           this.searchPosition.set(searchX, searchY + 1, searchZ);
+                           BlockState coverState = mc.level.getBlockState(this.searchPosition);
+                           if (!coverState.isAir()) {
+                              ItemStack coverItem = new ItemStack(coverState.getBlock().asItem());
+                              if (!coverItem.isEmpty()) {
+                                 this.beds.add(new BedEntry(searchX, searchY, searchZ, coverItem));
                               }
                            }
                         }
@@ -65,27 +64,27 @@ public class BedPlates extends Feature {
          }
       }
 
-      if (var1 == Events.f5) {
-         EventRender2D var17 = (EventRender2D)var1;
-         Vector3d var18 = new Vector3d();
+      if (event == Events.RENDER_2D) {
+         EventRender2D render2DEvent = (EventRender2D)event;
+         MutableVector3d scratchPosition = new MutableVector3d();
 
-         for (BedEntry var20 : this.f610) {
-            Vector3d var21 = WorldToScreenProjector.m43((double)var20.x() + 0.5, (double)var20.y() + 1.5, (double)var20.z() + 0.5, var18);
-            if (var21 != null) {
-               int var22 = (int)var21.x;
-               int var23 = (int)var21.y;
-               byte var24 = 10;
-               var17.m89().fill(var22 - var24, var23 - var24, var22 + var24, var23 + var24, Integer.MIN_VALUE);
-               var17.m89().item(var20.stack(), var22 - var24 + 2, var23 - var24 + 2);
+         for (BedEntry bed : this.beds) {
+            MutableVector3d screenPosition = WorldToScreenProjector.project((double)bed.x() + 0.5, (double)bed.y() + 1.5, (double)bed.z() + 0.5, scratchPosition);
+            if (screenPosition != null) {
+               int screenX = (int)screenPosition.x;
+               int screenY = (int)screenPosition.y;
+               byte iconHalfWidth = 10;
+               render2DEvent.getGraphics().fill(screenX - iconHalfWidth, screenY - iconHalfWidth, screenX + iconHalfWidth, screenY + iconHalfWidth, Integer.MIN_VALUE);
+               render2DEvent.getGraphics().item(bed.stack(), screenX - iconHalfWidth + 2, screenY - iconHalfWidth + 2);
             }
          }
       }
    }
 
    public BedPlates() {
-      super(f606, Category.VISUAL);
-      this.f609 = new MutableBlockPos();
-      this.f610 = new ArrayList();
+      super(BED_PLATES_LABEL, Category.VISUAL);
+      this.searchPosition = new MutableBlockPos();
+      this.beds = new ArrayList();
    }
 
    public static record BedEntry(int x, int y, int z, ItemStack stack) {

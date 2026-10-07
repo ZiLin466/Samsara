@@ -11,12 +11,12 @@ import net.minecraft.network.chat.MutableComponent;
 public class SamsaraClient implements ModInitializer {
    public void onInitialize() {
       FeatureManager.registerModules();
-      CommandManager.m6();
+      CommandManager.registerCommands();
       ConfigManager.init();
    }
 
-   public static void sendMessage(String var0) {
-      Minecraft.getInstance().player.sendSystemMessage(Component.literal(var0));
+   public static void sendMessage(String message) {
+      Minecraft.getInstance().player.sendSystemMessage(Component.literal(message));
    }
 
    public static void sendPrefixedMessage(String message) {

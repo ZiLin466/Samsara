@@ -15,6 +15,8 @@ import java.util.function.Supplier;
 
 /** Main-thread snapshots, ordered atomic writes, and an explicit startup/shutdown boundary. */
 public final class ClientStateStore implements AutoCloseable {
+   private static final long SAVE_CHECK_INTERVAL_MS = 1000;
+   private static final long FLUSH_TIMEOUT_SECONDS = 5;
    private static final Gson JSON=new GsonBuilder().setPrettyPrinting().create();
    private final Path file;
    private final Supplier<JsonObject> snapshot;
@@ -28,8 +30,8 @@ public final class ClientStateStore implements AutoCloseable {
    private Future<?> pending;
 
    public ClientStateStore(Path file,Supplier<JsonObject> snapshot,Consumer<JsonObject> restore,BiConsumer<String,Exception> failure) {
-      this(file,snapshot,restore,failure,Executors.newSingleThreadExecutor(r->{
-         Thread thread=new Thread(r,"Samsara state writer");thread.setDaemon(true);return thread;
+      this(file,snapshot,restore,failure,Executors.newSingleThreadExecutor(writeTask->{
+         Thread thread=new Thread(writeTask,"Samsara state writer");thread.setDaemon(true);return thread;
       }));
    }
 
@@ -56,7 +58,7 @@ public final class ClientStateStore implements AutoCloseable {
 
    public void tick(long now) {
       if (!loaded) return;
-      if (now-lastCheck>=1000) { lastCheck=now;save(); }
+      if (now-lastCheck>=SAVE_CHECK_INTERVAL_MS) { lastCheck=now;save(); }
    }
 
    public synchronized void save() {
@@ -75,7 +77,7 @@ public final class ClientStateStore implements AutoCloseable {
    public void flush() {
       if (!loaded) return;
       save();
-      try { if (pending!=null) pending.get(5,TimeUnit.SECONDS); }
+      try { if (pending!=null) pending.get(FLUSH_TIMEOUT_SECONDS,TimeUnit.SECONDS); }
       catch (InterruptedException error) { Thread.currentThread().interrupt();failure.accept("Interrupted while saving automatic state",error); }
       catch (ExecutionException | TimeoutException error) { failure.accept("Unable to flush automatic state",error); }
    }

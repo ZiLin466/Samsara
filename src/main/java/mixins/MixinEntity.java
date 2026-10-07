@@ -15,33 +15,33 @@ import org.spongepowered.asm.mixin.injection.callback.CallbackInfo;
 @Mixin({Entity.class})
 public abstract class MixinEntity {
    @Overwrite
-   public void moveRelative(float var1, Vec3 var2) {
-      Entity var3 = (Entity)(Object)this;
-      Vec3 var4 = getInputVector(var2, var1, var3.getYRot());
-      if (var3 == Minecraft.getInstance().player && Events.f3.m84()) {
-         var4 = getInputVector(var2, var1, Events.f3.m76());
+   public void moveRelative(float speed, Vec3 input) {
+      Entity entity = (Entity)(Object)this;
+      Vec3 movement = getInputVector(input, speed, entity.getYRot());
+      if (entity == Minecraft.getInstance().player && Events.ROTATION.hasMovementCorrection()) {
+         movement = getInputVector(input, speed, Events.ROTATION.getYaw());
       }
 
-      var3.setDeltaMovement(var3.getDeltaMovement().add(var4));
+      entity.setDeltaMovement(entity.getDeltaMovement().add(movement));
    }
 
    @Shadow
-   protected static Vec3 getInputVector(Vec3 var0, float var1, float var2) {
+   protected static Vec3 getInputVector(Vec3 position, float speed, float yaw) {
       throw new AssertionError();
    }
 
    @Shadow
-   public abstract void setSwimming(boolean var1);
+   public abstract void setSwimming(boolean swimming);
 
    @Inject(
       method = {"updateSwimming"},
       at = {@At("HEAD")},
       cancellable = true
    )
-   private void pm$43(CallbackInfo var1) {
-      if (FeatureManager.f37.isEnabled()) {
+   private void samsara$preventSwimming(CallbackInfo callback) {
+      if (FeatureManager.antiSwim.isEnabled()) {
          this.setSwimming(false);
-         var1.cancel();
+         callback.cancel();
       }
    }
 }

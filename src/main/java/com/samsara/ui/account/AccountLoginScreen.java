@@ -32,19 +32,19 @@ public final class AccountLoginScreen extends Screen implements TerminalPage {
    @Override protected void init() {
       String previous = input == null ? "" : input.getValue(), previousPassword = password == null ? "" : password.getValue();
       controls.clear(); input=null; password=null;
-      var b=TerminalTheme.body(width,height); int x=b.x(), w=b.width();
+      var bodyLayout=TerminalTheme.body(width,height); int x=bodyLayout.x(), w=bodyLayout.width();
       var available = direct ? List.of(SavedAccount.Type.CRACKED,SavedAccount.Type.SESSION) : List.of(SavedAccount.Type.values());
       int tw=(w-(available.size()-1)*4)/available.size();
       for(int i=0;i<available.size();i++) {
          var tab=available.get(i);
-         control((type==tab?"✓ ":"")+tab.label,x+i*(tw+4),b.y(),tw,()->{clearSecrets(); type=tab; status=""; rebuildWidgets();});
+         control((type==tab?"✓ ":"")+tab.label,x+i*(tw+4),bodyLayout.y(),tw,()->{clearSecrets(); type=tab; status=""; rebuildWidgets();});
       }
-      fieldsY=b.y()+(type==SavedAccount.Type.MICROSOFT?49:29);
+      fieldsY=bodyLayout.y()+(type==SavedAccount.Type.MICROSOFT?49:29);
       if(type==SavedAccount.Type.MICROSOFT) {
          int mw=(w-8)/3;
          String[] labels={"Web View","设备代码","邮箱密码"};
-         for(var m:AccountSessions.MicrosoftMethod.values())
-            control((method==m?"✓ ":"")+labels[m.ordinal()],x+m.ordinal()*(mw+4),b.y()+26,mw,()->{clearSecrets(); method=m; status=""; rebuildWidgets();});
+         for(var authMethod:AccountSessions.MicrosoftMethod.values())
+            control((method==authMethod?"✓ ":"")+labels[authMethod.ordinal()],x+authMethod.ordinal()*(mw+4),bodyLayout.y()+26,mw,()->{clearSecrets(); method=authMethod; status=""; rebuildWidgets();});
          if(method==AccountSessions.MicrosoftMethod.CREDENTIALS) {
             input=field("Microsoft 邮箱",x+5,fieldsY+4,w-10,320,false,previous);
             password=field("密码",x+5,fieldsY+28,w-10,1024,true,previousPassword);
@@ -63,13 +63,13 @@ public final class AccountLoginScreen extends Screen implements TerminalPage {
             control("获取 Account Token",x+(w+4)/2,fieldsY+42,(w-4)/2,()->openUrl("https://thealtening.com"));
          }
       }
-      int submitY=Math.min(b.footer()-25,fieldsY+(type==SavedAccount.Type.MICROSOFT?51:67));
+      int submitY=Math.min(bodyLayout.footer()-25,fieldsY+(type==SavedAccount.Type.MICROSOFT?51:67));
       submit=control(type==SavedAccount.Type.MICROSOFT&&method==AccountSessions.MicrosoftMethod.WEB_VIEW?"打开 Microsoft 登录窗口":direct?"登录":"添加账号",x,submitY,w,()->start(false));
       if(type==SavedAccount.Type.MICROSOFT&&method==AccountSessions.MicrosoftMethod.DEVICE_CODE) {
          submit.setWidth((w-4)/2); submit.setMessage(Component.literal("浏览器登录"));
          control("复制登录链接",x+(w+4)/2,submitY,(w-4)/2,()->start(true));
       }
-      addRenderableWidget(Button.builder(Component.literal("取消 / 返回"),btn->onClose()).bounds(x,b.footer(),w,20).build());
+      addRenderableWidget(Button.builder(Component.literal("取消 / 返回"),btn->onClose()).bounds(x,bodyLayout.footer(),w,20).build());
       if(!url.isEmpty()) {
          int cw=(w-8)/3;
          submit.visible=false;
@@ -82,8 +82,8 @@ public final class AccountLoginScreen extends Screen implements TerminalPage {
       updateEnabled();
    }
    private Button control(String label,int x,int y,int w,Runnable action) {
-      Button b=addRenderableWidget(Button.builder(Component.literal(label),btn->{if(!AccountSessions.busy()) action.run();}).bounds(x,y,Math.max(20,w),20).build());
-      controls.add(b); return b;
+      Button button=addRenderableWidget(Button.builder(Component.literal(label),btn->{if(!AccountSessions.busy()) action.run();}).bounds(x,y,Math.max(20,w),20).build());
+      controls.add(button); return button;
    }
    private void independent(String label,int x,int y,int w,Runnable action) {
       addRenderableWidget(Button.builder(Component.literal(label),btn->action.run()).bounds(x,y,w,20).build());
@@ -94,7 +94,7 @@ public final class AccountLoginScreen extends Screen implements TerminalPage {
          @Override public void insertText(String value) {
             if(tokenField&&value.length()>1) {
                try {value=AccountAuthClient.sessionToken(value);status="";}
-               catch(IllegalArgumentException e) {status=e.getMessage();return;}
+               catch(IllegalArgumentException error) {status=error.getMessage();return;}
             }
             super.insertText(value);
          }
@@ -105,21 +105,21 @@ public final class AccountLoginScreen extends Screen implements TerminalPage {
    }
    private void pasteToken() {
       try {input.setValue(AccountAuthClient.sessionToken(minecraft.keyboardHandler.getClipboard()));status="";}
-      catch(IllegalArgumentException e) {status=e.getMessage();}
+      catch(IllegalArgumentException error) {status=error.getMessage();}
    }
    private void updateEnabled() {
-      boolean busy=AccountSessions.busy(); for(var b:controls) b.active=!busy;
+      boolean busy=AccountSessions.busy(); for(var button:controls) button.active=!busy;
       if(input!=null) input.setEditable(!busy); if(password!=null) password.setEditable(!busy);
       if(submit!=null) submit.active=!busy&&(input==null||!input.getValue().isBlank())&&(password==null||!password.getValue().isBlank());
    }
    private void start(boolean copyLink) {
       if(AccountSessions.busy()) return;
       try { if(type==SavedAccount.Type.CRACKED) AccountStore.validate(input.getValue()); }
-      catch(IllegalArgumentException e) {status=e.getMessage();return;}
+      catch(IllegalArgumentException error) {status=error.getMessage();return;}
       String value=input==null?"":input.getValue(), secret=password==null?"":password.getValue();
       if(type==SavedAccount.Type.SESSION) {
          try {value=AccountAuthClient.sessionToken(value);}
-         catch(IllegalArgumentException e) {status=e.getMessage();return;}
+         catch(IllegalArgumentException error) {status=error.getMessage();return;}
       }
       if(input!=null&&type!=SavedAccount.Type.CRACKED) input.setValue(""); if(password!=null) password.setValue("");
       status="正在验证账号，请稍候"; code=""; url="";
@@ -139,23 +139,23 @@ public final class AccountLoginScreen extends Screen implements TerminalPage {
    static String randomName() { return "Samsara_"+Integer.toString(ThreadLocalRandom.current().nextInt(36*36*36*36*36),36); }
    private void openUrl(String value) {
       try { com.mojang.blaze3d.Blaze3D.openUri(java.net.URI.create(value)); }
-      catch (Exception e) { status="无法打开浏览器，请复制登录链接"; }
+      catch (Exception error) { status="无法打开浏览器，请复制登录链接"; }
    }
    private void clearSecrets() {if(input!=null) input.setValue("");if(password!=null) password.setValue("");}
    @Override public void tick() {updateEnabled();}
-   @Override public void extractRenderState(GuiGraphicsExtractor g,int mx,int my,float dt) {
-      var b=TerminalTheme.body(width,height);
-      if(input!=null&&type!=SavedAccount.Type.MICROSOFT) g.text(font,type==SavedAccount.Type.CRACKED?"用户名":type==SavedAccount.Type.SESSION?"Minecraft 访问令牌":generate?"API Key":"Account Token",b.x(),fieldsY,0xFFB1C0CD,false);
+   @Override public void extractRenderState(GuiGraphicsExtractor graphics,int mx,int my,float dt) {
+      var bodyLayout=TerminalTheme.body(width,height);
+      if(input!=null&&type!=SavedAccount.Type.MICROSOFT) graphics.text(font,type==SavedAccount.Type.CRACKED?"用户名":type==SavedAccount.Type.SESSION?"Minecraft 访问令牌":generate?"API Key":"Account Token",bodyLayout.x(),fieldsY,0xFFB1C0CD,false);
       if(type==SavedAccount.Type.MICROSOFT&&method==AccountSessions.MicrosoftMethod.WEB_VIEW)
-         g.textWithWordWrap(font,Component.literal("在 Microsoft 登录窗口完成授权，支持双重验证\n账号保存后可自动刷新，无需再次输入密码"),b.x(),fieldsY,b.width(),0xFFB1C0CD,false);
-      if(!code.isEmpty()) g.text(font,"设备代码："+code,b.x(),fieldsY+15,0xFF00D2EB,false);
+         graphics.textWithWordWrap(font,Component.literal("在 Microsoft 登录窗口完成授权，支持双重验证\n账号保存后可自动刷新，无需再次输入密码"),bodyLayout.x(),fieldsY,bodyLayout.width(),0xFFB1C0CD,false);
+      if(!code.isEmpty()) graphics.text(font,"设备代码："+code,bodyLayout.x(),fieldsY+15,0xFF00D2EB,false);
       String hint=status.isEmpty()?(type==SavedAccount.Type.SESSION?(direct?"登录成功后保存到账号列表；支持粘贴完整账号资料":"支持粘贴完整账号资料；Token 到期后需要更新"):direct?"本次登录不保存账号":"仅保存登录授权，不保存邮箱密码"):status;
-      g.text(font,font.plainSubstrByWidth(hint,b.width()),b.x(),height-31,0xFFB8C8D5,false);
-      super.extractRenderState(g,mx,my,dt);
+      graphics.text(font,font.plainSubstrByWidth(hint,bodyLayout.width()),bodyLayout.x(),height-31,0xFFB8C8D5,false);
+      super.extractRenderState(graphics,mx,my,dt);
    }
-   @Override public boolean keyPressed(KeyEvent e) {if(e.isConfirmation()&&!AccountSessions.busy()&&submit.active){start(false);return true;}return super.keyPressed(e);}
+   @Override public boolean keyPressed(KeyEvent event) {if(event.isConfirmation()&&!AccountSessions.busy()&&submit.active){start(false);return true;}return super.keyPressed(event);}
    @Override public void onClose() {closed=true;AccountSessions.cancel();clearSecrets();minecraft.gui.setScreen(parent);}
-   @Override public void extractBackground(GuiGraphicsExtractor g,int x,int y,float dt) { }
+   @Override public void extractBackground(GuiGraphicsExtractor graphics,int x,int y,float dt) { }
    @Override public String terminalTitle() {return direct?(type==SavedAccount.Type.SESSION?"Token 登录 / TOKEN LOGIN":"直接登录 / DIRECT LOGIN"):"添加账号 / REGISTER IDENTITY";}
    @Override public String terminalCode() {return "03 / AUTHORIZATION";}
    @Override public String terminalDescription() {return "身份与归属\n每一次旅程，都从你开始";}

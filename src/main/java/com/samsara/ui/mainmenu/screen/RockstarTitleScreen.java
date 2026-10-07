@@ -1,5 +1,6 @@
 package com.samsara.ui.mainmenu.screen;
 
+import com.samsara.util.render.ColorUtility;
 import com.samsara.util.animation.Animation;
 import com.samsara.util.animation.Easing;
 import com.samsara.util.render.FontRepository;
@@ -36,6 +37,7 @@ import org.lwjgl.system.MemoryUtil;
 import static org.lwjgl.nanovg.NanoVG.*;
 
 public class RockstarTitleScreen extends Screen {
+   private static final org.slf4j.Logger LOG = org.slf4j.LoggerFactory.getLogger("samsara-menu");
    private static final DateTimeFormatter TIME_FORMAT = DateTimeFormatter.ofPattern("HH:mm", Locale.ENGLISH);
    private static final DateTimeFormatter DATE_FORMAT = DateTimeFormatter.ofPattern("EEEE, MMMM d", Locale.ENGLISH);
 
@@ -110,7 +112,7 @@ public class RockstarTitleScreen extends Screen {
 
       float dim = 0.12f * (1.0f - progress);
       if (dim > 0.01f) {
-         NVGRenderer.rect(0.0f, 0.0f, width, height, applyAlpha(0xFF000000, dim));
+         NVGRenderer.rect(0.0f, 0.0f, width, height, ColorUtility.applyOpacity(0xFF000000, dim));
       }
 
       NVGTextRenderer clockFont = fontWithFallback("rockstar-bold", "productsans-medium");
@@ -121,10 +123,10 @@ public class RockstarTitleScreen extends Screen {
       float timeOffset = lerp(height / 2.0f - 20.0f, 80.0f, progress);
       loadMsdf();
 
-      drawCentered(textFont, date, width / 2.0f, timeOffset - 23.0f + DATE_FONT * 0.72f, DATE_FONT, applyAlpha(WHITE, textAlpha * 0.92f));
-      boolean clockDrawn = drawMsdfCentered(time, width / 2.0f, timeOffset, CLOCK_FONT, applyAlpha(WHITE, textAlpha));
+      drawCentered(textFont, date, width / 2.0f, timeOffset - 23.0f + DATE_FONT * 0.72f, DATE_FONT, ColorUtility.applyOpacity(WHITE, textAlpha * 0.92f));
+      boolean clockDrawn = drawMsdfCentered(time, width / 2.0f, timeOffset, CLOCK_FONT, ColorUtility.applyOpacity(WHITE, textAlpha));
       if (!clockDrawn) {
-         drawCentered(clockFont, time, width / 2.0f, timeOffset + CLOCK_FONT * 0.72f, CLOCK_FONT, applyAlpha(WHITE, textAlpha));
+         drawCentered(clockFont, time, width / 2.0f, timeOffset + CLOCK_FONT * 0.72f, CLOCK_FONT, ColorUtility.applyOpacity(WHITE, textAlpha));
       }
 
       float buttonRowY = (height > 500.0f ? height / 2.0f : height / 1.25f) - 5.0f;
@@ -139,10 +141,10 @@ public class RockstarTitleScreen extends Screen {
          this.drawButton(button);
       }
 
-      NVGRenderer.roundedRect(width / 2.0f - 36.0f, height - 5.0f - 3.0f * progress, 72.0f, 3.0f, 1.0f, applyAlpha(WHITE, progress));
+      NVGRenderer.roundedRect(width / 2.0f - 36.0f, height - 5.0f - 3.0f * progress, 72.0f, 3.0f, 1.0f, ColorUtility.applyOpacity(WHITE, progress));
 
       String hint = "Click to continue";
-      drawCentered(textFont, hint, width / 2.0f, height - 15.0f + 3.0f * progress + HINT_FONT * 0.72f, HINT_FONT, applyAlpha(WHITE, 155.0f / 255.0f * (1.0f - progress)));
+      drawCentered(textFont, hint, width / 2.0f, height - 15.0f + 3.0f * progress + HINT_FONT * 0.72f, HINT_FONT, ColorUtility.applyOpacity(WHITE, 155.0f / 255.0f * (1.0f - progress)));
    }
 
    private void handleLeftClick() {
@@ -169,9 +171,9 @@ public class RockstarTitleScreen extends Screen {
       button.hover.run(hovered ? 1.0f : 0.0f);
 
       float bgAlpha = 0.5f * appear + 0.2f * button.hover.getValue();
-      NVGRenderer.roundedRect(button.x, button.y, BUTTON_SIZE, BUTTON_SIZE, BUTTON_SIZE / 2.0f, applyAlpha(BUTTON_BG, bgAlpha));
+      NVGRenderer.roundedRect(button.x, button.y, BUTTON_SIZE, BUTTON_SIZE, BUTTON_SIZE / 2.0f, ColorUtility.applyOpacity(BUTTON_BG, bgAlpha));
       float iconSize = button.glyph == Glyph.QUIT ? 14.0f : 12.0f;
-      drawGlyph(button.glyph, cx, cy, iconSize, applyAlpha(WHITE, 0.95f * appear));
+      drawGlyph(button.glyph, cx, cy, iconSize, ColorUtility.applyOpacity(WHITE, 0.95f * appear));
    }
 
    private static void drawGlyph(Glyph glyph, float cx, float cy, float size, int color) {
@@ -257,18 +259,18 @@ public class RockstarTitleScreen extends Screen {
             int pixel = pixels[i];
             int r = pixel >> 16 & 0xFF;
             int g = pixel >> 8 & 0xFF;
-            int b = pixel & 0xFF;
-            int median = Math.max(Math.min(r, g), Math.min(Math.max(r, g), b));
+            int blue = pixel & 0xFF;
+            int median = Math.max(Math.min(r, g), Math.min(Math.max(r, g), blue));
             int alpha = Math.max(0, Math.min(255, (median - 128) * 8 + 128));
             coverage[i] = alpha << 24 | 0x00FFFFFF;
          }
-         ByteBuffer data = MemoryUtil.memAlloc(msdfAtlasWidth * msdfAtlasHeight * 4);
+         ByteBuffer imageBuffer = MemoryUtil.memAlloc(msdfAtlasWidth * msdfAtlasHeight * 4);
          for (int pixel : coverage) {
-            data.putInt((pixel << 16) | (pixel >>> 16));
+            imageBuffer.putInt((pixel << 16) | (pixel >>> 16));
          }
-         data.flip();
-         msdfImage = nvgCreateImageMem(NVGRenderer.getContext(), 0, data);
-         MemoryUtil.memFree(data);
+         imageBuffer.flip();
+         msdfImage = nvgCreateImageMem(NVGRenderer.getContext(), 0, imageBuffer);
+         MemoryUtil.memFree(imageBuffer);
 
          String json = Files.readString(jsonPath);
          String[] parts = json.split("\"unicode\":");
@@ -301,7 +303,7 @@ public class RockstarTitleScreen extends Screen {
             }
          }
       } catch (Throwable throwable) {
-         throwable.printStackTrace();
+         LOG.warn("Unable to load menu font atlas", throwable);
       }
    }
 
@@ -406,11 +408,6 @@ public class RockstarTitleScreen extends Screen {
       return mouseX >= x && mouseX <= x + w && mouseY >= y && mouseY <= y + h;
    }
 
-   private static int applyAlpha(int color, float alpha) {
-      int a = (int)Math.max(0.0f, Math.min(1.0f, alpha) * 255.0f);
-      return (a << 24) | (color & 0x00FFFFFF);
-   }
-
    private static void drawWallpaper(float width, float height, float progress) {
       if (wallpaperImage <= 0) {
          return;
@@ -444,13 +441,13 @@ public class RockstarTitleScreen extends Screen {
             return;
          }
          byte[] bytes = Files.readAllBytes(image);
-         ByteBuffer data = MemoryUtil.memAlloc(bytes.length);
-         data.put(bytes);
-         data.flip();
-         wallpaperImage = nvgCreateImageMem(NVGRenderer.getContext(), 0, data);
-         MemoryUtil.memFree(data);
+         ByteBuffer imageBuffer = MemoryUtil.memAlloc(bytes.length);
+         imageBuffer.put(bytes);
+         imageBuffer.flip();
+         wallpaperImage = nvgCreateImageMem(NVGRenderer.getContext(), 0, imageBuffer);
+         MemoryUtil.memFree(imageBuffer);
       } catch (Throwable throwable) {
-         throwable.printStackTrace();
+         LOG.warn("Unable to load menu wallpaper", throwable);
       }
    }
 
@@ -480,7 +477,7 @@ public class RockstarTitleScreen extends Screen {
             }
          }
       } catch (Throwable throwable) {
-         throwable.printStackTrace();
+         LOG.warn("Unable to load menu icons", throwable);
       }
    }
 
@@ -532,7 +529,7 @@ public class RockstarTitleScreen extends Screen {
          button.x = buttonX;
          button.y = this.height * 0.805f - BUTTON_SIZE / 2.0f;
          buttonX += Math.round(BUTTON_SIZE + BUTTON_GAP);
-         int bg = applyAlpha(BUTTON_BG, 0.4f * button.appear.getValue() + (isHovered(button.x, button.y, BUTTON_SIZE, BUTTON_SIZE) ? 0.2f : 0.0f));
+         int bg = ColorUtility.applyOpacity(BUTTON_BG, 0.4f * button.appear.getValue() + (isHovered(button.x, button.y, BUTTON_SIZE, BUTTON_SIZE) ? 0.2f : 0.0f));
          graphics.fill(Math.round(button.x), Math.round(button.y), Math.round(button.x + BUTTON_SIZE), Math.round(button.y + BUTTON_SIZE), bg);
          String label = switch (button.glyph) {
             case SINGLE -> "S";
@@ -545,7 +542,7 @@ public class RockstarTitleScreen extends Screen {
 
       String hint = "Click to continue";
       if (progress < 0.99f) {
-         graphics.centeredText(font, hint, this.width / 2 - font.width(hint) / 2, this.height - 14, applyAlpha(WHITE, 0.6f * (1.0f - progress)));
+         graphics.centeredText(font, hint, this.width / 2 - font.width(hint) / 2, this.height - 14, ColorUtility.applyOpacity(WHITE, 0.6f * (1.0f - progress)));
       }
    }
 

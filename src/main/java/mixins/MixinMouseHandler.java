@@ -28,7 +28,7 @@ public class MixinMouseHandler {
    @Inject(method = "handleAccumulatedMovement", at = @At("HEAD"))
    private void samsara$clearCameraFilter(CallbackInfo callback) {
       CameraType camera = this.minecraft.options.getCameraType();
-      boolean scaffold = FeatureManager.f29 != null && FeatureManager.f29.isEnabled();
+      boolean scaffold = FeatureManager.scaffold != null && FeatureManager.scaffold.isEnabled();
       boolean changed = this.samsara$cameraType != camera || this.samsara$player != this.minecraft.player
          || this.samsara$scaffold != scaffold;
       if (changed) {
@@ -50,9 +50,9 @@ public class MixinMouseHandler {
       method = {"onButton"},
       at = {@At("HEAD")}
    )
-   private void pm$41(long var1, MouseButtonInfo var3, int var4, CallbackInfo var5) {
-      EventMouseButton var6 = Events.f15.m12(var3.button(), var4, var3.modifiers());
-      var6.call();
+   private void samsara$dispatchMouseButton(long windowHandle, MouseButtonInfo buttonInfo, int action, CallbackInfo callback) {
+      EventMouseButton mouseButtonEvent = Events.MOUSE_BUTTON.reset(buttonInfo.button(), action, buttonInfo.modifiers());
+      mouseButtonEvent.call();
       // Let MouseHandler continue into Minecraft's Screen dispatch. Cancelling
       // here prevents NanoVG screens from receiving clicks and drag events.
    }

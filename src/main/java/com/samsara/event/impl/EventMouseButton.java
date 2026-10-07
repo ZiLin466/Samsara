@@ -3,50 +3,50 @@ package com.samsara.event.impl;
 import com.samsara.event.Event;
 
 public class EventMouseButton extends Event {
-   private int f82;
-   private int f83;
-   private int f81;
+   private int action;
+   private int modifiers;
+   private int button;
 
-   public EventMouseButton m12(int var1, int var2, int var3) {
-      this.f81 = var1;
-      this.f82 = var2;
-      this.f83 = var3;
+   public EventMouseButton reset(int button, int action, int modifiers) {
+      this.button = button;
+      this.action = action;
+      this.modifiers = modifiers;
       return this;
    }
 
-   public boolean m19() {
-      return this.f81 == 0;
+   public boolean isLeftButton() {
+      return this.button == 0;
    }
 
-   public boolean m20() {
-      return this.f81 == 1;
+   public boolean isRightButton() {
+      return this.button == 1;
    }
 
-   public boolean m18() {
-      return this.f82 == 2;
+   public boolean isRepeated() {
+      return this.action == 2;
    }
 
-   public int m13() {
-      return this.f81;
+   public int getButton() {
+      return this.button;
    }
 
-   public int m14() {
-      return this.f82;
+   public int getAction() {
+      return this.action;
    }
 
-   public boolean m16() {
-      return this.f82 == 1;
+   public boolean isPressed() {
+      return this.action == 1;
    }
 
-   public boolean m21() {
-      return this.f81 == 2;
+   public boolean isMiddleButton() {
+      return this.button == 2;
    }
 
-   public boolean m17() {
-      return this.f82 == 0;
+   public boolean isReleased() {
+      return this.action == 0;
    }
 
-   public int m15() {
-      return this.f83;
+   public int getModifiers() {
+      return this.modifiers;
    }
 }

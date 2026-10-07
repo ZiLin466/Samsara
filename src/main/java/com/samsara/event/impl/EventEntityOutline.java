@@ -4,24 +4,24 @@ import com.samsara.event.Event;
 import net.minecraft.world.entity.Entity;
 
 public class EventEntityOutline extends Event {
-   private Entity f91;
-   private int f92;
+   private Entity entity;
+   private int color;
 
-   public EventEntityOutline m36(int var1, Entity var2) {
-      this.f92 = var1;
-      this.f91 = var2;
+   public EventEntityOutline reset(int color, Entity entity) {
+      this.color = color;
+      this.entity = entity;
       return this;
    }
 
-   public Entity m38() {
-      return this.f91;
+   public Entity getEntity() {
+      return this.entity;
    }
 
-   public void m39(int var1) {
-      this.f92 = var1;
+   public void setColor(int color) {
+      this.color = color;
    }
 
-   public int m37() {
-      return this.f92;
+   public int getColor() {
+      return this.color;
    }
 }

@@ -26,15 +26,15 @@ public final class MenuBackground {
          && !(screen instanceof SamsaraTitleScreen) && !(screen instanceof com.samsara.ui.NanoGui)
          && !(screen instanceof com.samsara.ui.terminal.TerminalPage);
    }
-   public static void render(GuiGraphicsExtractor g, int width, int height) {
+   public static void render(GuiGraphicsExtractor graphics, int width, int height) {
       float cover = Math.max(width / 1820f, height / 1024f);
       int w = Math.round(1820 * cover), h = Math.round(1024 * cover);
-      g.blit(RenderPipelines.GUI_TEXTURED, ModTextures.register("textures/launch/scene.png"), (width-w)/2, (height-h)/2,
+      graphics.blit(RenderPipelines.GUI_TEXTURED, ModTextures.register("textures/launch/scene.png"), (width-w)/2, (height-h)/2,
          0, 0, w, h, 1820, 1024, 1820, 1024);
-      var l = LaunchLayout.of(width, height);
-      int size = Math.round(980*l.scale());
-      g.blit(RenderPipelines.GUI_TEXTURED, ModTextures.register("textures/launch/operator.png"),
-         Math.round(l.left()+40*l.scale()), Math.round(l.top()+30*l.scale()), 0, 0, size, size, 1024, 1024, 1024, 1024);
-      g.fill(0, 0, width, height, 0x700A111A);
+      var layout = LaunchLayout.of(width, height);
+      int size = Math.round(980*layout.scale());
+      graphics.blit(RenderPipelines.GUI_TEXTURED, ModTextures.register("textures/launch/operator.png"),
+         Math.round(layout.left()+40*layout.scale()), Math.round(layout.top()+30*layout.scale()), 0, 0, size, size, 1024, 1024, 1024, 1024);
+      graphics.fill(0, 0, width, height, 0x700A111A);
    }
 }

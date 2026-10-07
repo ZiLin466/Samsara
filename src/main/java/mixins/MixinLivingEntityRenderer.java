@@ -22,9 +22,9 @@ public class MixinLivingEntityRenderer<T extends LivingEntity, S extends LivingE
          shift = Shift.AFTER
       )}
    )
-   private void pm$52(LivingEntity var1, LivingEntityRenderState var2, float var3, CallbackInfo var4) {
-      if (var1 == Minecraft.getInstance().player) {
-         var2.xRot = Mth.rotLerp(var3, Events.f3.m79(), Events.f3.m82());
+   private void samsara$extractManagedRotation(LivingEntity target, LivingEntityRenderState renderState, float partialTick, CallbackInfo callback) {
+      if (target == Minecraft.getInstance().player) {
+         renderState.xRot = Mth.rotLerp(partialTick, Events.ROTATION.getPreviousPitch(), Events.ROTATION.getPitch());
       }
    }
 }

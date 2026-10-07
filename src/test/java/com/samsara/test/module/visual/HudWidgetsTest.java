@@ -54,7 +54,7 @@ final class HudWidgetsTest {
       assertEquals(original, old);
       assertTrue(hud.isEnabled());
       assertEquals(List.of("Dynamic Island", "Potion Status", "TargetHUD", "SessionHUD"), hud.widgets.selectedValues());
-      assertEquals("Opai", ((ModeSetting)hud.settings.stream().filter(s -> s.getName().equals("Target Mode")).findFirst().orElseThrow()).m224());
+      assertEquals("Opai", ((ModeSetting)hud.settings.stream().filter(s -> s.getName().equals("Target Mode")).findFirst().orElseThrow()).getValue());
       var saved = ModuleConfigCodec.snapshot(List.of(hud), ModuleConfigCodec.Scope.ALL, false);
       assertEquals(java.util.Set.of("HUD"), saved.keySet());
       assertFalse(saved.getAsJsonObject("HUD").getAsJsonObject("settings").get("Target Show Armor").getAsBoolean());
@@ -71,7 +71,7 @@ final class HudWidgetsTest {
       ModuleConfigCodec.prepare(List.of(hud), old, ModuleConfigCodec.Scope.ALL).run();
       assertFalse(hud.isEnabled());
       assertEquals(List.of("InventoryHUD"), hud.widgets.selectedValues());
-      assertEquals("Classic", ((ModeSetting)hud.settings.stream().filter(s -> s.getName().equals("Target Mode")).findFirst().orElseThrow()).m224());
+      assertEquals("Classic", ((ModeSetting)hud.settings.stream().filter(s -> s.getName().equals("Target Mode")).findFirst().orElseThrow()).getValue());
    }
 
    @Test void newWidgetSelectionsRoundTripAndGameplayPresetsPreserveThem() {
@@ -101,6 +101,6 @@ final class HudWidgetsTest {
       var warnings = new java.util.ArrayList<String>();
       ModuleConfigCodec.prepare(List.of(hud), root, ModuleConfigCodec.Scope.ALL, true, warnings::add).run();
       assertEquals(1, warnings.size()); assertEquals(6, hud.widgets.selectedValues().size());
-      assertEquals("Opai", ((ModeSetting)hud.settings.stream().filter(s -> s.getName().equals("ArrayList mode")).findFirst().orElseThrow()).m224());
+      assertEquals("Opai", ((ModeSetting)hud.settings.stream().filter(s -> s.getName().equals("ArrayList mode")).findFirst().orElseThrow()).getValue());
    }
 }

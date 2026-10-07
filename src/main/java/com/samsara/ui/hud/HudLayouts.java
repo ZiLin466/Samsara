@@ -56,9 +56,9 @@ public final class HudLayouts {
    public JsonObject snapshot() {
       JsonObject result = new JsonObject();
       for (var entry : this.placements.entrySet()) {
-         var value = entry.getValue(); var data = new JsonObject();
-         data.addProperty("x", value.x); data.addProperty("y", value.y); data.addProperty("scale", value.scale);
-         result.add(entry.getKey().name(), data);
+         var value = entry.getValue(); var layouts = new JsonObject();
+         layouts.addProperty("x", value.x); layouts.addProperty("y", value.y); layouts.addProperty("scale", value.scale);
+         result.add(entry.getKey().name(), layouts);
       }
       return result;
    }
@@ -67,8 +67,8 @@ public final class HudLayouts {
       var parsed = new EnumMap<Element, Placement>(Element.class);
       for (Element element : Element.values()) {
          if (!root.has(element.name())) continue;
-         JsonObject data = root.getAsJsonObject(element.name()); Placement next = new Placement(element);
-         double x = data.get("x").getAsDouble(), y = data.get("y").getAsDouble(), scale = data.get("scale").getAsDouble();
+         JsonObject layouts = root.getAsJsonObject(element.name()); Placement next = new Placement(element);
+         double x = layouts.get("x").getAsDouble(), y = layouts.get("y").getAsDouble(), scale = layouts.get("scale").getAsDouble();
          if (!Double.isFinite(x) || !Double.isFinite(y) || !Double.isFinite(scale)) throw new IllegalArgumentException("Invalid HUD layout");
          next.move(x, y); next.scale(scale); parsed.put(element, next);
       }

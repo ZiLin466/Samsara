@@ -6,7 +6,6 @@ import com.samsara.module.Category;
 import com.samsara.module.Feature;
 import com.samsara.setting.ModeSetting;
 import com.samsara.setting.NumberSetting;
-import java.nio.charset.StandardCharsets;
 import mixins.ClientInputAccessor;
 import net.minecraft.network.protocol.game.ServerboundAttackPacket;
 import net.minecraft.world.entity.Entity;
@@ -14,60 +13,60 @@ import net.minecraft.world.entity.player.Input;
 import net.minecraft.world.phys.Vec2;
 
 public class SprintReset extends Feature {
-   private static final String f307 = "WTap";
-   private static final String f305 = "Mode";
-   private final ModeSetting f311;
-   private static final String f306 = "WTap";
-   private static final String f304 = "Reset Delay";
-   private final NumberSetting f309;
-   private static final String f302 = "SprintReset";
-   private static final String f303 = "Release Delay";
-   private int f313;
-   private int f312;
-   private final NumberSetting f310;
-   private static final String f308 = "STap";
+   private static final String W_TAP_MODE = "WTap";
+   private static final String MODE_LABEL = "Mode";
+   private final ModeSetting mode;
+   private static final String DEFAULT_MODE = "WTap";
+   private static final String RESET_DELAY_LABEL = "Reset Delay";
+   private final NumberSetting releaseDelay;
+   private static final String SPRINT_RESET_LABEL = "SprintReset";
+   private static final String RELEASE_DELAY_LABEL = "Release Delay";
+   private int resetTicksRemaining;
+   private int releaseTicksRemaining;
+   private final NumberSetting resetDelay;
+   private static final String S_TAP_LABEL = "STap";
 
    @Override
-   public void onEvent(Event var1) {
-      if (var1 == Events.f3) {
-         this.setSuffix(this.f311.m224());
+   public void onEvent(Event event) {
+      if (event == Events.ROTATION) {
+         this.setSuffix(this.mode.getValue());
       }
 
-      if (var1 == Events.f10 && Events.f10.m44() instanceof ServerboundAttackPacket var2) {
-         Entity var7 = mc.level.getEntity(var2.entityId());
-         if (var7 != null && mc.player.isSprinting() && this.f313 <= 0) {
-            this.f312 = (int)this.f309.m220();
-            this.f313 = (int)this.f310.m220();
+      if (event == Events.PACKET_SEND && Events.PACKET_SEND.getPacket() instanceof ServerboundAttackPacket attackPacket) {
+         Entity entity = mc.level.getEntity(attackPacket.entityId());
+         if (entity != null && mc.player.isSprinting() && this.resetTicksRemaining <= 0) {
+            this.releaseTicksRemaining = (int)this.releaseDelay.getValue();
+            this.resetTicksRemaining = (int)this.resetDelay.getValue();
          }
       }
 
-      if (var1 == Events.f8) {
-         if (this.f313 > 0) {
-            this.f313--;
+      if (event == Events.POST_MOVE_INPUT) {
+         if (this.resetTicksRemaining > 0) {
+            this.resetTicksRemaining--;
          }
 
-         if (this.f312 > 0) {
-            this.f312--;
-            Input var6 = mc.player.input.keyPresses;
-            ClientInputAccessor var8 = (ClientInputAccessor)mc.player.input;
-            boolean var4 = this.f311.m228(f308);
-            Vec2 var5 = new Vec2(0.0F, var4 ? -1.0F : 0.0F);
-            if (var5.length() > 1.0F) {
-               var5 = var5.normalized();
+         if (this.releaseTicksRemaining > 0) {
+            this.releaseTicksRemaining--;
+            Input input = mc.player.input.keyPresses;
+            ClientInputAccessor inputAccessor = (ClientInputAccessor)mc.player.input;
+            boolean backwardTap = this.mode.is(S_TAP_LABEL);
+            Vec2 movement = new Vec2(0.0F, backwardTap ? -1.0F : 0.0F);
+            if (movement.length() > 1.0F) {
+               movement = movement.normalized();
             }
 
-            var8.setMoveVector(var5);
-            mc.player.input.keyPresses = new Input(false, var4, false, false, var6.jump(), var6.shift(), var6.sprint());
-         } else if (this.f312 == 0) {
-            this.f312--;
+            inputAccessor.setMoveVector(movement);
+            mc.player.input.keyPresses = new Input(false, backwardTap, false, false, input.jump(), input.shift(), input.sprint());
+         } else if (this.releaseTicksRemaining == 0) {
+            this.releaseTicksRemaining--;
          }
       }
    }
 
    public SprintReset() {
-      super(f302, Category.COMBAT);
-      this.f309 = new NumberSetting(f303, this, 2.0, 1.0, 5.0, 1.0);
-      this.f310 = new NumberSetting(f304, this, 0.0, 0.0, 10.0, 1.0);
-      this.f311 = new ModeSetting(f305, this, f306, new String[]{f307, f308});
+      super(SPRINT_RESET_LABEL, Category.COMBAT);
+      this.releaseDelay = new NumberSetting(RELEASE_DELAY_LABEL, this, 2.0, 1.0, 5.0, 1.0);
+      this.resetDelay = new NumberSetting(RESET_DELAY_LABEL, this, 0.0, 0.0, 10.0, 1.0);
+      this.mode = new ModeSetting(MODE_LABEL, this, DEFAULT_MODE, new String[]{W_TAP_MODE, S_TAP_LABEL});
    }
 }

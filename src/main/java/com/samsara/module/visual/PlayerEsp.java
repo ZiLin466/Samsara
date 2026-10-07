@@ -6,158 +6,123 @@ import com.samsara.module.Category;
 import com.samsara.module.Feature;
 import com.samsara.module.FeatureManager;
 import com.samsara.setting.BooleanSetting;
-import com.samsara.util.ColorUtil;
-import com.samsara.util.Vector3d;
+import com.samsara.util.ClientColors;
+import com.samsara.util.MutableVector3d;
 import com.samsara.util.WorldToScreenProjector;
-import java.nio.charset.StandardCharsets;
 import net.minecraft.client.gui.GuiGraphicsExtractor;
 import net.minecraft.world.entity.Entity;
 import net.minecraft.world.entity.LivingEntity;
-import net.minecraft.world.entity.player.Player;
 
 public class PlayerEsp extends Feature {
-   private static final String f652 = "Health bar";
-   private static final String f650 = "PlayerESP";
-   private final BooleanSetting f654;
-   private final BooleanSetting f655;
-   private final BooleanSetting f656;
-   private final Vector3d f657;
-   private static final String f651 = "2D";
-   private static final String f653 = "Outline";
+   private static final double HEIGHT_PADDING = 0.15;
+   private static final int BOX_BORDER_THICKNESS = 1;
+   private static final int BOX_OUTLINE_THICKNESS = 1;
+   private static final int HEALTH_BAR_OFFSET = 4;
+   private static final String HEALTH_BAR_LABEL = "Health bar";
+   private static final String PLAYER_ESP_LABEL = "PlayerESP";
+   private final BooleanSetting twoDimensional;
+   private final BooleanSetting healthBar;
+   private final BooleanSetting outline;
+   private final MutableVector3d projectedPosition;
+   private static final String TWO_DIMENSIONAL_LABEL = "2D";
+   private static final String OUTLINE_LABEL = "Outline";
 
    public PlayerEsp() {
-      super(f650, Category.VISUAL);
-      this.f654 = new BooleanSetting(f651, this, false);
-      this.f655 = new BooleanSetting(f652, this, false);
-      this.f656 = new BooleanSetting(f653, this, false);
-      this.f657 = new Vector3d();
+      super(PLAYER_ESP_LABEL, Category.VISUAL);
+      this.twoDimensional = new BooleanSetting(TWO_DIMENSIONAL_LABEL, this, false);
+      this.healthBar = new BooleanSetting(HEALTH_BAR_LABEL, this, false);
+      this.outline = new BooleanSetting(OUTLINE_LABEL, this, false);
+      this.projectedPosition = new MutableVector3d();
    }
 
-   private void draw2DBox(GuiGraphicsExtractor var1, LivingEntity var2, int var3, float var4, Vector3d var5) {
-      double var6 = Double.MAX_VALUE;
-      double var8 = Double.MAX_VALUE;
-      double var10 = -Double.MAX_VALUE;
-      double var12 = -Double.MAX_VALUE;
-      double var14 = var2.xOld + (var2.getX() - var2.xOld) * (double)var4;
-      double var16 = var2.yOld + (var2.getY() - var2.yOld) * (double)var4;
-      double var18 = var2.zOld + (var2.getZ() - var2.zOld) * (double)var4;
-      double var20 = (double)var2.getBbWidth() * 0.5;
-      double var22 = (double)var2.getBbHeight();
-      double var24 = var14 - var20;
-      double var26 = var14 + var20;
-      double var30 = var16 + var22 + 0.15;
-      double var32 = var18 - var20;
-      double var34 = var18 + var20;
-      Vector3d var36 = WorldToScreenProjector.m43(var24, var16, var32, var5);
-      if (var36 != null) {
-         var6 = Math.min(var6, var36.x);
-         var8 = Math.min(var8, var36.y);
-         var10 = Math.max(var10, var36.x);
-         var12 = Math.max(var12, var36.y);
-         var36 = WorldToScreenProjector.m43(var24, var16, var34, var5);
-         if (var36 != null) {
-            var6 = Math.min(var6, var36.x);
-            var8 = Math.min(var8, var36.y);
-            var10 = Math.max(var10, var36.x);
-            var12 = Math.max(var12, var36.y);
-            var36 = WorldToScreenProjector.m43(var26, var16, var32, var5);
-            if (var36 != null) {
-               var6 = Math.min(var6, var36.x);
-               var8 = Math.min(var8, var36.y);
-               var10 = Math.max(var10, var36.x);
-               var12 = Math.max(var12, var36.y);
-               var36 = WorldToScreenProjector.m43(var26, var16, var34, var5);
-               if (var36 != null) {
-                  var6 = Math.min(var6, var36.x);
-                  var8 = Math.min(var8, var36.y);
-                  var10 = Math.max(var10, var36.x);
-                  var12 = Math.max(var12, var36.y);
-                  var36 = WorldToScreenProjector.m43(var24, var30, var32, var5);
-                  if (var36 != null) {
-                     var6 = Math.min(var6, var36.x);
-                     var8 = Math.min(var8, var36.y);
-                     var10 = Math.max(var10, var36.x);
-                     var12 = Math.max(var12, var36.y);
-                     var36 = WorldToScreenProjector.m43(var24, var30, var34, var5);
-                     if (var36 != null) {
-                        var6 = Math.min(var6, var36.x);
-                        var8 = Math.min(var8, var36.y);
-                        var10 = Math.max(var10, var36.x);
-                        var12 = Math.max(var12, var36.y);
-                        var36 = WorldToScreenProjector.m43(var26, var30, var32, var5);
-                        if (var36 != null) {
-                           var6 = Math.min(var6, var36.x);
-                           var8 = Math.min(var8, var36.y);
-                           var10 = Math.max(var10, var36.x);
-                           var12 = Math.max(var12, var36.y);
-                           var36 = WorldToScreenProjector.m43(var26, var30, var34, var5);
-                           if (var36 != null) {
-                              var6 = Math.min(var6, var36.x);
-                              var8 = Math.min(var8, var36.y);
-                              var10 = Math.max(var10, var36.x);
-                              var12 = Math.max(var12, var36.y);
-                              int var37 = (int)var6;
-                              int var38 = (int)var8;
-                              int var39 = (int)var10;
-                              int var40 = (int)var12;
-                              byte var41 = 1;
-                              if (this.f654.m215()) {
-                                 byte var42 = 1;
-                                 var1.fill(var37 - var42, var38 - var42, var39 + var42, var38 + var42 + var41, -16777216);
-                                 var1.fill(var37 - var42, var40 - var42 - var41, var39 + var42, var40 + var42, -16777216);
-                                 var1.fill(var37 - var42, var38 - var42, var37 + var42 + var41, var40 + var42, -16777216);
-                                 var1.fill(var39 - var42 - var41, var38 - var42, var39 + var42, var40 + var42, -16777216);
-                                 var1.fill(var37, var38, var39, var38 + var41, var3);
-                                 var1.fill(var37, var40 - var41, var39, var40, var3);
-                                 var1.fill(var37, var38, var37 + var41, var40, var3);
-                                 var1.fill(var39 - var41, var38, var39, var40, var3);
-                              }
+   private void draw2DBox(GuiGraphicsExtractor graphics, LivingEntity target, int color, float partialTick, MutableVector3d scratchPosition) {
+      double minScreenX = Double.MAX_VALUE;
+      double minScreenY = Double.MAX_VALUE;
+      double maxScreenX = -Double.MAX_VALUE;
+      double maxScreenY = -Double.MAX_VALUE;
+      double entityX = target.xOld + (target.getX() - target.xOld) * (double)partialTick;
+      double entityY = target.yOld + (target.getY() - target.yOld) * (double)partialTick;
+      double entityZ = target.zOld + (target.getZ() - target.zOld) * (double)partialTick;
+      double halfWidth = (double)target.getBbWidth() * 0.5;
+      double entityHeight = (double)target.getBbHeight();
+      double minX = entityX - halfWidth;
+      double maxX = entityX + halfWidth;
+      double maxY = entityY + entityHeight + HEIGHT_PADDING;
+      double minZ = entityZ - halfWidth;
+      double maxZ = entityZ + halfWidth;
+      // Preserve corner order and suppress the overlay when any corner is behind the camera.
+      for (int corner = 0; corner < 8; corner++) {
+         double cornerX = (corner & 2) == 0 ? minX : maxX;
+         double cornerY = (corner & 4) == 0 ? entityY : maxY;
+         double cornerZ = (corner & 1) == 0 ? minZ : maxZ;
+         MutableVector3d screenPoint = WorldToScreenProjector.project(cornerX, cornerY, cornerZ, scratchPosition);
+         if (screenPoint == null) return;
+         minScreenX = Math.min(minScreenX, screenPoint.x);
+         minScreenY = Math.min(minScreenY, screenPoint.y);
+         maxScreenX = Math.max(maxScreenX, screenPoint.x);
+         maxScreenY = Math.max(maxScreenY, screenPoint.y);
+      }
+      int left = (int)minScreenX;
+      int top = (int)minScreenY;
+      int right = (int)maxScreenX;
+      int bottom = (int)maxScreenY;
+      drawBox(graphics, left, top, right, bottom, color);
+      drawHealthBar(graphics, target, left, top, bottom);
+   }
 
-                              if (this.f655.m215()) {
-                                 double var89 = Math.clamp((double)(var2.getHealth() / var2.getMaxHealth()), 0.0, 1.0);
-                                 int var44 = ColorUtil.m26((float)var89);
-                                 int var45 = Math.max(1, var40 - var38);
-                                 int var46 = Math.max(var2.getHealth() > 0.0F ? 1 : 0, (int)Math.ceil((double)var45 * var89));
-                                 byte var47 = 4;
-                                 int var48 = var37 - var47;
-                                 int var49 = var48 + 1;
-                                 var1.fill(var48 - 1, var38 - 1, var49 + 1, var38 + var45 + 1, -16777216);
-                                 var1.fill(var48, var38, var49, var38 + var45, -11513776);
-                                 if (var46 > 0) {
-                                    var1.fill(var48, var38 + var45 - var46, var49, var38 + var45, var44);
-                                 }
-                              }
-                           }
-                        }
-                     }
-                  }
-               }
-            }
+   private void drawBox(GuiGraphicsExtractor graphics, int left, int top, int right, int bottom, int color) {
+      int borderThickness = BOX_BORDER_THICKNESS;
+      if (this.twoDimensional.getValue()) {
+         int outlineThickness = BOX_OUTLINE_THICKNESS;
+         graphics.fill(left - outlineThickness, top - outlineThickness, right + outlineThickness, top + outlineThickness + borderThickness, -16777216);
+         graphics.fill(left - outlineThickness, bottom - outlineThickness - borderThickness, right + outlineThickness, bottom + outlineThickness, -16777216);
+         graphics.fill(left - outlineThickness, top - outlineThickness, left + outlineThickness + borderThickness, bottom + outlineThickness, -16777216);
+         graphics.fill(right - outlineThickness - borderThickness, top - outlineThickness, right + outlineThickness, bottom + outlineThickness, -16777216);
+         graphics.fill(left, top, right, top + borderThickness, color);
+         graphics.fill(left, bottom - borderThickness, right, bottom, color);
+         graphics.fill(left, top, left + borderThickness, bottom, color);
+         graphics.fill(right - borderThickness, top, right, bottom, color);
+      }
+   }
+
+   private void drawHealthBar(GuiGraphicsExtractor graphics, LivingEntity target, int left, int top, int bottom) {
+      if (this.healthBar.getValue()) {
+         double healthRatio = Math.clamp((double)(target.getHealth() / target.getMaxHealth()), 0.0, 1.0);
+         int healthColor = ClientColors.healthColor((float)healthRatio);
+         int barHeight = Math.max(1, bottom - top);
+         int filledBarHeight = Math.max(target.getHealth() > 0.0F ? 1 : 0, (int)Math.ceil((double)barHeight * healthRatio));
+         int barOffset = HEALTH_BAR_OFFSET;
+         int barLeft = left - barOffset;
+         int barRight = barLeft + 1;
+         graphics.fill(barLeft - 1, top - 1, barRight + 1, top + barHeight + 1, -16777216);
+         graphics.fill(barLeft, top, barRight, top + barHeight, -11513776);
+         if (filledBarHeight > 0) {
+            graphics.fill(barLeft, top + barHeight - filledBarHeight, barRight, top + barHeight, healthColor);
          }
       }
    }
 
    @Override
-   public void onEvent(Event var1) {
-      if (var1 == Events.f5 && (this.f654.m215() || this.f655.m215())) {
-         GuiGraphicsExtractor var2 = Events.f5.m89();
-         float var3 = Events.f5.m91();
-         int var4 = ColorUtil.m27();
+   public void onEvent(Event event) {
+      if (event == Events.RENDER_2D && (this.twoDimensional.getValue() || this.healthBar.getValue())) {
+         GuiGraphicsExtractor graphics = Events.RENDER_2D.getGraphics();
+         float partialTick = Events.RENDER_2D.getPartialTick();
+         int themeColor = ClientColors.colorAtOffset(0);
 
          for (Entity entity : mc.level.entitiesForRendering()) {
-            if (entity instanceof LivingEntity var6 && FeatureManager.targets.shouldShow(var6)) {
-               this.draw2DBox(var2, var6, var4, var3, this.f657);
+            if (entity instanceof LivingEntity target && FeatureManager.targets.shouldShow(target)) {
+               this.draw2DBox(graphics, target, themeColor, partialTick, this.projectedPosition);
             }
          }
       }
 
-      if (var1 == Events.f14 && this.f656.m215()) {
-         Entity var7 = Events.f14.m38();
-         if (!FeatureManager.targets.shouldShow(var7)) {
+      if (event == Events.ENTITY_OUTLINE && this.outline.getValue()) {
+         Entity entity = Events.ENTITY_OUTLINE.getEntity();
+         if (!FeatureManager.targets.shouldShow(entity)) {
             return;
          }
 
-         Events.f14.m39(ColorUtil.m27());
+         Events.ENTITY_OUTLINE.setColor(ClientColors.colorAtOffset(0));
       }
    }
 }

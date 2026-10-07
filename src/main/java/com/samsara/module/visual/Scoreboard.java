@@ -3,17 +3,16 @@ package com.samsara.module.visual;
 import com.samsara.module.Category;
 import com.samsara.module.Feature;
 import com.samsara.setting.NumberSetting;
-import java.nio.charset.StandardCharsets;
 
 public class Scoreboard extends Feature {
-   private static final String f659 = "X";
-   public final NumberSetting f33;
-   public final NumberSetting f32 = new NumberSetting(f659, this, 0.0, 0.0, 1000.0, 1.0);
-   private static final String f658 = "Scoreboard";
-   private static final String f660 = "Y";
+   private static final String X_LABEL = "X";
+   public final NumberSetting y;
+   public final NumberSetting x = new NumberSetting(X_LABEL, this, 0.0, 0.0, 1000.0, 1.0);
+   private static final String SCOREBOARD_LABEL = "Scoreboard";
+   private static final String Y_LABEL = "Y";
 
    public Scoreboard() {
-      super(f658, Category.VISUAL);
-      this.f33 = new NumberSetting(f660, this, 0.0, -500.0, 500.0, 1.0);
+      super(SCOREBOARD_LABEL, Category.VISUAL);
+      this.y = new NumberSetting(Y_LABEL, this, 0.0, -500.0, 500.0, 1.0);
    }
 }

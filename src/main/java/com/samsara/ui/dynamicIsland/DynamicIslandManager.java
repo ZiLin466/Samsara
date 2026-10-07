@@ -74,7 +74,7 @@ public final class DynamicIslandManager {
       if (module == null) {
          return;
       }
-      if (module == FeatureManager.f29) {
+      if (module == FeatureManager.scaffold) {
          SCAFFOLD_BPS.reset();
          if (!module.isEnabled()) {
             STATE.remove("scaffold");
@@ -275,19 +275,19 @@ public final class DynamicIslandManager {
    }
 
    private static void updateScaffold(long now) {
-      if (FeatureManager.f29 == null || !FeatureManager.f29.isEnabled() || MC.player == null || MC.level == null) {
+      if (FeatureManager.scaffold == null || !FeatureManager.scaffold.isEnabled() || MC.player == null || MC.level == null) {
          STATE.remove("scaffold");
          SCAFFOLD_BPS.reset();
          return;
       }
-      int blocks = Math.max(0, InventoryUtil.m41());
+      int blocks = Math.max(0, InventoryUtil.countHotbarBlocks());
       String detail = String.format(Locale.ROOT, "%d blocks left - %.1f block/s",
          blocks, SCAFFOLD_BPS.blocksPerSecond(MC.player, MC.level));
       STATE.postScaffold(detail, Math.min(1, blocks / 100f), now);
    }
 
    private static void updateBedAura(long now) {
-      var bedAura = FeatureManager.f33;
+      var bedAura = FeatureManager.bedAura;
       var target = bedAura == null ? null : bedAura.diggingTarget(MC.getDeltaTracker().getGameTimeDeltaPartialTick(false));
       if (target == null) {
          STATE.remove("bed-aura");

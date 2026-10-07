@@ -37,7 +37,7 @@ public final class MultiSelectSetting extends Setting implements ChoiceSetting {
    public List<String> canonical(Collection<String> values) {
       Set<String> result = new LinkedHashSet<>();
       for (String value : values) {
-         String option = this.options.stream().filter(v -> v.equalsIgnoreCase(value)).findFirst()
+         String option = this.options.stream().filter(candidate -> candidate.equalsIgnoreCase(value)).findFirst()
             .orElseThrow(() -> new IllegalArgumentException("Unknown choice: " + value));
          result.add(option);
       }

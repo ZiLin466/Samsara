@@ -17,9 +17,9 @@ public class MixinPlayer {
          target = "Lnet/minecraft/world/phys/Vec3;multiply(DDD)Lnet/minecraft/world/phys/Vec3;"
       )
    )
-   private Vec3 pm$48(Vec3 var1, double var2, double var4, double var6) {
-      KeepSprint var8 = FeatureManager.f36;
-      double var9 = var8.m156();
-      return var1.multiply(var9, var4, var9);
+   private Vec3 samsara$preserveSprintMotion(Vec3 position, double xMultiplier, double yMultiplier, double zMultiplier) {
+      KeepSprint keepSprint = FeatureManager.keepSprint;
+      double sprintMultiplier = keepSprint.getSprintMotionMultiplier();
+      return position.multiply(sprintMultiplier, yMultiplier, sprintMultiplier);
    }
 }

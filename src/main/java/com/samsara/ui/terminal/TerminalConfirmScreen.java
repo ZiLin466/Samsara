@@ -14,17 +14,17 @@ public final class TerminalConfirmScreen extends Screen implements TerminalPage 
       super(Component.literal(title)); this.parent = parent; this.detail = detail; this.callback = callback;
    }
    @Override protected void init() {
-      var b = TerminalTheme.body(width, height);
-      addRenderableWidget(Button.builder(Component.literal("确认"), button -> finish(true)).bounds(b.x(), b.footer(), (b.width() - 6) / 2, 21).build());
-      addRenderableWidget(Button.builder(Component.literal("取消"), button -> finish(false)).bounds(b.x() + (b.width() + 6) / 2, b.footer(), (b.width() - 6) / 2, 21).build());
+      var bodyLayout = TerminalTheme.body(width, height);
+      addRenderableWidget(Button.builder(Component.literal("确认"), button -> finish(true)).bounds(bodyLayout.x(), bodyLayout.footer(), (bodyLayout.width() - 6) / 2, 21).build());
+      addRenderableWidget(Button.builder(Component.literal("取消"), button -> finish(false)).bounds(bodyLayout.x() + (bodyLayout.width() + 6) / 2, bodyLayout.footer(), (bodyLayout.width() - 6) / 2, 21).build());
    }
    private void finish(boolean value) { minecraft.gui.setScreen(parent); callback.accept(value); }
    @Override public void onClose() { finish(false); }
-   @Override public void extractBackground(GuiGraphicsExtractor g, int x, int y, float dt) { }
-   @Override public void extractRenderState(GuiGraphicsExtractor g, int x, int y, float dt) {
-      var b = TerminalTheme.body(width, height);
-      g.text(font, detail, b.x() + 12, b.y() + 22, 0xFFE5E8ED, false);
-      super.extractRenderState(g, x, y, dt);
+   @Override public void extractBackground(GuiGraphicsExtractor graphics, int x, int y, float dt) { }
+   @Override public void extractRenderState(GuiGraphicsExtractor graphics, int x, int y, float dt) {
+      var bodyLayout = TerminalTheme.body(width, height);
+      graphics.text(font, detail, bodyLayout.x() + 12, bodyLayout.y() + 22, 0xFFE5E8ED, false);
+      super.extractRenderState(graphics, x, y, dt);
    }
    @Override public String terminalTitle() { return title.getString(); }
    @Override public String terminalCode() { return "IDENTITY ARCHIVE / CONFIRM"; }

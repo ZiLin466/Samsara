@@ -5,7 +5,6 @@ import com.samsara.event.Events;
 import com.samsara.module.Category;
 import com.samsara.module.Feature;
 import com.samsara.setting.BooleanSetting;
-import java.nio.charset.StandardCharsets;
 import mixins.ClientInputAccessor;
 import net.minecraft.client.Minecraft;
 import net.minecraft.network.protocol.Packet;
@@ -19,43 +18,43 @@ import net.minecraft.world.inventory.InventoryMenu;
 import net.minecraft.world.phys.Vec2;
 
 public class Disabler extends Feature {
-   private static final String f350 = "Watchdog InvMove";
-   private static final String f348 = "KeepAlive Packet";
-   private final BooleanSetting f353;
-   private final BooleanSetting f352;
-   private static final String f347 = "Disabler";
+   private static final String WATCHDOG_INV_MOVE_LABEL = "Watchdog InvMove";
+   private static final String KEEP_ALIVE_PACKET_LABEL = "KeepAlive Packet";
+   private final BooleanSetting watchdogInvMove;
+   private final BooleanSetting sprintPacket;
+   private static final String DISABLER_LABEL = "Disabler";
    int ticks;
-   private final BooleanSetting f351 = new BooleanSetting(f348, this, false);
-   private static final String f349 = "Sprint Packet";
+   private final BooleanSetting keepAlivePacket = new BooleanSetting(KEEP_ALIVE_PACKET_LABEL, this, false);
+   private static final String SPRINT_PACKET_LABEL = "Sprint Packet";
 
    @Override
-   public void onEvent(Event var1) {
-      if (var1 == Events.f8 && this.ticks > 0) {
+   public void onEvent(Event event) {
+      if (event == Events.POST_MOVE_INPUT && this.ticks > 0) {
          mc.player.input.keyPresses = new Input(false, false, false, false, false, false, false);
-         ClientInputAccessor var2 = (ClientInputAccessor)mc.player.input;
-         var2.setMoveVector(new Vec2(0.0F, 0.0F));
+         ClientInputAccessor inputAccessor = (ClientInputAccessor)mc.player.input;
+         inputAccessor.setMoveVector(new Vec2(0.0F, 0.0F));
          this.ticks--;
       }
 
-      if (var1 == Events.f10) {
-         Packet var5 = Events.f10.m44();
-         if (this.f351.m215() && var5 instanceof ServerboundKeepAlivePacket) {
-            var1.setCancelled(true);
+      if (event == Events.PACKET_SEND) {
+         Packet packet = Events.PACKET_SEND.getPacket();
+         if (this.keepAlivePacket.getValue() && packet instanceof ServerboundKeepAlivePacket) {
+            event.setCancelled(true);
          }
 
-         if (this.f352.m215()
-            && var5 instanceof ServerboundPlayerCommandPacket var3
-            && (var3.getAction() == Action.START_SPRINTING || var3.getAction() == Action.STOP_SPRINTING)) {
-            var1.setCancelled(true);
+         if (this.sprintPacket.getValue()
+            && packet instanceof ServerboundPlayerCommandPacket playerCommandPacket
+            && (playerCommandPacket.getAction() == Action.START_SPRINTING || playerCommandPacket.getAction() == Action.STOP_SPRINTING)) {
+            event.setCancelled(true);
          }
 
-         if (this.f353.m215() && Events.f10.m44() instanceof ServerboundPlayerCommandPacket var6 && var6.getAction() == Action.OPEN_INVENTORY) {
-            var1.setCancelled(true);
+         if (this.watchdogInvMove.getValue() && Events.PACKET_SEND.getPacket() instanceof ServerboundPlayerCommandPacket playerCommandPacket && playerCommandPacket.getAction() == Action.OPEN_INVENTORY) {
+            event.setCancelled(true);
          }
 
-         if (this.f353.m215() && var5 instanceof ServerboundContainerClickPacket var7) {
-            Minecraft var8 = Minecraft.getInstance();
-            if (var7.containerInput() == ContainerInput.PICKUP && var8.getConnection() != null && var8.player.containerMenu instanceof InventoryMenu) {
+         if (this.watchdogInvMove.getValue() && packet instanceof ServerboundContainerClickPacket containerClickPacket) {
+            Minecraft minecraft = Minecraft.getInstance();
+            if (containerClickPacket.containerInput() == ContainerInput.PICKUP && minecraft.getConnection() != null && minecraft.player.containerMenu instanceof InventoryMenu) {
                this.ticks = 5;
             }
          }
@@ -63,9 +62,9 @@ public class Disabler extends Feature {
    }
 
    public Disabler() {
-      super(f347, Category.MISC);
-      this.f352 = new BooleanSetting(f349, this, false);
-      this.f353 = new BooleanSetting(f350, this, false);
+      super(DISABLER_LABEL, Category.MISC);
+      this.sprintPacket = new BooleanSetting(SPRINT_PACKET_LABEL, this, false);
+      this.watchdogInvMove = new BooleanSetting(WATCHDOG_INV_MOVE_LABEL, this, false);
       this.ticks = -1;
    }
 }

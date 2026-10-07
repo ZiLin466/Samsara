@@ -4,69 +4,69 @@ import com.samsara.event.Event;
 import com.samsara.util.KeybindHandler;
 
 public class EventRotation extends Event {
-   private boolean f115;
-   private boolean f114;
-   private float f110;
-   private float f112;
-   private float f111;
-   private float f113;
+   private boolean useClientRotation;
+   private boolean movementCorrection;
+   private float yaw;
+   private float previousYaw;
+   private float pitch;
+   private float previousPitch;
 
-   public float m76() {
-      return this.f110;
+   public float getYaw() {
+      return this.yaw;
    }
 
-   public EventRotation m75(float var1, float var2) {
-      KeybindHandler.m5();
-      this.f112 = this.f110;
-      this.f113 = this.f111;
-      this.f110 = var1;
-      this.f111 = var2;
-      this.f114 = false;
-      this.f115 = true;
+   public EventRotation reset(float yaw, float pitch) {
+      KeybindHandler.updateKeybinds();
+      this.previousYaw = this.yaw;
+      this.previousPitch = this.pitch;
+      this.yaw = yaw;
+      this.pitch = pitch;
+      this.movementCorrection = false;
+      this.useClientRotation = true;
       return this;
    }
 
-   public void m80(float var1) {
-      this.f113 = var1;
+   public void setPreviousPitch(float previousPitch) {
+      this.previousPitch = previousPitch;
    }
 
-   public boolean m84() {
-      return this.f114;
+   public boolean hasMovementCorrection() {
+      return this.movementCorrection;
    }
 
-   public float m79() {
-      return this.f113;
+   public float getPreviousPitch() {
+      return this.previousPitch;
    }
 
-   public void m83(float var1) {
-      this.f111 = var1;
+   public void setPitch(float pitch) {
+      this.pitch = pitch;
    }
 
-   public float m78() {
-      return this.f112;
+   public float getPreviousYaw() {
+      return this.previousYaw;
    }
 
-   public void m87(boolean var1) {
-      this.f115 = var1;
+   public void setUseClientRotation(boolean useClientRotation) {
+      this.useClientRotation = useClientRotation;
    }
 
-   public float m82() {
-      return this.f111;
+   public float getPitch() {
+      return this.pitch;
    }
 
-   public void m81(float var1) {
-      this.f112 = var1;
+   public void setPreviousYaw(float previousYaw) {
+      this.previousYaw = previousYaw;
    }
 
-   public void m85(boolean var1) {
-      this.f114 = var1;
+   public void setMovementCorrection(boolean modified) {
+      this.movementCorrection = modified;
    }
 
-   public void m77(float var1) {
-      this.f110 = var1;
+   public void setYaw(float yaw) {
+      this.yaw = yaw;
    }
 
-   public boolean m86() {
-      return this.f115;
+   public boolean usesClientRotation() {
+      return this.useClientRotation;
    }
 }

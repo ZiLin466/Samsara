@@ -1,5 +1,7 @@
 package com.samsara.ui.clickgui;
 
+import com.samsara.util.render.ColorUtility;
+import com.samsara.ui.MouseButtons;
 import com.samsara.module.Category;
 import com.samsara.module.Feature;
 import com.samsara.module.FeatureManager;
@@ -13,7 +15,6 @@ import com.samsara.ui.NanoGui;
 import com.samsara.util.animation.Animation;
 import com.samsara.util.animation.Easing;
 import com.samsara.util.render.FontRepository;
-import com.samsara.util.render.GlassRenderer;
 import com.samsara.util.render.NVGRenderer;
 import com.samsara.util.render.NVGTextRenderer;
 import java.util.ArrayList;
@@ -44,7 +45,7 @@ public class RockstarClickGuiScreen extends Screen implements NanoGui {
    private static final float CARD_H = 28.0f;
    private static final float CARD_STEP_X = 183.5f;
    private static final float CARD_STEP_Y = 34.0f;
-   private static final float SECTION_GAP = 25.0f;
+
    private static final float CARDS_X = 127.0f;
    private static final float SETTINGS_W = 152.0f;
    private static final float SETTINGS_MAX_H = 200.0f;
@@ -136,7 +137,7 @@ public class RockstarClickGuiScreen extends Screen implements NanoGui {
    }
 
    private boolean glass() {
-      return this.renderMode != null && this.renderMode.m228("LiquidGlass");
+      return this.renderMode != null && this.renderMode.is("LiquidGlass");
    }
 
    @Override
@@ -177,7 +178,6 @@ public class RockstarClickGuiScreen extends Screen implements NanoGui {
       float dt = Math.min(64.0f, time - this.lastFrameTime);
       this.lastFrameTime = time;
       float smoothing = 1.0f - (float)Math.exp(-dt * 0.014);
-      GlassRenderer.request();
 
       this.menuAnimation.run(this.closing ? 0.0f : 1.0f);
       float alpha = Math.min(1.0f, this.menuAnimation.getValue());
@@ -298,7 +298,7 @@ public class RockstarClickGuiScreen extends Screen implements NanoGui {
       float pillY = y + 43.0f + this.sidebarPill.getValue();
       if (glass) {
          NVGRenderer.roundedRectGradient(x + 12.0f, pillY, 95.0f, 16.0f, 5.0f,
-            applyAlpha(GLASS_ACCENT_SOFT, 0.82f), applyAlpha(GLASS_ACCENT, 0.70f), 90.0f);
+            ColorUtility.applyOpacity(GLASS_ACCENT_SOFT, 0.82f), ColorUtility.applyOpacity(GLASS_ACCENT, 0.70f), 90.0f);
          drawGlassStroke(x + 12.0f, pillY, 95.0f, 16.0f, 5.0f, 0x52FFFFFF, 0.7f);
       } else {
          NVGRenderer.roundedRect(x + 12.0f, pillY, 95.0f, 16.0f, 4.0f, ACCENT);
@@ -306,7 +306,7 @@ public class RockstarClickGuiScreen extends Screen implements NanoGui {
       for (CategorySection section : this.sections) {
          float rowY = y + 43.0f + section.index * 18.0f;
          float selected = section.selected.getValue();
-         int iconColor = glass ? GLASS_TEXT_MUTED : mixColor(TEXT_MUTED, WHITE, selected);
+         int iconColor = glass ? GLASS_TEXT_MUTED : ColorUtility.mix(TEXT_MUTED, WHITE, selected);
          drawCategoryIcon(section.category, x + 18.0f, rowY + 4.0f, 8.0f, iconColor);
          drawText(font, section.name, x + 32.0f, rowY + 10.5f, 7.0f, iconColor);
       }
@@ -387,25 +387,25 @@ public class RockstarClickGuiScreen extends Screen implements NanoGui {
 
       if (glass()) {
          float hoverAmount = card.hover.getValue();
-         int cardTop = mixColor(0x3EFFFFFF, 0x68FFFFFF, hoverAmount);
-         int cardBottom = mixColor(0x26EAF0FF, 0x4EE8E2F4, hoverAmount);
+         int cardTop = ColorUtility.mix(0x3EFFFFFF, 0x68FFFFFF, hoverAmount);
+         int cardBottom = ColorUtility.mix(0x26EAF0FF, 0x4EE8E2F4, hoverAmount);
          NVGRenderer.roundedRectGradient(card.x, card.y, CARD_W, CARD_H, 7.0f, cardTop, cardBottom, 90.0f);
          drawGlassStroke(card.x, card.y, CARD_W, CARD_H, 7.0f,
-            applyAlpha(0xFFFFFFFF, 0.18f + 0.12f * hoverAmount), 0.7f);
+            ColorUtility.applyOpacity(0xFFFFFFFF, 0.18f + 0.12f * hoverAmount), 0.7f);
       } else {
          int base = CARD_BASE;
          int hoverColor = CARD_HOVER;
-         NVGRenderer.roundedRect(card.x, card.y, CARD_W, CARD_H, 6.0f, mixColor(base, hoverColor, card.hover.getValue()));
+         NVGRenderer.roundedRect(card.x, card.y, CARD_W, CARD_H, 6.0f, ColorUtility.mix(base, hoverColor, card.hover.getValue()));
       }
 
       float toggleX = card.x + CARD_W - 25.0f;
       float toggleY = card.y + (CARD_H - 7.0f) / 2.0f;
-      int toggleColor = mixColor(glass() ? GLASS_TOGGLE_OFF : TOGGLE_OFF,
+      int toggleColor = ColorUtility.mix(glass() ? GLASS_TOGGLE_OFF : TOGGLE_OFF,
          glass() ? GLASS_TOGGLE_ON : ACCENT, card.enable.getValue());
       NVGRenderer.roundedRect(toggleX, toggleY, 14.5f, 7.0f, 3.5f, toggleColor);
       if (glass()) {
          drawGlassStroke(toggleX, toggleY, 14.5f, 7.0f, 3.5f,
-            mixColor(0x80333F53, 0x526A98E7, card.enable.getValue()), 0.65f);
+            ColorUtility.mix(0x80333F53, 0x526A98E7, card.enable.getValue()), 0.65f);
       }
       float knobX = toggleX + 1.0f + 5.0f * card.enable.getValue();
       NVGRenderer.roundedRect(knobX, toggleY + 1.0f, 7.5f, 5.0f, 2.5f, WHITE);
@@ -418,7 +418,7 @@ public class RockstarClickGuiScreen extends Screen implements NanoGui {
       } else {
          float nameAlpha = 0.85f + 0.15f * Math.max(card.enable.getValue(), card.hover.getValue());
          drawText(font, module.getName(), card.x + 7.0f, card.y + 16.5f, 7.0f,
-            applyAlpha(glass() ? GLASS_TEXT : TEXT, nameAlpha));
+            ColorUtility.applyOpacity(glass() ? GLASS_TEXT : TEXT, nameAlpha));
       }
    }
 
@@ -460,7 +460,7 @@ public class RockstarClickGuiScreen extends Screen implements NanoGui {
       float nameBaseline = rowY + 12.0f;
       float nameAlpha = 0.7f + 0.3f * enable;
       drawText(font, "Enabled", x + 10.0f, nameBaseline, 8.0f,
-         applyAlpha(glass() ? GLASS_TEXT : TEXT, nameAlpha));
+         ColorUtility.applyOpacity(glass() ? GLASS_TEXT : TEXT, nameAlpha));
       drawCheck(x + w - 22.0f, rowY + 5.0f, enable);
       NVGRenderer.rect(x, rowY + 18.0f, w, 0.5f, separator);
       rowY += 18.0f;
@@ -470,16 +470,16 @@ public class RockstarClickGuiScreen extends Screen implements NanoGui {
             continue;
          }
          if (setting instanceof BooleanSetting bool) {
-            window.boolAnims.computeIfAbsent(setting.getName(), name -> new Animation(Easing.EASE_OUT_QUART, 300)).run(bool.m215() ? 1.0f : 0.0f);
+            window.boolAnims.computeIfAbsent(setting.getName(), name -> new Animation(Easing.EASE_OUT_QUART, 300)).run(bool.getValue() ? 1.0f : 0.0f);
             float enableAnim = window.boolAnims.get(setting.getName()).getValue();
             drawText(font, setting.getDisplayName(), x + 10.0f, rowY + 12.0f, 8.0f,
-               applyAlpha(glass() ? GLASS_TEXT : TEXT, 0.7f + 0.3f * enableAnim));
+               ColorUtility.applyOpacity(glass() ? GLASS_TEXT : TEXT, 0.7f + 0.3f * enableAnim));
             drawCheck(x + w - 22.0f, rowY + 5.0f, enableAnim);
             NVGRenderer.rect(x, rowY + 18.0f, w, 0.5f, separator);
             rowY += 18.0f;
          } else if (setting instanceof ModeSetting mode) {
             drawText(font, setting.getDisplayName(), x + 10.0f, rowY + 12.0f, 8.0f, glass() ? GLASS_TEXT_MUTED : TEXT_MUTED);
-            String value = mode.m224();
+            String value = mode.getValue();
             float valueWidth = font.getStringWidth(value, 7.0f);
             drawText(font, value, x + w - 10.0f - valueWidth, rowY + 11.5f, 7.0f, glass() ? GLASS_ACCENT : ACCENT);
             NVGRenderer.rect(x, rowY + 18.0f, w, 0.5f, separator);
@@ -501,15 +501,15 @@ public class RockstarClickGuiScreen extends Screen implements NanoGui {
             }
          } else if (setting instanceof NumberSetting number) {
             drawText(font, setting.getDisplayName(), x + 10.0f, rowY + 12.0f, 8.0f, glass() ? GLASS_TEXT_MUTED : TEXT_MUTED);
-            String value = formatNumber(number.m220());
+            String value = formatNumber(number.getValue());
             float valueWidth = font.getStringWidth(value, 7.0f);
             drawText(font, value, x + w - 10.0f - valueWidth, rowY + 11.5f, 7.0f, glass() ? GLASS_TEXT_MUTED : TEXT_MUTED);
             float trackX = x + 10.0f;
             float trackW = w - 20.0f;
             float trackY = rowY + 20.0f;
             NVGRenderer.roundedRect(trackX, trackY, trackW, 2.0f, 1.0f, glass() ? 0x3A33425E : 0x2EFFFFFF);
-            double range = number.m219() - number.m218();
-            double fraction = range == 0.0 ? 0.0 : (number.m220() - number.m218()) / range;
+            double range = number.getMaximum() - number.getMinimum();
+            double fraction = range == 0.0 ? 0.0 : (number.getValue() - number.getMinimum()) / range;
             float fillW = (float)Math.max(0.0, Math.min(1.0, fraction)) * trackW;
             NVGRenderer.roundedRect(trackX, trackY, fillW, 2.0f, 1.0f, glass() ? GLASS_ACCENT : ACCENT);
             NVGRenderer.roundedRect(trackX + fillW - 1.5f, trackY - 3.0f, 3.0f, 8.0f, 1.5f, WHITE);
@@ -523,9 +523,9 @@ public class RockstarClickGuiScreen extends Screen implements NanoGui {
    private void drawCheck(float x, float y, float enable) {
       int off = glass() ? GLASS_TOGGLE_OFF : TOGGLE_OFF;
       int on = glass() ? GLASS_TOGGLE_ON : ACCENT;
-      NVGRenderer.roundedRect(x, y, 13.0f, 8.0f, 4.0f, mixColor(off, on, enable));
+      NVGRenderer.roundedRect(x, y, 13.0f, 8.0f, 4.0f, ColorUtility.mix(off, on, enable));
       if (glass()) {
-         drawGlassStroke(x, y, 13.0f, 8.0f, 4.0f, mixColor(0x80333F53, 0x526A98E7, enable), 0.65f);
+         drawGlassStroke(x, y, 13.0f, 8.0f, 4.0f, ColorUtility.mix(0x80333F53, 0x526A98E7, enable), 0.65f);
       }
       float knobX = x + 1.0f + 5.0f * enable;
       NVGRenderer.roundedRect(knobX, y + 1.0f, 6.0f, 6.0f, 3.0f, WHITE);
@@ -534,115 +534,49 @@ public class RockstarClickGuiScreen extends Screen implements NanoGui {
       }
    }
 
-   private static final float[] GLASS_XFORM = new float[6];
-
    private static void drawGlassPanel(float x, float y, float width, float height, float radius, float alpha) {
       drawGlassPanel(x, y, width, height, radius, alpha, false);
    }
 
    private static void drawGlassPanel(float x, float y, float width, float height, float radius, float alpha, boolean sidebar) {
-      long vg = NVGRenderer.getContext();
-      if (!GlassRenderer.isReady() || GlassRenderer.image() == 0) {
-         drawGlassPanelFallback(x, y, width, height, radius, alpha, sidebar);
-         return;
-      }
-      int image = GlassRenderer.image();
-      var mc = NVGRenderer.getMinecraft();
-      float guiW = mc.getWindow().getGuiScaledWidth();
-      float guiH = mc.getWindow().getGuiScaledHeight();
-
-      nvgCurrentTransform(vg, GLASS_XFORM);
-      float invScale = 1.0f / Math.max(0.01f, GLASS_XFORM[0]);
-      float offX = -GLASS_XFORM[4] * invScale;
-      float offY = -GLASS_XFORM[5] * invScale;
-      float cx = x + width * 0.5f;
-      float cy = y + height * 0.5f;
-
-      NVGRenderer.applyColor(applyAlpha(0x00000000, 0.0f), NVGRenderer.NVG_COLOR_2);
-      NVGRenderer.applyColor(applyAlpha(0xFF17223C, (sidebar ? 0.10f : 0.14f) * alpha), NVGRenderer.NVG_COLOR_1);
-      nvgBoxGradient(vg, x, y, width, height, radius, 18.0f, NVGRenderer.NVG_COLOR_1, NVGRenderer.NVG_COLOR_2, NVGRenderer.NVG_PAINT);
-      nvgBeginPath(vg);
-      nvgRect(vg, x - 30.0f, y - 30.0f, width + 60.0f, height + 60.0f);
-      nvgFillPaint(vg, NVGRenderer.NVG_PAINT);
-      nvgFill(vg);
-
-      nvgImagePattern(vg, offX, offY, guiW * invScale, guiH * invScale, 0.0f, image, alpha, NVGRenderer.NVG_PAINT);
-      nvgBeginPath(vg);
-      nvgRoundedRect(vg, x, y, width, height, radius);
-      nvgFillPaint(vg, NVGRenderer.NVG_PAINT);
-      nvgFill(vg);
-
-      float halfMin = Math.min(width, height) * 0.5f;
-      float dim = (width + height) * 0.5f;
-      float reach = 0.045f * dim;
-      float step = 1.7f;
-      for (float dOut = 0.0f; dOut + step < halfMin * 0.5f; dOut += step) {
-         float dIn = dOut + step;
-         float dMid = dOut + step * 0.5f;
-         float fres = (float)Math.pow(Math.max(1.0 - dMid / halfMin, 0.0), 50.0);
-         float shift = fres * reach;
-         if (shift < 0.25f) {
-            break;
-         }
-         if (width - 2.0f * dIn <= 0.0f || height - 2.0f * dIn <= 0.0f) {
-            break;
-         }
-         float s = 1.0f + shift / Math.max(halfMin - dMid, 1.0f);
-         nvgBeginPath(vg);
-         nvgRoundedRect(vg, x + dOut, y + dOut, width - 2.0f * dOut, height - 2.0f * dOut, Math.max(radius - dOut, 0.0f));
-         nvgPathWinding(vg, NVG_HOLE);
-         nvgRoundedRect(vg, x + dIn, y + dIn, width - 2.0f * dIn, height - 2.0f * dIn, Math.max(radius - dIn, 0.0f));
-         nvgImagePattern(vg, cx - cx * s, cy - cy * s, guiW * s, guiH * s, 0.0f, image, alpha, NVGRenderer.NVG_PAINT);
-         nvgFillPaint(vg, NVGRenderer.NVG_PAINT);
-         nvgFill(vg);
-      }
-
-      drawGlassTint(x, y, width, height, radius, alpha, sidebar);
-   }
-
-   private static void drawGlassPanelFallback(float x, float y, float width, float height, float radius, float alpha) {
-      drawGlassPanelFallback(x, y, width, height, radius, alpha, false);
-   }
-
-   private static void drawGlassPanelFallback(float x, float y, float width, float height, float radius, float alpha, boolean sidebar) {
-      // applyAlpha replaces the source alpha, so the material opacity is kept
+      // applyOpacity replaces the source alpha, so the material opacity is kept
       // explicitly here instead of being hidden in the ARGB color constants.
       int top = sidebar ? 0xFFF5F9FF : 0xFFF3F7FF;
       int bottom = sidebar ? 0xFFE0E8F5 : 0xFFE7D9EF;
       float topOpacity = (sidebar ? 0.20f : 0.14f) * alpha;
       float bottomOpacity = (sidebar ? 0.16f : 0.11f) * alpha;
       NVGRenderer.roundedRectGradient(x, y, width, height, radius,
-         applyAlpha(top, topOpacity), applyAlpha(bottom, bottomOpacity), 90.0f);
+         ColorUtility.applyOpacity(top, topOpacity), ColorUtility.applyOpacity(bottom, bottomOpacity), 90.0f);
       drawGlassTint(x, y, width, height, radius, alpha, sidebar);
    }
 
    private static void drawGlassSidebarLayer(float x, float y, float width, float height, float radius) {
       NVGRenderer.roundedRectGradient(x, y, width, height, radius,
-         applyAlpha(0xFFF6FAFF, 0.10f), applyAlpha(0xFFDDE7F5, 0.14f), 0.0f);
+         ColorUtility.applyOpacity(0xFFF6FAFF, 0.10f), ColorUtility.applyOpacity(0xFFDDE7F5, 0.14f), 0.0f);
       NVGRenderer.roundedRectGradient(x + width - 8.0f, y + 3.0f, 8.0f, height - 6.0f, 2.0f,
-         applyAlpha(0xFFFFFFFF, 0.0f), applyAlpha(0xFFFFFFFF, 0.12f), 0.0f);
+         ColorUtility.applyOpacity(0xFFFFFFFF, 0.0f), ColorUtility.applyOpacity(0xFFFFFFFF, 0.12f), 0.0f);
       drawGlassLine(x + width - 0.5f, y + 10.0f, x + width - 0.5f, y + height - 10.0f,
-         applyAlpha(0xFFFFFFFF, 0.28f), 0.75f);
+         ColorUtility.applyOpacity(0xFFFFFFFF, 0.28f), 0.75f);
       drawGlassLine(x + width + 0.5f, y + 12.0f, x + width + 0.5f, y + height - 12.0f,
-         applyAlpha(0xFF46536B, 0.10f), 0.65f);
+         ColorUtility.applyOpacity(0xFF46536B, 0.10f), 0.65f);
    }
 
    private static void drawGlassTint(float x, float y, float width, float height, float radius, float alpha, boolean sidebar) {
       NVGRenderer.roundedRectGradient(x, y, width, height, radius,
-         applyAlpha(0xFFF9FCFF, (sidebar ? 0.08f : 0.06f) * alpha),
-         applyAlpha(0xFFE8D7F0, (sidebar ? 0.07f : 0.08f) * alpha), 90.0f);
+         ColorUtility.applyOpacity(0xFFF9FCFF, (sidebar ? 0.08f : 0.06f) * alpha),
+         ColorUtility.applyOpacity(0xFFE8D7F0, (sidebar ? 0.07f : 0.08f) * alpha), 90.0f);
       drawGlassTopSheen(x + 1.0f, y + 1.0f, width - 2.0f, Math.min(height * 0.34f, 28.0f),
          Math.max(1.0f, radius - 1.0f), alpha);
 
       // Keep the stroke inside the fill to avoid clipping at rounded corners.
       drawGlassStroke(x + 0.75f, y + 0.75f, width - 1.5f, height - 1.5f,
-         Math.max(1.0f, radius - 0.75f), applyAlpha(0xFFFFFFFF, 0.52f * alpha), 1.0f);
+         Math.max(1.0f, radius - 0.75f), ColorUtility.applyOpacity(0xFFFFFFFF, 0.52f * alpha), 1.0f);
    }
 
    private static void drawGlassTopSheen(float x, float y, float width, float height, float radius, float alpha) {
       long vg = NVGRenderer.getContext();
-      NVGRenderer.applyColor(applyAlpha(0xFFFFFFFF, 0.12f * alpha), NVGRenderer.NVG_COLOR_1);
-      NVGRenderer.applyColor(applyAlpha(0xFFFFFFFF, 0.0f), NVGRenderer.NVG_COLOR_2);
+      NVGRenderer.applyColor(ColorUtility.applyOpacity(0xFFFFFFFF, 0.12f * alpha), NVGRenderer.NVG_COLOR_1);
+      NVGRenderer.applyColor(ColorUtility.applyOpacity(0xFFFFFFFF, 0.0f), NVGRenderer.NVG_COLOR_2);
       nvgLinearGradient(vg, x, y, x, y + height, NVGRenderer.NVG_COLOR_1, NVGRenderer.NVG_COLOR_2, NVGRenderer.NVG_PAINT);
       nvgBeginPath(vg);
       nvgRoundedRectVarying(vg, x, y, width, height, radius, radius, 0.0f, 0.0f);
@@ -861,15 +795,15 @@ public class RockstarClickGuiScreen extends Screen implements NanoGui {
       float rowY = y + 24.0f - this.configsScroll;
       for (String name : configs) {
          if (isHovered(x + w - 38.0f - saveWidth, rowY, saveWidth + 8.0f, 18.0f)) {
-            ConfigManager.m32(name);
+            ConfigManager.saveConfig(name);
             return;
          }
          if (isHovered(x + w - 14.0f - delWidth, rowY, delWidth + 8.0f, 18.0f)) {
-            ConfigManager.m36(name);
+            ConfigManager.deleteConfig(name);
             return;
          }
          if (isHovered(x, rowY, w - 52.0f, 18.0f)) {
-            ConfigManager.m33(name);
+            ConfigManager.loadConfig(name);
             return;
          }
          rowY += 18.0f;
@@ -888,7 +822,7 @@ public class RockstarClickGuiScreen extends Screen implements NanoGui {
       while (containsName(existing, name)) {
          name = "config" + ++index;
       }
-      ConfigManager.m32(name);
+      ConfigManager.saveConfig(name);
    }
 
    private static boolean containsName(String[] array, String value) {
@@ -902,13 +836,9 @@ public class RockstarClickGuiScreen extends Screen implements NanoGui {
 
    private void openConfigFolder() {
       try {
-         String os = System.getProperty("os.name", "").toLowerCase(Locale.ROOT);
-         String path = ConfigManager.getConfigDir().getAbsolutePath();
-         String[] command = os.contains("win") ? new String[]{"explorer.exe", path}
-            : os.contains("mac") ? new String[]{"open", path}
-            : new String[]{"xdg-open", path};
-         Runtime.getRuntime().exec(command);
-      } catch (Exception ignored) {
+         ConfigManager.openConfigDirectory(ConfigManager.getConfigDir().toPath());
+      } catch (Exception error) {
+         org.slf4j.LoggerFactory.getLogger("samsara-config").warn("Unable to open configuration directory", error);
       }
    }
 
@@ -926,25 +856,12 @@ public class RockstarClickGuiScreen extends Screen implements NanoGui {
       this.mouseY = y;
    }
 
-   private static int applyAlpha(int color, float alpha) {
-      int a = (int)Math.max(0.0f, Math.min(1.0f, alpha) * 255.0f);
-      return (a << 24) | (color & 0x00FFFFFF);
-   }
-
    private static void drawText(NVGTextRenderer font, String text, float x, float baselineY, float size, int color) {
       font.drawString(text, x, baselineY, size, color, false, NVG_ALIGN_LEFT | NVG_ALIGN_BASELINE);
    }
 
-   private static int mixColor(int from, int to, float t) {
-      t = Math.max(0.0f, Math.min(1.0f, t));
-      int a = (int)(((from >>> 24) & 0xFF) + (((to >>> 24) & 0xFF) - ((from >>> 24) & 0xFF)) * t);
-      int r = (int)(((from >>> 16) & 0xFF) + (((to >>> 16) & 0xFF) - ((from >>> 16) & 0xFF)) * t);
-      int g = (int)(((from >>> 8) & 0xFF) + (((to >>> 8) & 0xFF) - ((from >>> 8) & 0xFF)) * t);
-      int b = (int)((from & 0xFF) + ((to & 0xFF) - (from & 0xFF)) * t);
-      return (a << 24) | (r << 16) | (g << 8) | b;
-   }
-
-   private static String formatNumber(double value) {      if (value == Math.rint(value)) {
+   private static String formatNumber(double value) {
+      if (value == Math.rint(value)) {
          return Integer.toString((int)value);
       }
       String formatted = String.format(Locale.ROOT, "%.2f", value);
@@ -952,25 +869,6 @@ public class RockstarClickGuiScreen extends Screen implements NanoGui {
          formatted = formatted.substring(0, formatted.length() - 1);
       }
       return formatted;
-   }
-
-   private static String keyName(int key) {
-      if (key == 0) {
-         return "No bind";
-      }
-      String name = GLFW.glfwGetKeyName(key, 0);
-      if (name != null) {
-         return name.toUpperCase(Locale.ROOT);
-      }
-      return switch (key) {
-         case GLFW.GLFW_KEY_LEFT_SHIFT -> "LSHIFT";
-         case GLFW.GLFW_KEY_RIGHT_SHIFT -> "RSHIFT";
-         case GLFW.GLFW_KEY_LEFT_CONTROL -> "LCTRL";
-         case GLFW.GLFW_KEY_RIGHT_CONTROL -> "RCTRL";
-         case GLFW.GLFW_KEY_LEFT_ALT -> "LALT";
-         case GLFW.GLFW_KEY_RIGHT_ALT -> "RALT";
-         default -> "KEY" + key;
-      };
    }
 
    @Override
@@ -1085,7 +983,7 @@ public class RockstarClickGuiScreen extends Screen implements NanoGui {
          return true;
       }
       this.updateInputPosition(event.x(), event.y());
-      int button = normalizeMouseButton(event.button());
+      int button = MouseButtons.normalize(event.button());
 
       for (SettingsWindow window : this.windows) {
          boolean insideWindow = isHovered(window.x, window.y, SETTINGS_W, window.height);
@@ -1165,18 +1063,6 @@ public class RockstarClickGuiScreen extends Screen implements NanoGui {
       return null;
    }
 
-   private static int normalizeMouseButton(int button) {
-      // 26.3 reports SDL button ids (1=left, 2=middle, 3=right, 4/5=back/forward);
-      // the handlers below use the GLFW-style numbering (0=left, 1=right, 2=middle).
-      return switch (button) {
-         case 1 -> 0;
-         case 3 -> 1;
-         case 4 -> 3;
-         case 5 -> 4;
-         default -> button;
-      };
-   }
-
    private void handleCardClick(ModuleCard card, int button) {
       if (button == 0) {
          card.module.toggle();
@@ -1247,22 +1133,22 @@ public class RockstarClickGuiScreen extends Screen implements NanoGui {
          }
          if (setting instanceof BooleanSetting bool) {
             if (button == 0 && isHovered(x, rowY, w, 18.0f)) {
-               bool.m217(!bool.m215());
+               bool.setValue(!bool.getValue());
                return;
             }
             rowY += 18.0f;
          } else if (setting instanceof ModeSetting mode) {
             if (button == 0 && isHovered(x, rowY, w, 18.0f)) {
-               String[] values = mode.m227();
+               String[] values = mode.getOptions();
                if (values.length > 0) {
                   int index = 0;
                   for (int i = 0; i < values.length; i++) {
-                     if (values[i].equals(mode.m224())) {
+                     if (values[i].equals(mode.getValue())) {
                         index = i;
                         break;
                      }
                   }
-                  mode.m226(values[(index + 1) % values.length]);
+                  mode.setValue(values[(index + 1) % values.length]);
                }
                return;
             }
@@ -1299,7 +1185,7 @@ public class RockstarClickGuiScreen extends Screen implements NanoGui {
       float trackW = SETTINGS_W - 20.0f;
       double fraction = (this.mouseX - trackX) / trackW;
       fraction = Math.max(0.0, Math.min(1.0, fraction));
-      number.m223(number.m218() + fraction * (number.m219() - number.m218()));
+      number.setValue(number.getMinimum() + fraction * (number.getMaximum() - number.getMinimum()));
       window.scrollTarget = window.scroll;
    }
 
@@ -1316,7 +1202,7 @@ public class RockstarClickGuiScreen extends Screen implements NanoGui {
    @Override
    public boolean mouseDragged(MouseButtonEvent event, double deltaX, double deltaY) {
       this.updateInputPosition(event.x(), event.y());
-      int button = normalizeMouseButton(event.button());
+      int button = MouseButtons.normalize(event.button());
       if (this.dragWindow && button == 0) {
          this.winX = Math.max(4.0f, Math.min(this.width - WIN_W - 4.0f, (float)this.mouseX - this.dragX));
          this.winY = Math.max(4.0f, Math.min(this.height - WIN_H - 4.0f, (float)this.mouseY - this.dragY));

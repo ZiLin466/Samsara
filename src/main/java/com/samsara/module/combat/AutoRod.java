@@ -142,19 +142,19 @@ public final class AutoRod extends Feature {
       if (mc.options.keyAttack.isDown()) this.lastClick = System.nanoTime();
       this.bobber = findBobber();
       if (!rodAt(this.availableSlot) || this.availableSlot >= 0 && this.availableSlot != mc.player.getInventory().getSelectedSlot()) this.availableSlot = findRod();
-      if (this.scanMin.m220() != this.previousScanMin || this.scanMax.m220() != this.previousScanMax) {
-         this.previousScanMin = this.scanMin.m220(); this.previousScanMax = this.scanMax.m220();
+      if (this.scanMin.getValue() != this.previousScanMin || this.scanMax.getValue() != this.previousScanMax) {
+         this.previousScanMin = this.scanMin.getValue(); this.previousScanMax = this.scanMax.getValue();
          this.scanExtra = random(this.previousScanMin, this.previousScanMax);
       }
    }
 
-   @Override public int getPriority(Event event) { return event == Events.f3 ? -3 : 0; }
+   @Override public int getPriority(Event event) { return event == Events.ROTATION ? -3 : 0; }
    @Override public void onEvent(Event event) {
-      if (event == Events.f15 && Events.f15.m13() == InputConstants.MOUSE_BUTTON_LEFT && Events.f15.m16()) this.lastClick = System.nanoTime();
+      if (event == Events.MOUSE_BUTTON && Events.MOUSE_BUTTON.getButton() == InputConstants.MOUSE_BUTTON_LEFT && Events.MOUSE_BUTTON.isPressed()) this.lastClick = System.nanoTime();
       if (mc.player == null || mc.level == null || mc.gameMode == null || !mc.player.isAlive()) return;
-      if (event == Events.f3) updateRotation();
-      if (event == Events.f2) updateCycle();
-      if (event == Events.f8) this.aiming.correctMovement(this.rotation);
+      if (event == Events.ROTATION) updateRotation();
+      if (event == Events.POST_MOTION) updateCycle();
+      if (event == Events.POST_MOVE_INPUT) this.aiming.correctMovement(this.rotation);
    }
 
    private void updateRotation() {
@@ -173,17 +173,17 @@ public final class AutoRod extends Feature {
       this.castRotation = desired;
       this.aimingForCast = true;
       this.rotation = this.aiming.turn(this.serverRotation == null ? cameraRotation() : this.serverRotation, desired);
-      Events.f3.m77(this.rotation.yaw()); Events.f3.m83(this.rotation.pitch());
+      Events.ROTATION.setYaw(this.rotation.yaw()); Events.ROTATION.setPitch(this.rotation.pitch());
       this.aiming.applyMovementCorrection();
    }
    private void restoreRotation() {
-      if (enabled(FeatureManager.f26) && FeatureManager.f26.f17 != null) {
+      if (enabled(FeatureManager.killAura) && FeatureManager.killAura.target != null) {
          this.aiming.reset();
          return;
       }
       this.rotation = this.aiming.returnRotation(cameraRotation());
       if (this.rotation != null) {
-         Events.f3.m77(this.rotation.yaw()); Events.f3.m83(this.rotation.pitch());
+         Events.ROTATION.setYaw(this.rotation.yaw()); Events.ROTATION.setPitch(this.rotation.pitch());
          this.aiming.applyMovementCorrection();
       }
    }
@@ -193,47 +193,47 @@ public final class AutoRod extends Feature {
          this.bobber = findBobber();
          LivingEntity initialTarget = this.cycle.target();
          boolean pull = this.cycle.tick(this.bobber != null && this.bobber.getHookedIn() != null,
-            this.bobber != null && this.bobber.getKnownMovement().equals(Vec3.ZERO), this.pullOutOfRange.m215(),
+            this.bobber != null && this.bobber.getKnownMovement().equals(Vec3.ZERO), this.pullOutOfRange.getValue(),
             initialTarget == null ? Double.POSITIVE_INFINITY : mc.player.distanceToSqr(initialTarget));
          if (pull && (this.bobber != null || this.cycle.timedOut())) {
-            if (this.bobber != null) useRod(this.castSlot, randomTicks(this.resetMin.m220(), this.resetMax.m220()));
+            if (this.bobber != null) useRod(this.castSlot, randomTicks(this.resetMin.getValue(), this.resetMax.getValue()));
             else { this.silentSlot.clear(); syncSlot(); }
-            this.cycle.pulled(randomTicks(this.cooldownMin.m220(), this.cooldownMax.m220()));
+            this.cycle.pulled(randomTicks(this.cooldownMin.getValue(), this.cooldownMax.getValue()));
             this.castSlot = -2;
          }
          return;
       }
       if (!this.cycle.ready() || !requirementsMet() || this.target == null || this.rotation == null) return;
       var desired = this.castRotation;
-      if (desired == null || (this.serverRotation == null ? cameraRotation() : this.serverRotation).angleTo(desired) > this.aimThreshold.m220()) return;
+      if (desired == null || (this.serverRotation == null ? cameraRotation() : this.serverRotation).angleTo(desired) > this.aimThreshold.getValue()) return;
       this.castSlot = this.availableSlot;
       if (this.bobber == null) {
-         if (!useRod(this.castSlot, (int)this.hitTimeout.m220() + (int)Math.max(this.resetMin.m220(), this.resetMax.m220()))) {
+         if (!useRod(this.castSlot, (int)this.hitTimeout.getValue() + (int)Math.max(this.resetMin.getValue(), this.resetMax.getValue()))) {
             this.castSlot = -2; return;
          }
-         this.scanExtra = random(this.scanMin.m220(), this.scanMax.m220());
+         this.scanExtra = random(this.scanMin.getValue(), this.scanMax.getValue());
       }
-      this.cycle.start(this.target, (int)this.hitTimeout.m220(), Math.min(this.minRange.m220(), this.maxRange.m220()),
-         Math.max(this.minRange.m220(), this.maxRange.m220()) + this.scanExtra);
+      this.cycle.start(this.target, (int)this.hitTimeout.getValue(), Math.min(this.minRange.getValue(), this.maxRange.getValue()),
+         Math.max(this.minRange.getValue(), this.maxRange.getValue()) + this.scanExtra);
    }
 
    private boolean requirementsMet() {
-      if (!rodAt(this.availableSlot) || mc.player.getHealth() <= this.minHealth.m220()
-         || enabled(FeatureManager.f29) || enabled(FeatureManager.f39) || enabled(FeatureManager.f40)) return false;
+      if (!rodAt(this.availableSlot) || mc.player.getHealth() <= this.minHealth.getValue()
+         || enabled(FeatureManager.scaffold) || enabled(FeatureManager.blink) || enabled(FeatureManager.stasis)) return false;
       ItemStack main = mc.player.getMainHandItem();
       if (this.ignoredItems.contains(BuiltInRegistries.ITEM.getKey(main.getItem()).toString())) return false;
       if (this.ignores.contains("Open Inventory") && mc.gui.screen() instanceof AbstractContainerScreen<?>
          || this.ignores.contains("Using Item") && mc.player.isUsingItem()
-            && !(enabled(FeatureManager.f26) && FeatureManager.f26.isAutoBlocking())
+            && !(enabled(FeatureManager.killAura) && FeatureManager.killAura.isAutoBlocking())
          || this.ignores.contains("Holding Consumable") && (main.has(DataComponents.CONSUMABLE) || mc.player.getOffhandItem().has(DataComponents.CONSUMABLE))) return false;
       if (this.requires.contains("Click") && !mc.options.keyAttack.isDown()
          && (this.lastClick == Long.MIN_VALUE || System.nanoTime() - this.lastClick > 250_000_000L)
          || this.requires.contains("Weapon") && !isWeapon(main)
          || this.requires.contains("Vanilla Name") && main.has(DataComponents.CUSTOM_NAME)
          || this.requires.contains("Not Breaking") && mc.gameMode.isDestroying()) return false;
-      double range = Math.max(this.minRange.m220(), this.maxRange.m220()) + this.scanExtra;
-      return (int)this.maxEnemies.m220() == 0 || targets().stream()
-         .filter(entity -> mc.player.distanceToSqr(entity) <= range * range).count() <= (int)this.maxEnemies.m220();
+      double range = Math.max(this.minRange.getValue(), this.maxRange.getValue()) + this.scanExtra;
+      return (int)this.maxEnemies.getValue() == 0 || targets().stream()
+         .filter(entity -> mc.player.distanceToSqr(entity) <= range * range).count() <= (int)this.maxEnemies.getValue();
    }
    private static boolean enabled(Feature module) { return module != null && module.isEnabled(); }
    private boolean isWeapon(ItemStack stack) {
@@ -245,21 +245,21 @@ public final class AutoRod extends Feature {
       var result = new ArrayList<LivingEntity>();
       for (Entity entity : mc.level.entitiesForRendering()) {
          if (entity instanceof LivingEntity living && FeatureManager.targets.shouldAttack(entity)
-            && living.hurtTime <= this.hurtTime.m220()
-            && cameraRotation().angleTo(Aim.lookingAt(mc.player.getEyePosition(), living.getBoundingBox().getCenter())) <= this.fov.m220()) result.add(living);
+            && living.hurtTime <= this.hurtTime.getValue()
+            && cameraRotation().angleTo(Aim.lookingAt(mc.player.getEyePosition(), living.getBoundingBox().getCenter())) <= this.fov.getValue()) result.add(living);
       }
       return result;
    }
    private LivingEntity selectTarget() {
-      double minimum = Math.min(this.minRange.m220(), this.maxRange.m220());
-      double maximum = Math.max(this.minRange.m220(), this.maxRange.m220()) + this.scanExtra;
+      double minimum = Math.min(this.minRange.getValue(), this.maxRange.getValue());
+      double maximum = Math.max(this.minRange.getValue(), this.maxRange.getValue()) + this.scanExtra;
       return targets().stream().filter(entity -> mc.player.distanceToSqr(entity) >= minimum * minimum
          && mc.player.distanceToSqr(entity) <= maximum * maximum && mc.player.hasLineOfSight(entity)
-         && entity.getHealth() + entity.getAbsorptionAmount() > this.minTargetHealth.m220())
+         && entity.getHealth() + entity.getAbsorptionAmount() > this.minTargetHealth.getValue())
          .min(targetComparator()).orElse(null);
    }
    private Comparator<LivingEntity> targetComparator() {
-      Comparator<LivingEntity> result = (a, b) -> 0;
+      Comparator<LivingEntity> result = (leftTarget, rightTarget) -> 0;
       for (String key : this.priority.selectedValues()) {
          Comparator<LivingEntity> next = switch (key) {
             case "Type" -> Comparator.comparingInt(this::typeWeight);
@@ -280,7 +280,7 @@ public final class AutoRod extends Feature {
       return Integer.MAX_VALUE;
    }
    private Aim.Rotation calculateRotation(LivingEntity entity) {
-      return this.gravity.m228("Linear") ? this.aiming.linear(entity) : this.aiming.projectile(entity);
+      return this.gravity.is("Linear") ? this.aiming.linear(entity) : this.aiming.projectile(entity);
    }
    private Aim.Rotation cameraRotation() { return new Aim.Rotation(mc.player.getYRot(), mc.player.getXRot()); }
    private FishingHook findBobber() {
@@ -304,7 +304,7 @@ public final class AutoRod extends Feature {
       return mc.player == this.owner && mc.level == this.world ? this.silentSlot.selected(realSlot) : realSlot;
    }
    public LivingEntity renderedTarget() {
-      return isEnabled() && this.targetRendering.m215() && mc.level == this.world && this.target != null
+      return isEnabled() && this.targetRendering.getValue() && mc.level == this.world && this.target != null
          && !this.target.isRemoved() ? this.target : null;
    }
    private void syncSlot() { ((MultiPlayerGameModeAccessor)mc.gameMode).invokeEnsureHasSentCarriedItem(); }
@@ -314,16 +314,16 @@ public final class AutoRod extends Feature {
    }
    private boolean useRod(int slot, int resetTicks) {
       if (!rodAt(slot)) { this.silentSlot.clear(); syncSlot(); return false; }
-      if (FeatureManager.f26 != null && !FeatureManager.f26.prepareForAutoRod()) return false;
+      if (FeatureManager.killAura != null && !FeatureManager.killAura.prepareForAutoRod()) return false;
       InteractionHand hand = slot == -1 ? InteractionHand.OFF_HAND : InteractionHand.MAIN_HAND;
       if (slot >= 0) this.silentSlot.select(slot, resetTicks);
       float yaw = mc.player.getYRot(), pitch = mc.player.getXRot();
       try {
          // Prediction and the use packet must use the same server-facing rotation.
-         mc.player.setYRot(Events.f3.m76()); mc.player.setXRot(Events.f3.m82());
+         mc.player.setYRot(Events.ROTATION.getYaw()); mc.player.setXRot(Events.ROTATION.getPitch());
          InteractionResult result = mc.gameMode.useItem(mc.player, hand);
          if (!result.consumesAction()) { this.silentSlot.clear(); syncSlot(); return false; }
-         if (!this.swingMode.m228("Hide For Both") && !this.swingMode.m228("Hide For Client")) {
+         if (!this.swingMode.is("Hide For Both") && !this.swingMode.is("Hide For Client")) {
             mc.player.swing(hand, SwingAnimation.DEFAULT, false);
          }
          mc.player.itemUsed(hand);
@@ -382,11 +382,14 @@ public final class AutoRod extends Feature {
    }
 
    static final class Aim {
+      private static final double HOOK_DRAG = .92;
+      private static final double HOOK_SPEED = 1.5;
+      private static final double HOOK_GRAVITY = .04;
       record Rotation(float yaw, float pitch) {
          Vec3 direction() { return Vec3.directionFromRotation(this.pitch, this.yaw); }
          double angleTo(Rotation other) {
-            Vec3 a = direction(), b = other.direction();
-            return Math.toDegrees(Math.atan2(a.cross(b).length(), a.dot(b)));
+            Vec3 direction = direction(), otherDirection = other.direction();
+            return Math.toDegrees(Math.atan2(direction.cross(otherDirection).length(), direction.dot(otherDirection)));
          }
       }
       private static final Minecraft mc = Minecraft.getInstance();
@@ -432,12 +435,12 @@ public final class AutoRod extends Feature {
          this.pitchMax = number(module, "Rotation Pitch Speed Max", 180, 0, 180, 1, null);
          this.steepness = number(module, "Rotation Sigmoid Steepness", 10, 0, 20, .1, null);
          this.midpoint = number(module, "Rotation Sigmoid Midpoint", .3, 0, 1, .01, null);
-         this.steepness.setVisible(() -> this.smoothing.m228("Sigmoid"));
-         this.midpoint.setVisible(() -> this.smoothing.m228("Sigmoid"));
-         this.yawMin.setVisible(() -> !this.smoothing.m228("Acceleration"));
-         this.yawMax.setVisible(() -> !this.smoothing.m228("Acceleration"));
-         this.pitchMin.setVisible(() -> !this.smoothing.m228("Acceleration"));
-         this.pitchMax.setVisible(() -> !this.smoothing.m228("Acceleration"));
+         this.steepness.setVisible(() -> this.smoothing.is("Sigmoid"));
+         this.midpoint.setVisible(() -> this.smoothing.is("Sigmoid"));
+         this.yawMin.setVisible(() -> !this.smoothing.is("Acceleration"));
+         this.yawMax.setVisible(() -> !this.smoothing.is("Acceleration"));
+         this.pitchMin.setVisible(() -> !this.smoothing.is("Acceleration"));
+         this.pitchMax.setVisible(() -> !this.smoothing.is("Acceleration"));
          this.yawAccelMin = number(module, "Rotation Yaw Acceleration Min", 20, 1, 180, 1, null);
          this.yawAccelMax = number(module, "Rotation Yaw Acceleration Max", 25, 1, 180, 1, null);
          this.pitchAccelMin = number(module, "Rotation Pitch Acceleration Min", 20, 1, 180, 1, null);
@@ -449,23 +452,23 @@ public final class AutoRod extends Feature {
          this.accelErrorPitch = number(module, "Rotation Pitch Accel Error", .1, .01, 1, .01, this.accelerationError);
          this.constantErrorYaw = number(module, "Rotation Yaw Constant Error", .1, .01, 1, .01, this.constantError);
          this.constantErrorPitch = number(module, "Rotation Pitch Constant Error", .1, .01, 1, .01, this.constantError);
-         for (Setting setting : List.of(this.yawAccelMin, this.yawAccelMax, this.pitchAccelMin, this.pitchAccelMax, this.accelerationError, this.constantError, this.sigmoidDeceleration)) setting.setVisible(() -> this.smoothing.m228("Acceleration"));
-         this.accelErrorYaw.setVisible(() -> this.smoothing.m228("Acceleration") && this.accelerationError.m215());
-         this.accelErrorPitch.setVisible(() -> this.smoothing.m228("Acceleration") && this.accelerationError.m215());
-         this.constantErrorYaw.setVisible(() -> this.smoothing.m228("Acceleration") && this.constantError.m215());
-         this.constantErrorPitch.setVisible(() -> this.smoothing.m228("Acceleration") && this.constantError.m215());
-         this.steepness.setVisible(() -> this.smoothing.m228("Sigmoid") || this.smoothing.m228("Acceleration") && this.sigmoidDeceleration.m215());
-         this.midpoint.setVisible(() -> this.smoothing.m228("Sigmoid") || this.smoothing.m228("Acceleration") && this.sigmoidDeceleration.m215());
+         for (Setting setting : List.of(this.yawAccelMin, this.yawAccelMax, this.pitchAccelMin, this.pitchAccelMax, this.accelerationError, this.constantError, this.sigmoidDeceleration)) setting.setVisible(() -> this.smoothing.is("Acceleration"));
+         this.accelErrorYaw.setVisible(() -> this.smoothing.is("Acceleration") && this.accelerationError.getValue());
+         this.accelErrorPitch.setVisible(() -> this.smoothing.is("Acceleration") && this.accelerationError.getValue());
+         this.constantErrorYaw.setVisible(() -> this.smoothing.is("Acceleration") && this.constantError.getValue());
+         this.constantErrorPitch.setVisible(() -> this.smoothing.is("Acceleration") && this.constantError.getValue());
+         this.steepness.setVisible(() -> this.smoothing.is("Sigmoid") || this.smoothing.is("Acceleration") && this.sigmoidDeceleration.getValue());
+         this.midpoint.setVisible(() -> this.smoothing.is("Sigmoid") || this.smoothing.is("Acceleration") && this.sigmoidDeceleration.getValue());
          this.resetTicks = number(module, "Rotation Ticks Until Reset", 5, 1, 30, 1, null);
          this.resetThreshold = number(module, "Rotation Reset Threshold", 2, 1, 180, 1, null);
          this.movementCorrection = new ModeSetting("Rotation Movement Correction", module, "Silent", new String[]{"Off", "Silent", "Strict", "Change Look"});
       }
       private static NumberSetting number(Feature module, String name, double value, double min, double max, double step, BooleanSetting toggle) {
          var setting = new NumberSetting(name, module, value, min, max, step);
-         if (toggle != null) setting.setVisible(toggle::m215);
+         if (toggle != null) setting.setVisible(toggle::getValue);
          return setting;
       }
-      private static double sample(NumberSetting minimum, NumberSetting maximum) { return AutoRod.random(minimum.m220(), maximum.m220()); }
+      private static double sample(NumberSetting minimum, NumberSetting maximum) { return AutoRod.random(minimum.getValue(), maximum.getValue()); }
 
       Rotation linear(LivingEntity entity) {
          Vec3 eye = mc.player.getEyePosition();
@@ -475,29 +478,29 @@ public final class AutoRod extends Feature {
          Vec3 closest = points.stream().min(Comparator.comparingDouble(eye::distanceToSqr)).orElse(nearest(box, eye));
          Vec3 point = points.stream().filter(p -> !exempt(box, closest, p))
             .min(Comparator.comparingDouble(eye::distanceToSqr)).orElse(closest);
-         if (this.delay.m215()) {
+         if (this.delay.getValue()) {
             if (this.delayedPoint == null) {
-               this.delayedPoint = point; this.pointDelay = AutoRod.randomTicks(this.delayMin.m220(), this.delayMax.m220());
+               this.delayedPoint = point; this.pointDelay = AutoRod.randomTicks(this.delayMin.getValue(), this.delayMax.getValue());
             } else if (!point.equals(this.delayedPoint)) {
                Vec3 old = this.delayedPoint;
                if (--this.pointDelay <= 0) {
-                  this.delayedPoint = point; this.pointDelay = AutoRod.randomTicks(this.delayMin.m220(), this.delayMax.m220());
+                  this.delayedPoint = point; this.pointDelay = AutoRod.randomTicks(this.delayMin.getValue(), this.delayMax.getValue());
                }
                point = old;
             }
          }
-         if (this.lazy.m215()) {
+         if (this.lazy.getValue()) {
             if (this.lazyPoint == null || point.distanceToSqr(this.lazyPoint) >= this.lazyThreshold * this.lazyThreshold) {
                this.lazyPoint = point; this.lazyThreshold = sample(this.lazyMin, this.lazyMax);
             }
             point = this.lazyPoint;
          }
-         if (this.gaussian.m215()) {
+         if (this.gaussian.getValue()) {
             double yaw = sample(this.gaussianYawMin, this.gaussianYawMax), pitch = sample(this.gaussianPitchMin, this.gaussianPitchMax);
-            if (yaw > 0 && pitch > 0 && this.gaussianChance.m220() > 0) {
-               if (this.gaussianOffset.distanceToSqr(this.gaussianTarget) < Math.pow(this.gaussianTolerance.m220(), 2)) {
+            if (yaw > 0 && pitch > 0 && this.gaussianChance.getValue() > 0) {
+               if (this.gaussianOffset.distanceToSqr(this.gaussianTarget) < Math.pow(this.gaussianTolerance.getValue(), 2)) {
                   var random = java.util.concurrent.ThreadLocalRandom.current();
-                  if (random.nextDouble(100) < this.gaussianChance.m220()) this.gaussianTarget = new Vec3(
+                  if (random.nextDouble(100) < this.gaussianChance.getValue()) this.gaussianTarget = new Vec3(
                      random.nextGaussian(.00942273861037109, .23319837528201348) * yaw,
                      random.nextGaussian(-.30075078007595923, .3492437109081718) * pitch,
                      random.nextGaussian(.013282929419023442, .24453708645460387) * yaw);
@@ -517,9 +520,9 @@ public final class AutoRod extends Feature {
          boolean parts = this.exemptParts.contains("Head") && point.y > box.maxY - third
             || this.exemptParts.contains("Body") && point.y >= box.minY + third && point.y <= box.maxY - third
             || this.exemptParts.contains("Feet") && point.y < box.minY + third;
-         return parts || this.exemptNearest.m215()
-            && point.subtract(nearest).horizontalDistance() < this.exemptHorizontal.m220()
-            && Math.abs(point.y - nearest.y) < this.exemptVertical.m220();
+         return parts || this.exemptNearest.getValue()
+            && point.subtract(nearest).horizontalDistance() < this.exemptHorizontal.getValue()
+            && Math.abs(point.y - nearest.y) < this.exemptVertical.getValue();
       }
       Rotation projectile(LivingEntity entity) {
          var dimensions = entity.getDimensions(entity.getPose());
@@ -530,7 +533,7 @@ public final class AutoRod extends Feature {
       static Rotation projectile(Vec3 eye, DoubleFunction<Vec3> position, double width, double height, BiPredicate<Vec3, Vec3> visible) {
          Vec3 base = position.apply(0);
          if (base.distanceToSqr(eye) < 25) {
-            Vec3 difference = position.apply(base.distanceTo(eye) / 1.5).subtract(eye);
+            Vec3 difference = position.apply(base.distanceTo(eye) / HOOK_SPEED).subtract(eye);
             double distance = difference.horizontalDistance(), velocitySquared = 2.25, gravity = .03;
             double discriminant = velocitySquared * velocitySquared - gravity * (gravity * distance * distance + 2 * difference.y * velocitySquared);
             if (discriminant < 0 || distance < 1e-8) return null;
@@ -538,7 +541,7 @@ public final class AutoRod extends Feature {
                Mth.wrapDegrees((float)-Math.toDegrees(Math.atan((velocitySquared - Math.sqrt(discriminant)) / (gravity * distance)))));
          }
          Vec3 offset = new Vec3(width * .5, height * .5, width * .5);
-         double lower = 0, upper = base.distanceTo(eye) / 1.5 * 1.75;
+         double lower = 0, upper = base.distanceTo(eye) / HOOK_SPEED * 1.75;
          while (upper - lower > 1e-4) {
             double middle = (lower + upper) * .5;
             double left = Math.abs(directionByTime(eye, position.apply((lower + middle) * .5).add(offset), (lower + middle) * .5).length() - 1);
@@ -549,10 +552,10 @@ public final class AutoRod extends Feature {
          Vec3 impact = position.apply(time);
          Vec3 direction = directionByTime(eye, impact.add(offset), time);
          if (Math.abs(direction.length() - 1) > .1) return null;
-         double r = .92, rt = Math.pow(r, time), log = Math.log(r), resistance = r - 1;
-         Vec3 incoming = new Vec3(direction.x * rt * log * 1.5 / resistance,
-            (direction.y * resistance * rt * log * 1.5 - .04 * (rt * log - r + 1)) / (resistance * resistance),
-            direction.z * rt * log * 1.5 / resistance).normalize();
+         double dragPower = Math.pow(HOOK_DRAG, time), dragLog = Math.log(HOOK_DRAG), resistance = HOOK_DRAG - 1;
+         Vec3 incoming = new Vec3(direction.x * dragPower * dragLog * HOOK_SPEED / resistance,
+            (direction.y * resistance * dragPower * dragLog * HOOK_SPEED - HOOK_GRAVITY * (dragPower * dragLog - HOOK_DRAG + 1)) / (resistance * resistance),
+            direction.z * dragPower * dragLog * HOOK_SPEED / resistance).normalize();
          Vec3 virtualEye = eye.add(0, -incoming.y * eye.distanceTo(impact), 0);
          AABB box = new AABB(impact.x - width * .5, impact.y, impact.z - width * .5,
             impact.x + width * .5, impact.y + height, impact.z + width * .5).inflate(.25);
@@ -566,11 +569,11 @@ public final class AutoRod extends Feature {
          return null;
       }
       static Vec3 directionByTime(Vec3 eye, Vec3 target, double time) {
-         double r = .92, power = Math.pow(r, time), denominator = 1.5 * (power - 1);
+         double power = Math.pow(HOOK_DRAG, time), denominator = HOOK_SPEED * (power - 1);
          Vec3 delta = target.subtract(eye);
-         return new Vec3(delta.x * (r - 1) / denominator,
-            delta.y * (r - 1) / denominator + .04 * (power - r * time + time - 1) / ((r - 1) * denominator),
-            delta.z * (r - 1) / denominator);
+         return new Vec3(delta.x * (HOOK_DRAG - 1) / denominator,
+            delta.y * (HOOK_DRAG - 1) / denominator + HOOK_GRAVITY * (power - HOOK_DRAG * time + time - 1) / ((HOOK_DRAG - 1) * denominator),
+            delta.z * (HOOK_DRAG - 1) / denominator);
       }
       private static DoubleFunction<Vec3> prediction(LivingEntity entity) {
          Vec3 base = entity.position(), velocity = base.subtract(new Vec3(entity.xo, entity.yo, entity.zo));
@@ -606,14 +609,14 @@ public final class AutoRod extends Feature {
          Vec3 normal = box.getCenter().subtract(eye).normalize();
          var vertices = new ArrayList<Vec3>();
          for (double x : new double[]{box.minX, box.maxX}) for (double y : new double[]{box.minY, box.maxY}) for (double z : new double[]{box.minZ, box.maxZ}) vertices.add(new Vec3(x, y, z));
-         Vec3 origin = vertices.stream().map(v -> eye.add(normal.scale(v.subtract(eye).dot(normal))))
+         Vec3 origin = vertices.stream().map(point -> eye.add(normal.scale(point.subtract(eye).dot(normal))))
             .min(Comparator.comparingDouble(eye::distanceToSqr)).orElse(box.getCenter()).lerp(eye, .1);
          float yaw = (float)Math.atan2(normal.z, normal.x), pitch = (float)Math.atan2(normal.y, normal.horizontalDistance());
          var to = new Matrix3f().rotateY(-yaw).mul(new Matrix3f().rotateZ(pitch));
          var back = new Matrix3f().rotateZ(-pitch).mul(new Matrix3f().rotateY(yaw));
          float minY = 0, maxY = 0, minZ = 0, maxZ = 0;
-         for (Vec3 v : vertices) {
-            Vec3 ray = v.subtract(eye);
+         for (Vec3 point : vertices) {
+            Vec3 ray = point.subtract(eye);
             Vec3 projection = eye.add(ray.scale(origin.subtract(eye).dot(normal) / ray.dot(normal))).subtract(origin);
             var transformed = new Vector3f((float)projection.x, (float)projection.y, (float)projection.z).mul(back);
             minY = Math.min(minY, transformed.y); maxY = Math.max(maxY, transformed.y);
@@ -634,25 +637,25 @@ public final class AutoRod extends Feature {
       private static Vec3 vector(Vector3f vector) { return new Vec3(vector.x, vector.y, vector.z); }
 
       Rotation turn(Rotation current, Rotation desired) {
-         this.remainingRotationTicks = (int)this.resetTicks.m220();
+         this.remainingRotationTicks = (int)this.resetTicks.getValue();
          return smooth(current, desired);
       }
       private Rotation smooth(Rotation current, Rotation desired) {
          double horizontal = sample(this.yawMin, this.yawMax), vertical = sample(this.pitchMin, this.pitchMax);
-         if (this.smoothing.m228("Sigmoid")) {
+         if (this.smoothing.is("Sigmoid")) {
             double difference = Math.min(180, Math.hypot(Mth.wrapDegrees(desired.yaw - current.yaw), Mth.wrapDegrees(desired.pitch - current.pitch)));
-            double sigmoid = 1 / (1 + Math.exp(-this.steepness.m220() * (difference / 120 - this.midpoint.m220())));
+            double sigmoid = 1 / (1 + Math.exp(-this.steepness.getValue() * (difference / 120 - this.midpoint.getValue())));
             horizontal *= sigmoid; vertical *= sigmoid;
          }
          Rotation turned = turnLinear(current, desired, horizontal, vertical);
-         if (this.smoothing.m228("Acceleration")) {
+         if (this.smoothing.is("Acceleration")) {
             float dy = Mth.wrapDegrees(desired.yaw - current.yaw), dp = Mth.wrapDegrees(desired.pitch - current.pitch);
-            double factor = this.sigmoidDeceleration.m215() ? 1 / (1 + Math.exp(-this.steepness.m220() * (Math.hypot(dy, dp) / 120 - this.midpoint.m220()))) : 1;
+            double factor = this.sigmoidDeceleration.getValue() ? 1 / (1 + Math.exp(-this.steepness.getValue() * (Math.hypot(dy, dp) / 120 - this.midpoint.getValue()))) : 1;
             double ay = Mth.clamp(Mth.wrapDegrees(dy - this.previousYawSpeed), -sample(this.yawAccelMin, this.yawAccelMax), sample(this.yawAccelMin, this.yawAccelMax)) * factor;
             double ap = Mth.clamp(Mth.wrapDegrees(dp - this.previousPitchSpeed), -sample(this.pitchAccelMin, this.pitchAccelMax), sample(this.pitchAccelMin, this.pitchAccelMax)) * factor;
             double y = this.previousYawSpeed + ay, p = this.previousPitchSpeed + ap;
-            if (this.accelerationError.m215()) { y += ay * AutoRod.random(-this.accelErrorYaw.m220(), this.accelErrorYaw.m220()); p += ap * AutoRod.random(-this.accelErrorPitch.m220(), this.accelErrorPitch.m220()); }
-            if (this.constantError.m215()) { y += AutoRod.random(-this.constantErrorYaw.m220(), this.constantErrorYaw.m220()); p += AutoRod.random(-this.constantErrorPitch.m220(), this.constantErrorPitch.m220()); }
+            if (this.accelerationError.getValue()) { y += ay * AutoRod.random(-this.accelErrorYaw.getValue(), this.accelErrorYaw.getValue()); p += ap * AutoRod.random(-this.accelErrorPitch.getValue(), this.accelErrorPitch.getValue()); }
+            if (this.constantError.getValue()) { y += AutoRod.random(-this.constantErrorYaw.getValue(), this.constantErrorYaw.getValue()); p += AutoRod.random(-this.constantErrorPitch.getValue(), this.constantErrorPitch.getValue()); }
             turned = new Rotation(current.yaw + (float)y, Mth.clamp(current.pitch + (float)p, -90, 90));
          }
          double sensitivity = mc.options.sensitivity().get() * .6 + .2;
@@ -673,13 +676,13 @@ public final class AutoRod extends Feature {
             Mth.clamp(current.pitch + (float)Mth.clamp(pitchDelta, -pitchLimit, pitchLimit), -90, 90));
       }
       void applyMovementCorrection() {
-         if (this.movementCorrection.m228("Change Look")) {
-            mc.player.setYRot(Events.f3.m76()); mc.player.setXRot(Events.f3.m82());
+         if (this.movementCorrection.is("Change Look")) {
+            mc.player.setYRot(Events.ROTATION.getYaw()); mc.player.setXRot(Events.ROTATION.getPitch());
          }
-         if (!this.movementCorrection.m228("Off")) { Events.f3.m85(true); Events.f3.m87(true); }
+         if (!this.movementCorrection.is("Off")) { Events.ROTATION.setMovementCorrection(true); Events.ROTATION.setUseClientRotation(true); }
       }
       void correctMovement(Rotation rotation) {
-         if (rotation == null || !this.movementCorrection.m228("Silent")) return;
+         if (rotation == null || !this.movementCorrection.is("Silent")) return;
          var input = (ClientInputAccessor)mc.player.input;
          Vec2 original = input.getMoveVector();
          Vec2 corrected = correctMovement(original, mc.player.getYRot(), rotation.yaw);
@@ -693,9 +696,9 @@ public final class AutoRod extends Feature {
          double forward = input.y * cos + input.x * sin, sideways = input.x * cos - input.y * sin;
          Vec2 best = Vec2.ZERO;
          double error = Double.POSITIVE_INFINITY;
-         for (int f = -1; f <= 1; f++) for (int s = -1; s <= 1; s++) {
-            if (f == 0 && s == 0) continue;
-            Vec2 candidate = new Vec2(s, f).normalized();
+         for (int forwardInput = -1; forwardInput <= 1; forwardInput++) for (int strafeInput = -1; strafeInput <= 1; strafeInput++) {
+            if (forwardInput == 0 && strafeInput == 0) continue;
+            Vec2 candidate = new Vec2(strafeInput, forwardInput).normalized();
             double next = Math.pow(candidate.y - forward, 2) + Math.pow(candidate.x - sideways, 2);
             if (next < error) { best = candidate; error = next; }
          }
@@ -704,7 +707,7 @@ public final class AutoRod extends Feature {
       Rotation returnRotation(Rotation camera) {
          if (this.lastRotation == null) return null;
          if (this.remainingRotationTicks-- > 0) return this.lastRotation;
-         if (Math.hypot(Mth.wrapDegrees(camera.yaw - this.lastRotation.yaw), Mth.wrapDegrees(camera.pitch - this.lastRotation.pitch)) <= this.resetThreshold.m220()) {
+         if (Math.hypot(Mth.wrapDegrees(camera.yaw - this.lastRotation.yaw), Mth.wrapDegrees(camera.pitch - this.lastRotation.pitch)) <= this.resetThreshold.getValue()) {
             this.lastRotation = null; this.previousYawSpeed = this.previousPitchSpeed = 0; return null;
          }
          return smooth(this.lastRotation, camera);

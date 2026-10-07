@@ -64,21 +64,21 @@ final class ScaffoldClosetTest {
    @Test void legacyOptionsAndClosetSettingsAreMutuallyExclusive() {
       var scaffold = new Scaffold();
       var mode = (ModeSetting)scaffold.settings.stream().filter(s -> s.getName().equals("Mode")).findFirst().orElseThrow();
-      assertEquals("Blatant", mode.m224());
-      assertArrayEquals(new String[]{"Blatant", "Closet"}, mode.m227());
+      assertEquals("Blatant", mode.getValue());
+      assertArrayEquals(new String[]{"Blatant", "Closet"}, mode.getOptions());
       for (var setting : scaffold.settings) {
          if (setting == mode) continue;
          assertEquals(!setting.getName().startsWith("Closet "), setting.isVisible(), setting.getName());
       }
-      mode.m226("Closet");
+      mode.setValue("Closet");
       for (var setting : scaffold.settings) {
          if (setting == mode) continue;
          assertEquals(setting.getName().startsWith("Closet "), setting.isVisible(), setting.getName());
       }
       var rotations = (ModeSetting)scaffold.settings.stream().filter(s -> s.getName().equals("Rotations")).findFirst().orElseThrow();
-      rotations.m226("Backward");
-      mode.m226("Blatant");
-      assertEquals("Backward", rotations.m224());
+      rotations.setValue("Backward");
+      mode.setValue("Blatant");
+      assertEquals("Backward", rotations.getValue());
    }
 
    @Test void yawCrossesTheWrapBoundaryByTheShortPath() throws Exception {

@@ -10,7 +10,7 @@ import com.samsara.setting.NumberSetting;
 import com.samsara.ui.hud.HudLayouts;
 import com.samsara.util.Friends;
 import com.samsara.util.ModTextures;
-import com.samsara.util.Vector3d;
+import com.samsara.util.MutableVector3d;
 import com.samsara.util.WorldToScreenProjector;
 import com.samsara.util.render.GuiItemOpacity;
 import com.samsara.util.render.HudBackdrop;
@@ -65,28 +65,28 @@ public final class NameTags extends Feature {
 
    private boolean accepts(Entity entity) {
       if (mc.level == null || mc.player == null || entity.isRemoved() || mc.gui.hud.isHidden()) return false;
-      if (entity instanceof Player) return players.m215() && (FeatureManager.targets == null
+      if (entity instanceof Player) return players.getValue() && (FeatureManager.targets == null
          ? entity != mc.player : FeatureManager.targets.shouldShow(entity));
-      if (entity instanceof ItemEntity item) return items.m215() && !item.getItem().isEmpty();
-      return floatingText.m215() && (entity instanceof Display.TextDisplay display
+      if (entity instanceof ItemEntity item) return items.getValue() && !item.getItem().isEmpty();
+      return floatingText.getValue() && (entity instanceof Display.TextDisplay display
          ? display.textRenderState() != null && !display.textRenderState().text().getString().isBlank()
          : entity instanceof ArmorStand && entity.hasCustomName() && entity.isCustomNameVisible());
    }
 
    @Override public void onEvent(Event event) {
-      if (event != Events.f5 || mc.level == null || mc.player == null || mc.gui.hud.isHidden()) return;
-      GuiGraphicsExtractor graphics = Events.f5.m89();
-      float partial = Events.f5.m91();
+      if (event != Events.RENDER_2D || mc.level == null || mc.player == null || mc.gui.hud.isHidden()) return;
+      GuiGraphicsExtractor graphics = Events.RENDER_2D.getGraphics();
+      float partial = Events.RENDER_2D.getPartialTick();
       Vec3 camera = mc.gameRenderer.mainCamera().position();
       List<Projected> labels = new ArrayList<>();
-      Vector3d point = new Vector3d();
+      MutableVector3d point = new MutableVector3d();
       for (Entity entity : mc.level.entitiesForRendering()) {
          if (!accepts(entity)) continue;
          Vec3 position = entity.getPosition(partial);
          double rise = entity instanceof Display.TextDisplay ? 0
             : entity instanceof ItemEntity ? entity.getBbHeight() + .35 : entity.getEyeHeight() + .55;
          Vec3 anchor = position.add(0, rise, 0);
-         if (WorldToScreenProjector.m43(anchor.x, anchor.y, anchor.z, point) == null
+         if (WorldToScreenProjector.project(anchor.x, anchor.y, anchor.z, point) == null
             || !Double.isFinite(point.x) || !Double.isFinite(point.y) || !Double.isFinite(point.z)
             || point.z < -1 || point.z > 1) continue;
          float opacity = Geometry.opacity((float)point.x, graphics.guiWidth());
@@ -97,12 +97,12 @@ public final class NameTags extends Feature {
          .thenComparingInt(label -> label.entity().getId()));
       for (Projected label : labels) {
          View view = view(label.entity());
-         NativeSurface surface = new NativeSurface(graphics, label.entity(), label.opacity(), shader.m215(),
+         NativeSurface surface = new NativeSurface(graphics, label.entity(), label.opacity(), shader.getValue(),
             view.horizontal() ? Geometry.FONT_SIZE : Geometry.FLOATING_FONT_SIZE);
          Layout layout = Geometry.layout(view.parts(), surface::measure,
             view.horizontal() ? Geometry.PADDING : Geometry.FLOATING_PADDING);
-         float size = (float)scale.m220();
-         if (shader.m215()) for (int i = 0; i < layout.capsules().size(); i++) {
+         float size = (float)scale.getValue();
+         if (shader.getValue()) for (int i = 0; i < layout.capsules().size(); i++) {
             Capsule capsule = layout.capsules().get(i);
             float x = view.horizontal() ? capsule.x() - layout.width() / 2 : -capsule.width() / 2;
             float height = view.horizontal() ? Geometry.HEIGHT : Geometry.FLOATING_HEIGHT;
@@ -129,10 +129,10 @@ public final class NameTags extends Feature {
          int health = actualHealth(player);
          parts.add(new Part(Component.literal(Integer.toString(health)), Geometry.healthColor(health), true));
          parts.add(new Part(formattedName(player), 0xFFFFFFFF, false));
-         if (armorDifference.m215()) parts.add(Geometry.armorPart(
+         if (armorDifference.getValue()) parts.add(Geometry.armorPart(
             Armor.value(mc.player::getItemBySlot), Armor.value(player::getItemBySlot)));
          parts.add(new Part(Component.literal(Math.round(mc.player.distanceTo(player)) + "m"), Geometry.DISTANCE, false));
-         if (playerArmor.m215()) equipment = equipment(player);
+         if (playerArmor.getValue()) equipment = equipment(player);
          var objective = mc.level.getScoreboard().getDisplayObjective(DisplaySlot.BELOW_NAME);
          if (objective != null && !Geometry.isHealthObjective(objective.getDisplayName().getString())) {
             var value = mc.level.getScoreboard().getPlayerScoreInfo(player, objective);
@@ -151,7 +151,7 @@ public final class NameTags extends Feature {
 
    public static Component formattedName(Player player) {
       Component name = Geometry.teamName(player.getName(), player.getTeam());
-      if (FeatureManager.f27 != null && FeatureManager.f27.m136(player)) return name.copy().withStyle(ChatFormatting.DARK_AQUA);
+      if (FeatureManager.antiBot != null && FeatureManager.antiBot.isBot(player)) return name.copy().withStyle(ChatFormatting.DARK_AQUA);
       if (player.isInvisible()) return name.copy().withStyle(ChatFormatting.GOLD);
       if (player.isShiftKeyDown()) return name.copy().withStyle(ChatFormatting.DARK_RED);
       if (Friends.contains(player.getGameProfile().name())) return name.copy().withStyle(ChatFormatting.AQUA);

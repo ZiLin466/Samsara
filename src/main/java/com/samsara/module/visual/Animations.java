@@ -8,7 +8,6 @@ import com.samsara.module.FeatureManager;
 import com.samsara.setting.BooleanSetting;
 import com.samsara.setting.ModeSetting;
 import com.samsara.setting.NumberSetting;
-import java.nio.charset.StandardCharsets;
 import net.minecraft.tags.ItemTags;
 import net.minecraft.world.InteractionHand;
 import net.minecraft.world.entity.HumanoidArm;
@@ -21,34 +20,34 @@ public class Animations extends Feature {
    public final BooleanSetting fakeBlock = new BooleanSetting("Fake Block", this, false);
    public final NumberSetting blockY = new NumberSetting("Block Y", this, 0.1, 0.05, 0.3, 0.05);
    public final NumberSetting swingScale = new NumberSetting("Swing Scale", this, 0.9, 0.1, 1.0, 0.1);
-   public NumberSetting f28;
-   private static final String f597 = "Scale";
-   public NumberSetting f27 = new NumberSetting(f597, this, 1.0, 0.1, 2.0, 0.1);
-   private static final String f598 = "X";
-   private static final String f600 = "Z";
-   public NumberSetting f29;
-   private static final String f599 = "Y";
-   private static final String f596 = "Animations";
-   public NumberSetting f30;
+   public NumberSetting x;
+   private static final String SCALE_LABEL = "Scale";
+   public NumberSetting scale = new NumberSetting(SCALE_LABEL, this, 1.0, 0.1, 2.0, 0.1);
+   private static final String X_LABEL = "X";
+   private static final String Z_LABEL = "Z";
+   public NumberSetting y;
+   private static final String Y_LABEL = "Y";
+   private static final String ANIMATIONS_LABEL = "Animations";
+   public NumberSetting z;
 
    public Animations() {
-      super(f596, Category.VISUAL);
-      this.f28 = new NumberSetting(f598, this, 0.0, -2.0, 2.0, 0.05);
-      this.f29 = new NumberSetting(f599, this, 0.0, -2.0, 2.0, 0.05);
-      this.f30 = new NumberSetting(f600, this, 0.0, -2.0, 2.0, 0.05);
-      this.blockY.setVisible(() -> !this.blockingAnimation.m228("Pushdown"));
-      this.swingScale.setVisible(() -> this.blockingAnimation.m228("1.7"));
+      super(ANIMATIONS_LABEL, Category.VISUAL);
+      this.x = new NumberSetting(X_LABEL, this, 0.0, -2.0, 2.0, 0.05);
+      this.y = new NumberSetting(Y_LABEL, this, 0.0, -2.0, 2.0, 0.05);
+      this.z = new NumberSetting(Z_LABEL, this, 0.0, -2.0, 2.0, 0.05);
+      this.blockY.setVisible(() -> !this.blockingAnimation.is("Pushdown"));
+      this.swingScale.setVisible(() -> this.blockingAnimation.is("1.7"));
    }
 
    public boolean shouldBlock(InteractionHand hand, ItemStack item) {
       if (!isEnabled() || hand != InteractionHand.MAIN_HAND || !item.is(ItemTags.SWORDS) || mc.player == null
          || mc.gui.screen() != null || !mc.isWindowActive()) return false;
-      var aura = FeatureManager.f26;
-      boolean target = aura != null && aura.isEnabled() && aura.f17 != null;
+      var aura = FeatureManager.killAura;
+      boolean target = aura != null && aura.isEnabled() && aura.target != null;
       if (target && !aura.isAutoBlockInputAllowed()) return false;
       boolean usingHand = mc.player.isUsingItem() && mc.player.getUsedItemHand() == hand;
       if (target && aura.hasAutoBlockMode()) return usingHand || aura.hasAutoBlockAnimation();
-      return usingHand || this.fakeBlock.m215() && (target || isRightMouseDown());
+      return usingHand || this.fakeBlock.getValue() && (target || isRightMouseDown());
    }
 
    private static boolean isRightMouseDown() {

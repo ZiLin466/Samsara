@@ -36,9 +36,9 @@ final class ClientStateStoreTest {
 
    @Test void automaticSaveAndNextStartupRestoreSettingsBindingsAndEveryVisualPlacement() throws Exception {
       Path file=directory.resolve("samsara/state.json");var first=new Session();
-      first.gameplay.flag.m217(true);first.gameplay.mode.m226("B");first.gameplay.restoreEnabled(true);
+      first.gameplay.flag.setValue(true);first.gameplay.mode.setValue("B");first.gameplay.restoreEnabled(true);
       first.gameplay.setHidden(true);first.gameplay.setKey(45);
-      first.visual.flag.m217(true);first.visual.number.m223(7.5);first.visual.mode.m226("B");first.visual.setKey(32);
+      first.visual.flag.setValue(true);first.visual.number.setValue(7.5);first.visual.mode.setValue("B");first.visual.setKey(32);
       for (var element:HudLayouts.Element.values()) {
          first.hud.get(element).move(41+element.ordinal(),-25+element.ordinal());
          first.hud.get(element).scale(1.37);
@@ -58,24 +58,24 @@ final class ClientStateStoreTest {
    }
 
    @Test void portablePresetIncludesOnlyVisualBindingsAndPreservesVisualParametersAndGeometry() throws Exception {
-      var session=new Session();session.gameplay.flag.m217(true);session.visual.flag.m217(true);
+      var session=new Session();session.gameplay.flag.setValue(true);session.visual.flag.setValue(true);
       var preset=ModuleConfigCodec.snapshot(session.modules,ModuleConfigCodec.Scope.GAMEPLAY,false);
       Path file=directory.resolve("pvp.json");ConfigManager.atomicWrite(file,preset.toString());
       assertEquals(java.util.Set.of("key"),preset.getAsJsonObject("Visual").keySet());
       assertFalse(preset.has("hud"));assertFalse(preset.has("clickGui"));
-      session.gameplay.flag.m217(false);session.visual.flag.m217(false);
+      session.gameplay.flag.setValue(false);session.visual.flag.setValue(false);
       session.hud.get(HudLayouts.Element.POTION).move(123,56);session.hud.get(HudLayouts.Element.ISLAND).scale(1.8);
       ClickGuiLayouts.put("opai:Visual",223,73);
       var before=session.snapshot();
       ModuleConfigCodec.prepare(session.modules,JsonParser.parseString(Files.readString(file)).getAsJsonObject(),ModuleConfigCodec.Scope.GAMEPLAY).run();
-      var after=session.snapshot();assertTrue(session.gameplay.flag.m215());
+      var after=session.snapshot();assertTrue(session.gameplay.flag.getValue());
       assertEquals(before.getAsJsonObject("modules").get("Visual"),after.getAsJsonObject("modules").get("Visual"));
       assertEquals(before.get("hud"),after.get("hud"));assertEquals(before.get("clickGui"),after.get("clickGui"));
    }
 
    @Test void obsoleteSettingAndOneBadLayoutDoNotDiscardIndependentSettingsOrOtherHudRows() throws Exception {
       Path file=directory.resolve("state.json");var original=new Session();
-      original.gameplay.flag.m217(true);original.visual.mode.m226("B");
+      original.gameplay.flag.setValue(true);original.visual.mode.setValue("B");
       original.hud.get(HudLayouts.Element.TARGET).move(64,-12);
       ClickGuiLayouts.put("opai:Combat",101,92);
       var saved=original.snapshot();
@@ -85,8 +85,8 @@ final class ClientStateStoreTest {
       ConfigManager.atomicWrite(file,saved.toString());ClickGuiLayouts.load(new JsonObject());
       var restarted=new Session();
       try(var store=restarted.store(file)) {
-         store.load();assertTrue(restarted.gameplay.flag.m215());assertEquals("A",restarted.gameplay.mode.m224());
-         assertEquals("B",restarted.visual.mode.m224());assertEquals(64,restarted.hud.get(HudLayouts.Element.TARGET).x());
+         store.load();assertTrue(restarted.gameplay.flag.getValue());assertEquals("A",restarted.gameplay.mode.getValue());
+         assertEquals("B",restarted.visual.mode.getValue());assertEquals(64,restarted.hud.get(HudLayouts.Element.TARGET).x());
          assertEquals(101,ClickGuiLayouts.x("opai:Combat",0));assertEquals(3,restarted.warnings.size());
          assertEquals(new HudLayouts().get(HudLayouts.Element.INVENTORY).x(),restarted.hud.get(HudLayouts.Element.INVENTORY).x());
       }
@@ -98,7 +98,7 @@ final class ClientStateStoreTest {
       writer.submit(()->{ waiting.countDown();try { release.await(); } catch (InterruptedException error) { Thread.currentThread().interrupt(); } });
       assertTrue(waiting.await(2,TimeUnit.SECONDS));
       try(var store=new ClientStateStore(file,session::snapshot,session::restore,(message,error)->fail(message,error),writer)) {
-         store.load();store.save();session.gameplay.flag.m217(true);session.hud.get(HudLayouts.Element.SESSION).move(99,88);
+         store.load();store.save();session.gameplay.flag.setValue(true);session.hud.get(HudLayouts.Element.SESSION).move(99,88);
          store.save();var expected=session.snapshot();release.countDown();store.flush();
          assertEquals(expected,JsonParser.parseString(Files.readString(file)));
       } finally { release.countDown();writer.shutdownNow(); }

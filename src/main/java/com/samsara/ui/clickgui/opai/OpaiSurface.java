@@ -20,8 +20,8 @@ interface OpaiSurface {
    static int mix(int from, int to, float amount) {
       int result = 0;
       for (int shift = 0; shift <= 24; shift += 8) {
-         int a = (from >>> shift) & 255, b = (to >>> shift) & 255;
-         result |= Math.round(a + (b - a) * Math.clamp(amount, 0, 1)) << shift;
+         int fromChannel = (from >>> shift) & 255, toChannel = (to >>> shift) & 255;
+         result |= Math.round(fromChannel + (toChannel - fromChannel) * Math.clamp(amount, 0, 1)) << shift;
       }
       return result;
    }

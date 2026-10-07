@@ -19,8 +19,8 @@ final class CombatSettingsTest {
       assertEquals(List.of("OnGround"), conditions.selectedValues());
       conditions.setSelected(List.of("Backwards", "HoldingBlocks", "Sneak"));
       for (var setting : eagle.settings) {
-         if (setting.getName().equals("Edge Distance Min")) ((com.samsara.setting.NumberSetting)setting).m223(0.35);
-         if (setting.getName().equals("Edge Distance Max")) ((com.samsara.setting.NumberSetting)setting).m223(0.55);
+         if (setting.getName().equals("Edge Distance Min")) ((com.samsara.setting.NumberSetting)setting).setValue(0.35);
+         if (setting.getName().equals("Edge Distance Max")) ((com.samsara.setting.NumberSetting)setting).setValue(0.55);
       }
       var saved = ModuleConfigCodec.snapshot(List.of(eagle), ModuleConfigCodec.Scope.ALL, false);
       var restored = new com.samsara.module.player.Eagle();
@@ -29,17 +29,17 @@ final class CombatSettingsTest {
    }
    @Test void eachVelocityModeExposesOnlyItsOwnSettings() {
       var velocity = new Velocity();
-      velocity.mode.m226("Reduce");
+      velocity.mode.setValue("Reduce");
       assertEquals(Set.of("Mode", "Attack Counts", "Sprint Ticks", "Max Delay", "Swing Hand"), visible(velocity));
-      velocity.mode.m226("Delay");
+      velocity.mode.setValue("Delay");
       assertEquals(Set.of("Mode", "Epsilon Delay Ticks", "Epsilon Jump Reset"), visible(velocity));
-      velocity.mode.m226("JumpReset");
+      velocity.mode.setValue("JumpReset");
       assertEquals(Set.of("Mode", "Chance", "Jump By Received Hits", "Jump By Delay",
          "Ticks Until Jump Min", "Ticks Until Jump Max"), visible(velocity));
       ((com.samsara.setting.BooleanSetting)velocity.settings.stream()
-         .filter(s -> s.getName().equals("Jump By Received Hits")).findFirst().orElseThrow()).m217(true);
+         .filter(s -> s.getName().equals("Jump By Received Hits")).findFirst().orElseThrow()).setValue(true);
       assertTrue(visible(velocity).containsAll(Set.of("Hits Until Jump Min", "Hits Until Jump Max")));
-      velocity.mode.m226("Original");
+      velocity.mode.setValue("Original");
       assertTrue(visible(velocity).containsAll(Set.of("Horizontal", "Vertical", "Reduce", "Delay", "Reverse")));
       assertFalse(visible(velocity).contains("Max Delay")); assertFalse(visible(velocity).contains("Epsilon Delay Ticks"));
       assertFalse(visible(velocity).contains("Delay Range"));
@@ -48,18 +48,18 @@ final class CombatSettingsTest {
       return module.settings.stream().filter(s -> s.isVisible()).map(s -> s.getName()).collect(java.util.stream.Collectors.toSet());
    }
    @Test void jumpResetSettingsRoundTripWithoutOverwritingTheOtherVelocityModes() {
-      var velocity = new Velocity(); velocity.mode.m226("JumpReset");
+      var velocity = new Velocity(); velocity.mode.setValue("JumpReset");
       for (var setting : velocity.settings) {
-         if (setting.getName().equals("Chance")) ((com.samsara.setting.NumberSetting)setting).m223(60);
-         if (setting.getName().equals("Jump By Received Hits")) ((com.samsara.setting.BooleanSetting)setting).m217(true);
-         if (setting.getName().equals("Hits Until Jump Max")) ((com.samsara.setting.NumberSetting)setting).m223(5);
+         if (setting.getName().equals("Chance")) ((com.samsara.setting.NumberSetting)setting).setValue(60);
+         if (setting.getName().equals("Jump By Received Hits")) ((com.samsara.setting.BooleanSetting)setting).setValue(true);
+         if (setting.getName().equals("Hits Until Jump Max")) ((com.samsara.setting.NumberSetting)setting).setValue(5);
       }
       var saved = ModuleConfigCodec.snapshot(List.of(velocity), ModuleConfigCodec.Scope.ALL, false);
       var restored = new Velocity();
       ModuleConfigCodec.prepare(List.of(restored), saved, ModuleConfigCodec.Scope.ALL).run();
       assertEquals(saved, ModuleConfigCodec.snapshot(List.of(restored), ModuleConfigCodec.Scope.ALL, false));
-      assertEquals("JumpReset", restored.mode.m224());
-      restored.mode.m226("Delay");
+      assertEquals("JumpReset", restored.mode.getValue());
+      restored.mode.setValue("Delay");
       assertEquals(Set.of("Mode", "Epsilon Delay Ticks", "Epsilon Jump Reset"), visible(restored));
    }
    @Test void legacyConfigurationsMigrateWithoutMutatingInput() {
@@ -74,7 +74,7 @@ final class CombatSettingsTest {
       config.getAsJsonObject("Animations").getAsJsonObject("settings").remove("Fake Block");
       var unchanged = config.deepCopy();
       ModuleConfigCodec.prepare(modules, config, ModuleConfigCodec.Scope.ALL).run();
-      assertEquals("Delay", velocity.mode.m224()); assertTrue(animations.fakeBlock.m215());
+      assertEquals("Delay", velocity.mode.getValue()); assertTrue(animations.fakeBlock.getValue());
       var saved = ModuleConfigCodec.snapshot(modules, ModuleConfigCodec.Scope.ALL, false);
       assertEquals("None", saved.getAsJsonObject("KillAura").getAsJsonObject("settings").get("AutoBlock").getAsString());
       assertEquals(4, saved.getAsJsonObject("Velocity").getAsJsonObject("settings").get("Epsilon Delay Ticks").getAsInt());
@@ -98,6 +98,6 @@ final class CombatSettingsTest {
       config.addProperty("Velocity", "broken");
       config.getAsJsonObject("Animations").getAsJsonObject("settings").addProperty("Fake Block", true);
       ModuleConfigCodec.prepare(List.of(velocity, animations), config, ModuleConfigCodec.Scope.ALL, true).run();
-      assertTrue(animations.fakeBlock.m215());
+      assertTrue(animations.fakeBlock.getValue());
    }
 }

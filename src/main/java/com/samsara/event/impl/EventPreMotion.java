@@ -5,78 +5,78 @@ import com.samsara.event.Events;
 import net.minecraft.client.Minecraft;
 
 public class EventPreMotion extends Event {
-   private float f107;
-   private double f105;
-   private double f103;
-   private float f106;
-   private boolean f109;
-   private boolean f108;
-   private double f104;
+   private float pitch;
+   private double z;
+   private double x;
+   private float yaw;
+   private boolean horizontalCollision;
+   private boolean onGround;
+   private double y;
 
-   public float m69() {
-      return this.f106;
+   public float getYaw() {
+      return this.yaw;
    }
 
-   public boolean m71() {
-      return this.f108;
+   public boolean isOnGround() {
+      return this.onGround;
    }
 
-   public boolean m73() {
-      return this.f109;
+   public boolean isHorizontalCollision() {
+      return this.horizontalCollision;
    }
 
-   public double m63() {
-      return this.f103;
+   public double getX() {
+      return this.x;
    }
 
-   public void m68(double var1) {
-      this.f105 = var1;
+   public void setZ(double z) {
+      this.z = z;
    }
 
-   public void m66(double var1) {
-      this.f104 = var1;
+   public void setY(double y) {
+      this.y = y;
    }
 
-   public double m67() {
-      return this.f105;
+   public double getZ() {
+      return this.z;
    }
 
-   public double m65() {
-      return this.f104;
+   public double getY() {
+      return this.y;
    }
 
-   public void m72(boolean var1) {
-      this.f108 = var1;
+   public void setOnGround(boolean onGround) {
+      this.onGround = onGround;
    }
 
-   public EventPreMotion m62(double var1, double var3, double var5, boolean var7, boolean var8) {
-      if (!Events.f3.m86()) {
-         this.f106 = Events.f3.m76();
-         this.f107 = Events.f3.m82();
+   public EventPreMotion reset(double x, double y, double z, boolean onGround, boolean horizontalCollision) {
+      if (!Events.ROTATION.usesClientRotation()) {
+         this.yaw = Events.ROTATION.getYaw();
+         this.pitch = Events.ROTATION.getPitch();
       }
 
-      if (Events.f3.m76() != Minecraft.getInstance().player.getYRot()) {
-         Minecraft.getInstance().player.yBodyRot = Events.f3.m76();
+      if (Events.ROTATION.getYaw() != Minecraft.getInstance().player.getYRot()) {
+         Minecraft.getInstance().player.yBodyRot = Events.ROTATION.getYaw();
       }
 
-      this.f103 = var1;
-      this.f104 = var3;
-      this.f105 = var5;
-      this.f108 = var7;
-      this.f109 = var8;
-      Minecraft.getInstance().player.yHeadRot = Events.f3.m76();
+      this.x = x;
+      this.y = y;
+      this.z = z;
+      this.onGround = onGround;
+      this.horizontalCollision = horizontalCollision;
+      Minecraft.getInstance().player.yHeadRot = Events.ROTATION.getYaw();
       return this;
    }
 
-   public float m70() {
-      return this.f107;
+   public float getPitch() {
+      return this.pitch;
    }
 
-   public void m64(double var1) {
-      this.f103 = var1;
+   public void setX(double x) {
+      this.x = x;
    }
 
-   public void m74(boolean var1) {
-      this.f109 = var1;
+   public void setHorizontalCollision(boolean horizontalCollision) {
+      this.horizontalCollision = horizontalCollision;
    }
 }

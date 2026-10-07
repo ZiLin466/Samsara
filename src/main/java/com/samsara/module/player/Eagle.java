@@ -43,13 +43,13 @@ public class Eagle extends Feature {
 
    public Eagle() {
       super("Eagle", Category.PLAYER);
-      this.conditions.setVisible(this.conditional::m215);
-      this.pitchMin.setVisible(this.conditional::m215);
-      this.pitchMax.setVisible(this.conditional::m215);
+      this.conditions.setVisible(this.conditional::getValue);
+      this.pitchMin.setVisible(this.conditional::getValue);
+      this.pitchMax.setVisible(this.conditional::getValue);
       sampleEdgeDistance();
    }
 
-   @Override public int getPriority(Event event) { return event == Events.f7 ? 50 : 0; }
+   @Override public int getPriority(Event event) { return event == Events.MOVE_INPUT ? 50 : 0; }
 
    @Override public void onEnable() {
       onDisable();
@@ -62,12 +62,12 @@ public class Eagle extends Feature {
    }
 
    @Override public void onEvent(Event event) {
-      if (event != Events.f7) return;
+      if (event != Events.MOVE_INPUT) return;
       if (mc.player == null || mc.level == null) {
          onDisable();
          return;
       }
-      if (this.sampledMin != this.edgeMin.m220() || this.sampledMax != this.edgeMax.m220()) {
+      if (this.sampledMin != this.edgeMin.getValue() || this.sampledMax != this.edgeMax.getValue()) {
          sampleEdgeDistance();
          this.releaseDistance = Math.max(this.releaseDistance, Math.max(this.sampledMin, this.sampledMax) + .08);
       }
@@ -77,16 +77,16 @@ public class Eagle extends Feature {
       this.world = mc.level;
       this.player = mc.player;
       boolean originalSneak = mc.options.keyShift.isDown();
-      boolean conditionsMet = conditionsMet(Events.f7, mc.player.getXRot(), mc.player.onGround(),
+      boolean conditionsMet = conditionsMet(Events.MOVE_INPUT, mc.player.getXRot(), mc.player.onGround(),
          isValidBlock(mc.player.getMainHandItem()) || isValidBlock(mc.player.getOffhandItem()));
       boolean permitted = !mc.player.getAbilities().flying && conditionsMet;
-      Vec3[] simulated = simulateMovement(Events.f7);
+      Vec3[] simulated = simulateMovement(Events.MOVE_INPUT);
       double lookAhead = simulated[0].add(simulated[1].x, 0, simulated[1].z).subtract(mc.player.position()).horizontalDistance();
       if (!this.edgeActive) this.releaseDistance = Math.max(Math.max(this.sampledMin, this.sampledMax), lookAhead) + 0.08;
       boolean active = updateEdgeState(permitted,
-         isCloseToEdge(Events.f7, simulated, this.currentEdgeDistance),
-         isCloseToEdge(Events.f7, simulated, this.releaseDistance));
-      Events.f7.m60(applySneak(originalSneak, conditionsMet, active));
+         isCloseToEdge(Events.MOVE_INPUT, simulated, this.currentEdgeDistance),
+         isCloseToEdge(Events.MOVE_INPUT, simulated, this.releaseDistance));
+      Events.MOVE_INPUT.setSneak(applySneak(originalSneak, conditionsMet, active));
    }
 
    private boolean updateEdgeState(boolean permitted, boolean enterEdge, boolean releaseEdge) {
@@ -96,19 +96,19 @@ public class Eagle extends Feature {
    }
 
    private boolean conditionsMet(EventMoveInput input, float pitch, boolean onGround, boolean holdingBlocks) {
-      if (!this.conditional.m215()) return true;
+      if (!this.conditional.getValue()) return true;
       pitch = Mth.clamp(pitch, -90, 90);
-      if (pitch < Math.min(this.pitchMin.m220(), this.pitchMax.m220())
-          || pitch > Math.max(this.pitchMin.m220(), this.pitchMax.m220())) return false;
+      if (pitch < Math.min(this.pitchMin.getValue(), this.pitchMax.getValue())
+          || pitch > Math.max(this.pitchMin.getValue(), this.pitchMax.getValue())) return false;
       for (String condition : this.conditions.selectedValues()) {
          boolean matches = switch (condition) {
-            case "Left" -> input.m50();
-            case "Right" -> input.m51();
-            case "Forwards" -> input.m48();
-            case "Backwards" -> input.m49();
+            case "Left" -> input.isLeft();
+            case "Right" -> input.isRight();
+            case "Forwards" -> input.isForward();
+            case "Backwards" -> input.isBackward();
             case "HoldingBlocks" -> holdingBlocks;
             case "OnGround" -> onGround;
-            case "Sneak" -> input.m53();
+            case "Sneak" -> input.isSneak();
             default -> false;
          };
          if (!matches) return false;
@@ -117,7 +117,7 @@ public class Eagle extends Feature {
    }
 
    private boolean applySneak(boolean originalSneak, boolean conditionsMet, boolean active) {
-      boolean controlsSneak = this.conditional.m215() && this.conditions.contains("Sneak");
+      boolean controlsSneak = this.conditional.getValue() && this.conditions.contains("Sneak");
       if (!controlsSneak || !originalSneak) this.sneakCaptured = false;
       else if (active) this.sneakCaptured = true;
       boolean override = conditionsMet && controlsSneak && (active || this.sneakCaptured);
@@ -131,8 +131,8 @@ public class Eagle extends Feature {
    }
 
    private void sampleEdgeDistance() {
-      this.sampledMin = this.edgeMin.m220();
-      this.sampledMax = this.edgeMax.m220();
+      this.sampledMin = this.edgeMin.getValue();
+      this.sampledMax = this.edgeMax.getValue();
       double min = Math.min(this.sampledMin, this.sampledMax), max = Math.max(this.sampledMin, this.sampledMax);
       this.currentEdgeDistance = min == max ? min : ThreadLocalRandom.current().nextDouble(min, max);
    }
@@ -147,7 +147,7 @@ public class Eagle extends Feature {
    private boolean isCloseToEdge(EventMoveInput input, Vec3[] simulated, double distance) {
       Vec3 position = mc.player.position();
       Vec3 nextVelocity = simulated[1];
-      boolean moving = input.m48() != input.m49() || input.m50() != input.m51();
+      boolean moving = input.isForward() != input.isBackward() || input.isLeft() != input.isRight();
       Vec3 direction = !moving && nextVelocity.horizontalDistanceSqr() > 0.003 * 0.003
          ? new Vec3(nextVelocity.x, 0, nextVelocity.z).normalize()
          : Vec3.directionFromRotation(0, movementYaw(input, mc.player.getYRot()));
@@ -159,10 +159,10 @@ public class Eagle extends Feature {
 
    static float movementYaw(EventMoveInput input, float facingYaw) {
       float multiplier = 1;
-      if (input.m49() && !input.m48()) { facingYaw += 180; multiplier = -0.5F; }
-      else if (input.m48() && !input.m49()) multiplier = 0.5F;
-      if (input.m50() && !input.m51()) facingYaw -= 90 * multiplier;
-      if (input.m51() && !input.m50()) facingYaw += 90 * multiplier;
+      if (input.isBackward() && !input.isForward()) { facingYaw += 180; multiplier = -0.5F; }
+      else if (input.isForward() && !input.isBackward()) multiplier = 0.5F;
+      if (input.isLeft() && !input.isRight()) facingYaw -= 90 * multiplier;
+      if (input.isRight() && !input.isLeft()) facingYaw += 90 * multiplier;
       return facingYaw;
    }
 
@@ -170,12 +170,12 @@ public class Eagle extends Feature {
       float friction = mc.level.getBlockState(mc.player.getBlockPosBelowThatAffectsMyMovement()).getBlock().getFriction();
       boolean water = mc.player.isInWater(), lava = mc.player.isInLava();
       double acceleration = water || lava ? 0.02 : mc.player.onGround()
-         ? mc.player.getSpeed() * 0.21600002 / (friction * friction * friction) : input.m54() ? 0.026 : 0.02;
+         ? mc.player.getSpeed() * 0.21600002 / (friction * friction * friction) : input.isSprint() ? 0.026 : 0.02;
       Vec3 motion = mc.player.getDeltaMovement();
       motion = new Vec3(Math.abs(motion.x) < 0.003 ? 0 : motion.x,
          Math.abs(motion.y) < 0.003 ? 0 : motion.y, Math.abs(motion.z) < 0.003 ? 0 : motion.z);
-      Vec3 movementInput = new Vec3((input.m50() ? 0.98 : 0) - (input.m51() ? 0.98 : 0), 0,
-         (input.m48() ? 0.98 : 0) - (input.m49() ? 0.98 : 0));
+      Vec3 movementInput = new Vec3((input.isLeft() ? 0.98 : 0) - (input.isRight() ? 0.98 : 0), 0,
+         (input.isForward() ? 0.98 : 0) - (input.isBackward() ? 0.98 : 0));
       if (movementInput.lengthSqr() > 1) movementInput = movementInput.normalize();
       movementInput = movementInput.scale(acceleration);
       double yaw = Math.toRadians(mc.player.getYRot());
@@ -258,9 +258,9 @@ public class Eagle extends Feature {
          if (Math.abs(direction) < 1.0E-12) {
             if (origin < min || origin > max) return null;
          } else {
-            double a = (min - origin) / direction, b = (max - origin) / direction;
-            start = Math.max(start, Math.min(a, b));
-            end = Math.min(end, Math.max(a, b));
+            double firstIntersection = (min - origin) / direction, secondIntersection = (max - origin) / direction;
+            start = Math.max(start, Math.min(firstIntersection, secondIntersection));
+            end = Math.min(end, Math.max(firstIntersection, secondIntersection));
             if (start > end) return null;
          }
       }

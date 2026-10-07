@@ -4,13 +4,12 @@ import com.samsara.event.Event;
 import com.samsara.event.Events;
 import com.samsara.module.Category;
 import com.samsara.module.Feature;
-import java.nio.charset.StandardCharsets;
 
 public class Sprint extends Feature {
-   private static final String f426 = "Sprint";
+   private static final String SPRINT_LABEL = "Sprint";
 
    public Sprint() {
-      super(f426, Category.MOVEMENT);
+      super(SPRINT_LABEL, Category.MOVEMENT);
    }
 
    @Override
@@ -19,8 +18,8 @@ public class Sprint extends Feature {
    }
 
    @Override
-   public void onEvent(Event var1) {
-      if (var1 == Events.f3) {
+   public void onEvent(Event event) {
+      if (event == Events.ROTATION) {
          mc.options.keySprint.setDown(true);
       }
    }

@@ -21,9 +21,9 @@ public class MixinGui {
          shift = Shift.AFTER
       )}
    )
-   private void pm$22(DeltaTracker var1, boolean var2, boolean var3, CallbackInfo var4, @Local GuiGraphicsExtractor var5) {
+   private void samsara$dispatchRender2D(DeltaTracker deltaTracker, boolean renderBlockOutline, boolean renderDebug, CallbackInfo callback, @Local GuiGraphicsExtractor graphics) {
       com.samsara.ui.hud.HudLayouts.INSTANCE.beginFrame();
       com.samsara.ui.dynamicIsland.DynamicIslandManager.beginExtraction();
-      Events.f5.m88(var5, var1).call();
+      Events.RENDER_2D.reset(graphics, deltaTracker).call();
    }
 }

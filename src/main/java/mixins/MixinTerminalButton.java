@@ -15,8 +15,8 @@ import org.spongepowered.asm.mixin.injection.callback.CallbackInfo;
 public abstract class MixinTerminalButton {
    @Unique private final HoverMotion samsara$hover = new HoverMotion();
    @Inject(method = "extractWidgetRenderState", at = @At("HEAD"), cancellable = true)
-   private void samsara$button(GuiGraphicsExtractor g, int x, int y, float delta, CallbackInfo ci) {
+   private void samsara$button(GuiGraphicsExtractor graphics, int x, int y, float delta, CallbackInfo ci) {
       if (!TerminalTheme.active()) return;
-      TerminalTheme.button(g, (AbstractWidget)(Object)this, samsara$hover); ci.cancel();
+      TerminalTheme.button(graphics, (AbstractWidget)(Object)this, samsara$hover); ci.cancel();
    }
 }

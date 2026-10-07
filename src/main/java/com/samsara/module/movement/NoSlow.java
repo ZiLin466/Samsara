@@ -7,78 +7,77 @@ import com.samsara.module.Feature;
 import com.samsara.setting.BooleanSetting;
 import com.samsara.setting.ModeSetting;
 import com.samsara.setting.NumberSetting;
-import java.nio.charset.StandardCharsets;
 import net.minecraft.network.protocol.game.ServerboundSetCarriedItemPacket;
 import net.minecraft.network.protocol.game.ServerboundUseItemPacket;
 import net.minecraft.world.InteractionHand;
 
 public class NoSlow extends Feature {
-   private static final String f403 = "NoSlow";
-   private static final String f410 = "Always";
-   private static final String f407 = "NoGround";
-   private static final String f413 = "Block";
-   private NumberSetting f414;
-   private BooleanSetting f416;
-   private ModeSetting f419;
-   private static final String f412 = "SecondTick";
-   private BooleanSetting f417;
-   private static final String f404 = "Speed";
-   private static final String f409 = "Disabled";
-   private static final String f405 = "Force Sprinting";
-   private ModeSetting f418;
-   private BooleanSetting f415;
-   private static final String f411 = "FirstTick";
-   private static final String f406 = "Rotate";
-   private static final String f408 = "Swap";
-   private int f420;
+   private static final String NO_SLOW_LABEL = "NoSlow";
+   private static final String ALWAYS_LABEL = "Always";
+   private static final String NO_GROUND_LABEL = "NoGround";
+   private static final String BLOCK_LABEL = "Block";
+   private NumberSetting speed;
+   private BooleanSetting rotate;
+   private ModeSetting block;
+   private static final String SECOND_TICK_LABEL = "SecondTick";
+   private BooleanSetting noGround;
+   private static final String SPEED_LABEL = "Speed";
+   private static final String DISABLED_LABEL = "Disabled";
+   private static final String FORCE_SPRINTING_LABEL = "Force Sprinting";
+   private ModeSetting swap;
+   private BooleanSetting forceSprinting;
+   private static final String FIRST_TICK_LABEL = "FirstTick";
+   private static final String ROTATE_LABEL = "Rotate";
+   private static final String SWAP_LABEL = "Swap";
+   private int itemUseTicks;
 
    public NoSlow() {
-      super(f403, Category.MOVEMENT);
-      this.f414 = new NumberSetting(f404, this, 0.2, 0.2, 1.0, 0.1);
-      this.f415 = new BooleanSetting(f405, this, false);
-      this.f416 = new BooleanSetting(f406, this, false);
-      this.f417 = new BooleanSetting(f407, this, false);
-      this.f418 = new ModeSetting(f408, this, f409, new String[]{f409, f410, f411, f412});
-      this.f419 = new ModeSetting(f413, this, f409, new String[]{f409, f410, f411, f412});
+      super(NO_SLOW_LABEL, Category.MOVEMENT);
+      this.speed = new NumberSetting(SPEED_LABEL, this, 0.2, 0.2, 1.0, 0.1);
+      this.forceSprinting = new BooleanSetting(FORCE_SPRINTING_LABEL, this, false);
+      this.rotate = new BooleanSetting(ROTATE_LABEL, this, false);
+      this.noGround = new BooleanSetting(NO_GROUND_LABEL, this, false);
+      this.swap = new ModeSetting(SWAP_LABEL, this, DISABLED_LABEL, new String[]{DISABLED_LABEL, ALWAYS_LABEL, FIRST_TICK_LABEL, SECOND_TICK_LABEL});
+      this.block = new ModeSetting(BLOCK_LABEL, this, DISABLED_LABEL, new String[]{DISABLED_LABEL, ALWAYS_LABEL, FIRST_TICK_LABEL, SECOND_TICK_LABEL});
    }
 
    @Override
-   public void onEvent(Event var1) {
-      this.setSuffix(this.f414.m220() + "");
-      if (var1 == Events.f9) {
-         Events.f9.m94((float)this.f414.m220());
+   public void onEvent(Event event) {
+      this.setSuffix(this.speed.getValue() + "");
+      if (event == Events.SLOWDOWN) {
+         Events.SLOWDOWN.setSpeedMultiplier((float)this.speed.getValue());
       }
 
-      if (var1 == Events.f12 && this.f415.m215()) {
-         Events.f12.m97(1);
-         Events.f12.m99(true);
+      if (event == Events.SPRINT && this.forceSprinting.getValue()) {
+         Events.SPRINT.setSprintTriggerTime(1);
+         Events.SPRINT.setSprinting(true);
       }
 
-      if (var1 == Events.f3) {
+      if (event == Events.ROTATION) {
          if (mc.player.isUsingItem()) {
-            int var2 = this.f418.m228(f412) ? 2 : 1;
-            int var3 = this.f419.m228(f412) ? 2 : 1;
-            this.f420++;
-            if ((!mc.options.keyJump.isDown() || !mc.player.onGround()) && this.f416.m215()) {
-               Events.f3.m77(mc.player.getYRot() + 45.0F);
+            int swapTick = this.swap.is(SECOND_TICK_LABEL) ? 2 : 1;
+            int blockTick = this.block.is(SECOND_TICK_LABEL) ? 2 : 1;
+            this.itemUseTicks++;
+            if ((!mc.options.keyJump.isDown() || !mc.player.onGround()) && this.rotate.getValue()) {
+               Events.ROTATION.setYaw(mc.player.getYRot() + 45.0F);
             }
 
-            if (!this.f418.m228(f409) && (this.f420 == var2 || this.f418.m228(f410))) {
-               int var4 = mc.player.getInventory().getSelectedSlot();
-               mc.player.connection.send(new ServerboundSetCarriedItemPacket(var4 % 8 + 1));
-               mc.player.connection.send(new ServerboundSetCarriedItemPacket(var4));
+            if (!this.swap.is(DISABLED_LABEL) && (this.itemUseTicks == swapTick || this.swap.is(ALWAYS_LABEL))) {
+               int selectedSlot = mc.player.getInventory().getSelectedSlot();
+               mc.player.connection.send(new ServerboundSetCarriedItemPacket(selectedSlot % 8 + 1));
+               mc.player.connection.send(new ServerboundSetCarriedItemPacket(selectedSlot));
             }
 
-            if (!this.f419.m228(f409) && (this.f420 == var3 || this.f419.m228(f410))) {
+            if (!this.block.is(DISABLED_LABEL) && (this.itemUseTicks == blockTick || this.block.is(ALWAYS_LABEL))) {
                mc.getConnection().send(new ServerboundUseItemPacket(InteractionHand.MAIN_HAND, 0, mc.player.getYRot(), mc.player.getXRot()));
             }
          } else {
-            this.f420 = 0;
+            this.itemUseTicks = 0;
          }
       }
 
-      if (var1 == Events.f1 && mc.player.isUsingItem() && this.f417.m215()) {
-         Events.f1.m72(false);
+      if (event == Events.PRE_MOTION && mc.player.isUsingItem() && this.noGround.getValue()) {
+         Events.PRE_MOTION.setOnGround(false);
       }
    }
 }

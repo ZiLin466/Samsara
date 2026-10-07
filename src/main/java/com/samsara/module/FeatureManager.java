@@ -16,10 +16,10 @@ import com.samsara.module.movement.AntiSwim;
 import com.samsara.module.movement.AutoWalk;
 import com.samsara.module.movement.Blink;
 import com.samsara.module.movement.Flight;
-import com.samsara.module.movement.InvMove;
+import com.samsara.module.movement.InventoryMove;
 import com.samsara.module.movement.KeepSprint;
 import com.samsara.module.movement.LongJump;
-import com.samsara.module.movement.MoveFix;
+import com.samsara.module.movement.MovementCorrection;
 import com.samsara.module.movement.NoSlow;
 import com.samsara.module.movement.Speed;
 import com.samsara.module.movement.Sprint;
@@ -33,7 +33,7 @@ import com.samsara.module.player.ChestStealer;
 import com.samsara.module.player.Eagle;
 import com.samsara.module.player.FastMine;
 import com.samsara.module.player.FastPlace;
-import com.samsara.module.player.InvManager;
+import com.samsara.module.player.InventoryManager;
 import com.samsara.module.player.LagRange;
 import com.samsara.module.player.NoFall;
 import com.samsara.module.player.NoJumpDelay;
@@ -47,7 +47,7 @@ import com.samsara.module.visual.ClickGui;
 import com.samsara.module.visual.FullBright;
 import com.samsara.module.visual.Hud;
 import com.samsara.module.visual.NameTags;
-import com.samsara.module.visual.NoHurtCam;
+import com.samsara.module.visual.NoHurtCamera;
 import com.samsara.module.visual.PlayerEsp;
 import com.samsara.module.visual.Scoreboard;
 import com.samsara.module.visual.Theme;
@@ -56,30 +56,30 @@ import java.util.List;
 import net.minecraft.client.Minecraft;
 
 public class FeatureManager {
-   public static Velocity f28;
+   public static Velocity velocity;
    public static AutoRod autoRod;
    public static com.samsara.module.combat.TargetSettings targets;
-   public static Cape f38;
-   public static Scaffold f29;
-   public static Theme f24;
-   public static AntiBot f27;
-   public static KillAura f26;
-   public static Scoreboard f32;
+   public static Cape cape;
+   public static Scaffold scaffold;
+   public static Theme theme;
+   public static AntiBot antiBot;
+   public static KillAura killAura;
+   public static Scoreboard scoreboard;
    private static List<Feature> sortedModules;
-   public static AntiFire f31;
-   public static BedAura f33;
-   public static LongJump f35;
-   public static Animations f34;
-   public static Hud f25;
+   public static AntiFire antiFire;
+   public static BedAura bedAura;
+   public static LongJump longJump;
+   public static Animations animations;
+   public static Hud hud;
    public static ClickGui clickGui;
    public static NameTags nameTags;
    public static ChestStealer chestStealer;
-   public static Whitelist f30;
+   public static Whitelist whitelist;
    private static List<Feature> modules;
-   public static KeepSprint f36;
-   public static AntiSwim f37;
-   public static Blink f39;
-   public static Stasis f40;
+   public static KeepSprint keepSprint;
+   public static AntiSwim antiSwim;
+   public static Blink blink;
+   public static Stasis stasis;
 
    public static void loadEnabled() {
       sortedModules = new ArrayList<>(modules);
@@ -90,77 +90,77 @@ public class FeatureManager {
       modules = new ArrayList<>();
       modules.add(targets = new com.samsara.module.combat.TargetSettings());
       modules.add(new AimAssist());
-      modules.add(f27 = new AntiBot());
+      modules.add(antiBot = new AntiBot());
       modules.add(new AutoClicker());
       modules.add(new Criticals());
-      modules.add(f26 = new KillAura());
+      modules.add(killAura = new KillAura());
       modules.add(new SprintReset());
       modules.add(new TriggerBot());
-      modules.add(f28 = new Velocity());
+      modules.add(velocity = new Velocity());
       modules.add(autoRod = new AutoRod());
-      modules.add(f37 = new AntiSwim());
+      modules.add(antiSwim = new AntiSwim());
       modules.add(new AutoWalk());
       modules.add(new Flight());
-      modules.add(new InvMove());
-      modules.add(f36 = new KeepSprint());
-      modules.add(f35 = new LongJump());
-      modules.add(new MoveFix());
+      modules.add(new InventoryMove());
+      modules.add(keepSprint = new KeepSprint());
+      modules.add(longJump = new LongJump());
+      modules.add(new MovementCorrection());
       modules.add(new NoSlow());
       modules.add(new Speed());
       modules.add(new Sprint());
-      modules.add(f40 = new Stasis());
+      modules.add(stasis = new Stasis());
       modules.add(new Timer());
-      modules.add(f39 = new Blink());
+      modules.add(blink = new Blink());
       modules.add(new AutoTool());
       modules.add(new AutoHead());
       modules.add(new Backtrack());
-      modules.add(f33 = new BedAura());
+      modules.add(bedAura = new BedAura());
       modules.add(chestStealer = new ChestStealer());
       modules.add(new Eagle());
       modules.add(new FastMine());
       modules.add(new FastPlace());
-      modules.add(new InvManager());
+      modules.add(new InventoryManager());
       modules.add(new LagRange());
       modules.add(new NoFall());
       modules.add(new NoJumpDelay());
-      modules.add(f29 = new Scaffold());
+      modules.add(scaffold = new Scaffold());
       modules.add(new Ambience());
-      modules.add(f34 = new Animations());
-      modules.add(f31 = new AntiFire());
+      modules.add(animations = new Animations());
+      modules.add(antiFire = new AntiFire());
       modules.add(new BedPlates());
-      modules.add(f38 = new Cape());
+      modules.add(cape = new Cape());
       modules.add(clickGui = new ClickGui());
       modules.add(new FullBright());
-      modules.add(f25 = new Hud());
+      modules.add(hud = new Hud());
       modules.add(nameTags = new NameTags());
-      modules.add(new NoHurtCam());
+      modules.add(new NoHurtCamera());
       modules.add(new PlayerEsp());
-      modules.add(f32 = new Scoreboard());
-      modules.add(f24 = new Theme());
+      modules.add(scoreboard = new Scoreboard());
+      modules.add(theme = new Theme());
       modules.add(new Disabler());
-      modules.add(f30 = new Whitelist());
+      modules.add(whitelist = new Whitelist());
       modules.add(new WindCharge());
    }
 
-   public static List<Feature> m19(Category var0) {
-      ArrayList<Feature> var1 = new ArrayList<>();
+   public static List<Feature> getModulesByCategory(Category category) {
+      ArrayList<Feature> matchingFeatures = new ArrayList<>();
 
-      for (Feature var3 : modules) {
-         if (var3.getCategory() == var0) {
-            var1.add(var3);
+      for (Feature feature : modules) {
+         if (feature.getCategory() == category) {
+            matchingFeatures.add(feature);
          }
       }
 
-      return var1;
+      return matchingFeatures;
    }
 
    public static void sortModules() {
       sortedModules.sort(
-         (var0, var1) -> Integer.compare(Minecraft.getInstance().font.width(var1.getDisplayName()), Minecraft.getInstance().font.width(var0.getDisplayName()))
+         (leftFeature, rightFeature) -> Integer.compare(Minecraft.getInstance().font.width(rightFeature.getDisplayName()), Minecraft.getInstance().font.width(leftFeature.getDisplayName()))
       );
    }
 
-   public static List<Feature> m18() {
+   public static List<Feature> getSortedModules() {
       return sortedModules;
    }
 

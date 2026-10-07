@@ -50,10 +50,10 @@ final class AutoRodSettingsTest {
    @Test void eachRotationModeHidesSettingsFromOtherModes() {
       var rod = new AutoRod();
       var smoothing = (ModeSetting)rod.settings.stream().filter(s -> s.getName().equals("Rotation Smoothing")).findFirst().orElseThrow();
-      smoothing.m226("Acceleration");
+      smoothing.setValue("Acceleration");
       assertFalse(rod.settings.stream().filter(s -> s.getName().equals("Rotation Yaw Speed Min")).findFirst().orElseThrow().isVisible());
       assertTrue(rod.settings.stream().filter(s -> s.getName().equals("Rotation Yaw Acceleration Min")).findFirst().orElseThrow().isVisible());
-      smoothing.m226("Linear");
+      smoothing.setValue("Linear");
       assertFalse(rod.settings.stream().filter(s -> s.getName().equals("Rotation Yaw Acceleration Min")).findFirst().orElseThrow().isVisible());
    }
    private static MultiSelectSetting selection(AutoRod rod, String name) {

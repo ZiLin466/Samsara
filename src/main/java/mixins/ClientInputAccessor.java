@@ -11,5 +11,5 @@ public interface ClientInputAccessor {
    Vec2 getMoveVector();
 
    @Accessor("moveVector")
-   void setMoveVector(Vec2 var1);
+   void setMoveVector(Vec2 moveVector);
 }

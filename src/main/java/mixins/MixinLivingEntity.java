@@ -15,11 +15,11 @@ public class MixinLivingEntity {
          target = "Lnet/minecraft/world/entity/LivingEntity;getYRot()F"
       )}
    )
-   private float pm$44(float var1) {
-      if (Events.f3.m84()) {
-         return Events.f3.m86() ? Events.f3.m76() : Events.f1.m69();
+   private float samsara$jumpYaw(float originalYaw) {
+      if (Events.ROTATION.hasMovementCorrection()) {
+         return Events.ROTATION.usesClientRotation() ? Events.ROTATION.getYaw() : Events.PRE_MOTION.getYaw();
       } else {
-         return var1;
+         return originalYaw;
       }
    }
 }

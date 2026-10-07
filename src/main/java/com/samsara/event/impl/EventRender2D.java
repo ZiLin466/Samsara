@@ -7,26 +7,26 @@ import net.minecraft.client.DeltaTracker;
 import net.minecraft.client.gui.GuiGraphicsExtractor;
 
 public class EventRender2D extends Event {
-   private GuiGraphicsExtractor f116;
-   private DeltaTracker f117;
+   private GuiGraphicsExtractor graphics;
+   private DeltaTracker deltaTracker;
 
-   public EventRender2D m88(GuiGraphicsExtractor var1, DeltaTracker var2) {
-      this.f116 = var1;
-      this.f117 = var2;
-      WorldToScreenProjector.m42();
-      ClientColors.m51();
+   public EventRender2D reset(GuiGraphicsExtractor graphics, DeltaTracker deltaTracker) {
+      this.graphics = graphics;
+      this.deltaTracker = deltaTracker;
+      WorldToScreenProjector.updateCamera();
+      ClientColors.updateTheme();
       return this;
    }
 
-   public DeltaTracker m90() {
-      return this.f117;
+   public DeltaTracker getDeltaTracker() {
+      return this.deltaTracker;
    }
 
-   public GuiGraphicsExtractor m89() {
-      return this.f116;
+   public GuiGraphicsExtractor getGraphics() {
+      return this.graphics;
    }
 
-   public float m91() {
-      return this.f117.getGameTimeDeltaPartialTick(false);
+   public float getPartialTick() {
+      return this.deltaTracker.getGameTimeDeltaPartialTick(false);
    }
 }

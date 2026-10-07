@@ -26,9 +26,9 @@ public abstract class Setting {
       return this.module;
    }
 
-   public Setting(String var1, Feature var2) {
-      this.name = var1;
-      this.module = var2;
+   public Setting(String name, Feature module) {
+      this.name = name;
+      this.module = module;
       this.module.settings.add(this);
    }
 

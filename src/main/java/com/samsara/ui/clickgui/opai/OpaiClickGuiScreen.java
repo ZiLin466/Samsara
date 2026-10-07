@@ -1,5 +1,7 @@
 package com.samsara.ui.clickgui.opai;
 
+import com.samsara.util.render.ColorUtility;
+import com.samsara.ui.MouseButtons;
 import com.samsara.module.Category;
 import com.samsara.module.Feature;
 import com.samsara.module.FeatureManager;
@@ -257,7 +259,7 @@ public class OpaiClickGuiScreen extends Screen implements NanoGui {
       try {
          NVGRenderer.scale(this.menuScale, this.width / 2f, this.transformCenterY, 0, 0, () -> {
             Canvas canvas = new Canvas(null);
-            this.palette = OpaiStyle.palette(this.colorSetting.m224());
+            this.palette = OpaiStyle.palette(this.colorSetting.getValue());
             if (!this.configFront) this.drawConfigs(canvas);
             this.drawColumns(canvas);
             if (this.configFront) this.drawConfigs(canvas);
@@ -274,7 +276,7 @@ public class OpaiClickGuiScreen extends Screen implements NanoGui {
    public void drawHudEditButton() { this.hudEdit.draw(this.width, this.height, this.menuOpacity, this.closing); }
 
    private void drawColumns(Canvas canvas) {
-      this.palette = OpaiStyle.palette(this.colorSetting.m224());
+      this.palette = OpaiStyle.palette(this.colorSetting.getValue());
       for (OpaiColumn column : this.columns) {
          float bodyY = column.y + HEADER_H;
          if (column.bodyH <= 0.5f) {
@@ -368,15 +370,15 @@ public class OpaiClickGuiScreen extends Screen implements NanoGui {
          float enabled = row.enabled.approach(row.module.isEnabled() ? 1 : 0, now);
          float hover = row.hover.approach(hovered && this.draggedColumn == null ? 1 : 0, now);
          if (hover > 0.01f && enabled < 0.99f) {
-            canvas.rect(x, y, this.colW, ROW_H, applyAlpha(this.palette.hover(), hover * (1 - enabled)));
+            canvas.rect(x, y, this.colW, ROW_H, ColorUtility.multiplyOpacity(this.palette.hover(), hover * (1 - enabled)));
          }
          if (enabled > 0.01f) {
             canvas.rect(x, y, this.colW, ROW_H,
-               applyAlpha(mixColor(this.palette.enabled(), this.palette.enabledHover(), hover), enabled));
+               ColorUtility.multiplyOpacity(ColorUtility.mix(this.palette.enabled(), this.palette.enabledHover(), hover), enabled));
          }
          row.feedback.paint(canvas, x, y, this.colW, ROW_H, 0, this.palette.text(), now);
          canvas.text(row == this.bindingRow ? "Press a key" : row.name,
-            x + TEXT_PAD, y + ROW_H / 2, ROW_TEXT_SIZE, labelW, mixColor(this.palette.text(), this.palette.enabledText(), enabled));
+            x + TEXT_PAD, y + ROW_H / 2, ROW_TEXT_SIZE, labelW, ColorUtility.mix(this.palette.text(), this.palette.enabledText(), enabled));
          return;
       }
 
@@ -397,8 +399,8 @@ public class OpaiClickGuiScreen extends Screen implements NanoGui {
             canvas.text(value, x + this.colW - TEXT_PAD - valueWidth, y + 6.5f, 8.5f, valueWidth, this.palette.text());
             float trackW = this.colW - TEXT_PAD * 2;
             float trackY = y + SLIDER_Y;
-            double range = number.m219() - number.m218();
-            float fraction = range <= 0 ? 0 : (float)Math.clamp((number.m220() - number.m218()) / range, 0, 1);
+            double range = number.getMaximum() - number.getMinimum();
+            float fraction = range <= 0 ? 0 : (float)Math.clamp((number.getValue() - number.getMinimum()) / range, 0, 1);
             OpaiMotion slider = this.sliderAnims.computeIfAbsent(number, ignored -> new OpaiMotion(fraction, 35));
             if (this.draggingSlider == number) slider.snap(fraction, OpaiMotion.now());
             float displayed = slider.approach(fraction, OpaiMotion.now());
@@ -406,7 +408,7 @@ public class OpaiClickGuiScreen extends Screen implements NanoGui {
             canvas.rounded(x + TEXT_PAD, trackY - 1.25f, trackW * displayed, 2.5f, 1.25f, this.palette.accent());
             float knobX = x + TEXT_PAD + trackW * displayed;
             float pulse = this.feedback(number).press(OpaiMotion.now());
-            if (pulse > 0) canvas.rounded(knobX - 7, trackY - 7, 14, 14, 7, applyAlpha(this.palette.accent(), .25f * pulse));
+            if (pulse > 0) canvas.rounded(knobX - 7, trackY - 7, 14, 14, 7, ColorUtility.multiplyOpacity(this.palette.accent(), .25f * pulse));
             canvas.rounded(knobX - 4.5f, trackY - 3.5f, 9, 9, 4.5f, 0x33000000);
             canvas.rounded(knobX - 4, trackY - 4, 8, 8, 4, this.palette.accent());
          }
@@ -439,7 +441,7 @@ public class OpaiClickGuiScreen extends Screen implements NanoGui {
             float left = x + TEXT_PAD - 2;
             float width = labelW + 4;
             if (selected || hovered) {
-               int selection = choices.multiple() ? mixColor(this.choiceField(choices), this.palette.accent(), .10f) : this.palette.selected();
+               int selection = choices.multiple() ? ColorUtility.mix(this.choiceField(choices), this.palette.accent(), .10f) : this.palette.selected();
                canvas.rect(left + 1, y, width - 2, OPTION_H, selected ? selection : this.palette.hover());
             }
             if (selected) {
@@ -461,19 +463,19 @@ public class OpaiClickGuiScreen extends Screen implements NanoGui {
    }
 
    private void drawToggle(Canvas canvas, float x, float y, BooleanSetting bool) {
-      OpaiMotion anim = this.toggleAnims.computeIfAbsent(bool, setting -> new OpaiMotion(setting.m215() ? 1 : 0, 30));
-      float t = anim.approach(bool.m215() ? 1 : 0, OpaiMotion.now());
-      canvas.rounded(x, y, 26, 16, 8, mixColor(this.palette.toggleOutline(), this.palette.accent(), t));
+      OpaiMotion anim = this.toggleAnims.computeIfAbsent(bool, setting -> new OpaiMotion(setting.getValue() ? 1 : 0, 30));
+      float t = anim.approach(bool.getValue() ? 1 : 0, OpaiMotion.now());
+      canvas.rounded(x, y, 26, 16, 8, ColorUtility.mix(this.palette.toggleOutline(), this.palette.accent(), t));
       if (t < 1f) {
-         canvas.rounded(x + 1, y + 1, 24, 14, 7, applyAlpha(this.palette.field(), 1 - t));
+         canvas.rounded(x + 1, y + 1, 24, 14, 7, ColorUtility.multiplyOpacity(this.palette.field(), 1 - t));
       }
       OpaiFeedback feedback = this.feedback(bool);
       float stretch = 3 * feedback.press(OpaiMotion.now());
       float knobX = x + 2 + (10 - stretch) * t;
-      canvas.rounded(knobX, y + 2, 12 + stretch, 12, 6, mixColor(this.palette.fieldLine(), this.palette.enabledText(), t));
+      canvas.rounded(knobX, y + 2, 12 + stretch, 12, 6, ColorUtility.mix(this.palette.fieldLine(), this.palette.enabledText(), t));
       feedback.paint(canvas, x, y, 26, 16, 8, this.palette.accent(), OpaiMotion.now());
       if (t > 0.01f) {
-         canvas.check(knobX + 3, y + 5, 6, applyAlpha(this.palette.accent(), t));
+         canvas.check(knobX + 3, y + 5, 6, ColorUtility.multiplyOpacity(this.palette.accent(), t));
       }
    }
 
@@ -502,7 +504,7 @@ public class OpaiClickGuiScreen extends Screen implements NanoGui {
             column.scroll = column.scrollTarget;
          }
          this.menuScale = 1;
-         this.palette = OpaiStyle.palette(this.colorSetting.m224());
+         this.palette = OpaiStyle.palette(this.colorSetting.getValue());
          Canvas canvas = new Canvas(graphics);
          if (!this.configFront) this.drawConfigs(canvas);
          this.drawColumns(canvas);
@@ -530,29 +532,12 @@ public class OpaiClickGuiScreen extends Screen implements NanoGui {
       if (!this.closing && this.hudEdit.click(event.x(), event.y(), event.button())) {
          this.closeDestination = new com.samsara.ui.hud.editor.HudEditorScreen(); this.onClose(); return true;
       }
-      if (this.closing) {
-         return true;
-      }
+      if (this.closing) return true;
       this.setMouse(event.x(), event.y());
       this.shiftDown = event.hasShiftDown();
       OpaiColumn column = this.columnAt();
-      int button = normalizeMouseButton(event.button());
-      if ((this.configFront || column == null) && this.configs.click(this.mouseX, this.mouseY, button)) {
-         this.bindingRow = null;
-         this.draggedColumn = null;
-         this.draggedScrollbar = null;
-         this.draggingSlider = null;
-         this.sliderRow = null;
-         this.sliderColumn = null;
-         this.configFront = true;
-         this.configName.setFocused(this.configs.focused());
-         if (button == 0 && this.configs.focused()) {
-            int cursor = NVGRenderer.isAvailable() ? this.configs.cursorAt(new Canvas(null), this.mouseX) : this.configName.getValue().length();
-            this.configName.moveCursorTo(cursor, event.hasShiftDown());
-            this.syncConfigEditor();
-         }
-         return true;
-      }
+      int button = MouseButtons.normalize(event.button());
+      if (this.handleConfigClick(event, column, button)) return true;
       this.configName.setFocused(false);
       this.configs.blur();
       if (column == null) {
@@ -565,134 +550,156 @@ public class OpaiClickGuiScreen extends Screen implements NanoGui {
       this.configFront = false;
       Dropdown overlay = this.dropdownAt(column);
       if (overlay != null) {
-         if (button == 0 && overlay.row().openMode == overlay.mode()) {
-            int option = (int)((this.mouseY - overlay.bounds().y() + overlay.scroll()) / OPTION_H);
-            if (option >= 0 && option < overlay.choices().options().length) {
-               overlay.choices().select(option);
-               overlay.row().optionFeedback.computeIfAbsent(new Option(overlay.mode(), option), ignored -> new OpaiFeedback())
-                  .click((float)this.mouseX - overlay.bounds().x(), (float)this.mouseY - overlay.bounds().y() + overlay.scroll() - option * OPTION_H,
-                     overlay.bounds().width(), OPTION_H, OpaiMotion.now());
-               if (!overlay.choices().multiple()) overlay.row().openMode = null;
-               this.refreshLayouts();
-            }
-         } else if (button == 1) { this.closeDropdowns(); this.refreshLayouts(); }
+         this.handleDropdownClick(overlay, button);
          return true;
       }
       if (this.mouseY < column.y + HEADER_H) {
-         Action action = OpaiInteraction.header(button);
-         if (action == Action.EXPAND) {
-            this.clearDrag();
-            column.expanded = !column.expanded;
-            for (OpaiRow row : column.rows) {
-               if (this.bindingRow == row) {
-                  this.bindingRow = null;
-               }
-            }
-            this.refreshLayouts();
-         } else if (action == Action.DRAG) {
-            this.clearDrag();
-            this.draggedColumn = column;
-            this.dragX = (float)this.mouseX - column.x;
-            this.dragY = (float)this.mouseY - column.y;
-         }
+         this.handleHeaderClick(column, button);
          return true;
       }
-      float localY = (float)this.mouseY - column.y - HEADER_H;
       if (!column.expanded) return true;
-      if (button == 0 && column.maxScroll > 0 && new Rect(column.x + this.colW - 6,
-            column.y + HEADER_H, 6, column.bodyH - FOOTER_H).contains(this.mouseX, this.mouseY)) {
-         this.clearDrag();
-         this.draggedScrollbar = column;
-         Scrollbar bar = scrollbar(column.bodyH, column.content.height(), column.scroll);
-         this.scrollbarGrab = localY >= bar.top() && localY < bar.top() + bar.height()
-            ? localY - bar.top() : bar.height() / 2;
-         this.updateScrollbar();
-         return true;
-      }
+      float localY = (float)this.mouseY - column.y - HEADER_H;
+      if (this.beginScrollbarDrag(column, button, localY)) return true;
       Entry<Target> entry = column.content.hit(localY, column.scroll, column.bodyH);
-      if (entry == null) {
-         return true;
-      }
+      if (entry == null) return true;
       OpaiRow row = entry.target().row();
       Setting setting = entry.target().setting();
       Action action = OpaiInteraction.content(entry.kind(), button);
-      if (entry.kind() == Kind.MODULE) {
-         if (action == Action.TOGGLE) {
-            row.feedback.click((float)this.mouseX - column.x,
-               (float)this.mouseY - column.y - HEADER_H - entry.top() + column.scroll, this.colW, ROW_H, OpaiMotion.now());
-            row.enabled.approach(row.module.isEnabled() ? 1 : 0, OpaiMotion.now());
-            row.module.toggle();
-            row.enabled.approach(row.module.isEnabled() ? 1 : 0, OpaiMotion.now());
-         } else if (action == Action.EXPAND) {
-            this.clearDrag();
-            row.expanded = !row.expanded;
-            if (this.bindingRow == row && !row.expanded) this.bindingRow = null;
-            this.refreshLayouts();
-            if (row.expanded) {
-               float visible = column.targetBodyH - FOOTER_H;
-               float reveal = Math.min(column.content.height(), entry.top() + ROW_H + MODE_H);
-               column.scrollTarget = Math.clamp(
-                  Math.max(column.scroll, Math.min(entry.top(), reveal - visible)), 0, column.maxScroll);
-            }
-         } else if (action == Action.BIND) {
-            this.bindingRow = row;
-         }
-      } else if (action != Action.NONE && row.expanded && setting != null && setting.isVisible()) {
-         float y = column.y + HEADER_H + entry.top() - column.scroll;
-         switch (action) {
-            case TOGGLE -> {
-               BooleanSetting bool = (BooleanSetting)setting;
-               OpaiMotion toggle = this.toggleAnims.computeIfAbsent(bool, ignored -> new OpaiMotion(bool.m215() ? 1 : 0, 30));
-               toggle.approach(bool.m215() ? 1 : 0, OpaiMotion.now());
-               this.feedback(bool).click((float)this.mouseX - column.x - this.colW + TEXT_PAD + 26,
-                  (float)this.mouseY - y - (BOOLEAN_H - 16) / 2, 26, 16, OpaiMotion.now());
-               bool.m217(!bool.m215());
-               toggle.approach(bool.m215() ? 1 : 0, OpaiMotion.now());
-            }
-            case SLIDE -> {
-               if (sliderHit(column.x, y, this.colW).contains(this.mouseX, this.mouseY)) {
-                  this.feedback(setting).click((float)this.mouseX - column.x - TEXT_PAD,
-                     4, this.colW - TEXT_PAD * 2, 8, OpaiMotion.now());
-                  this.clearDrag();
-                  this.draggingSlider = (NumberSetting)setting;
-                  this.sliderRow = row;
-                  this.sliderColumn = column;
-                  column.scrollTarget = column.scroll;
-                  this.updateSlider();
-               }
-            }
-            case EXPAND -> {
-               if (field(column.x, y, this.colW).contains(this.mouseX, this.mouseY)) {
-                  Rect clicked = field(column.x, y, this.colW);
-                  this.feedback(setting).click((float)this.mouseX - clicked.x(), (float)this.mouseY - clicked.y(),
-                     clicked.width(), clicked.height(), OpaiMotion.now());
-                  boolean wasOpen = row.openMode == setting;
-                  this.closeDropdowns();
-                  row.openMode = wasOpen ? null : setting;
-               }
-            }
-            default -> { }
-         }
-      }
+      if (entry.kind() == Kind.MODULE) this.handleModuleClick(column, entry, row, action);
+      else if (action != Action.NONE && row.expanded && setting != null && setting.isVisible())
+         this.handleSettingClick(column, entry, row, setting, action);
       this.refreshLayouts();
       return true;
    }
 
-   /** 26.3 reports SDL button ids (1=left, 2=middle, 3=right); handlers use GLFW-style (0=left, 1=right). */
-   private static int normalizeMouseButton(int button) {
-      return switch (button) {
-         case 1 -> 0;
-         case 3 -> 1;
-         case 4 -> 3;
-         case 5 -> 4;
-         default -> button;
-      };
+   private boolean handleConfigClick(MouseButtonEvent event, OpaiColumn column, int button) {
+      if (!(this.configFront || column == null) || !this.configs.click(this.mouseX, this.mouseY, button)) return false;
+      this.bindingRow = null;
+      this.draggedColumn = null;
+      this.draggedScrollbar = null;
+      this.draggingSlider = null;
+      this.sliderRow = null;
+      this.sliderColumn = null;
+      this.configFront = true;
+      this.configName.setFocused(this.configs.focused());
+      if (button == 0 && this.configs.focused()) {
+         int cursor = NVGRenderer.isAvailable() ? this.configs.cursorAt(new Canvas(null), this.mouseX) : this.configName.getValue().length();
+         this.configName.moveCursorTo(cursor, event.hasShiftDown());
+         this.syncConfigEditor();
+      }
+      return true;
+   }
+
+   private void handleDropdownClick(Dropdown overlay, int button) {
+      if (button == 0 && overlay.row().openMode == overlay.mode()) {
+         int option = (int)((this.mouseY - overlay.bounds().y() + overlay.scroll()) / OPTION_H);
+         if (option >= 0 && option < overlay.choices().options().length) {
+            overlay.choices().select(option);
+            overlay.row().optionFeedback.computeIfAbsent(new Option(overlay.mode(), option), ignored -> new OpaiFeedback())
+               .click((float)this.mouseX - overlay.bounds().x(), (float)this.mouseY - overlay.bounds().y() + overlay.scroll() - option * OPTION_H,
+                  overlay.bounds().width(), OPTION_H, OpaiMotion.now());
+            if (!overlay.choices().multiple()) overlay.row().openMode = null;
+            this.refreshLayouts();
+         }
+      } else if (button == 1) { this.closeDropdowns(); this.refreshLayouts(); }
+   }
+
+   private void handleHeaderClick(OpaiColumn column, int button) {
+      Action action = OpaiInteraction.header(button);
+      if (action == Action.EXPAND) {
+         this.clearDrag();
+         column.expanded = !column.expanded;
+         for (OpaiRow row : column.rows) {
+            if (this.bindingRow == row) {
+               this.bindingRow = null;
+            }
+         }
+         this.refreshLayouts();
+      } else if (action == Action.DRAG) {
+         this.clearDrag();
+         this.draggedColumn = column;
+         this.dragX = (float)this.mouseX - column.x;
+         this.dragY = (float)this.mouseY - column.y;
+      }
+   }
+
+   private boolean beginScrollbarDrag(OpaiColumn column, int button, float localY) {
+      if (button != 0 || column.maxScroll <= 0 || !new Rect(column.x + this.colW - 6,
+            column.y + HEADER_H, 6, column.bodyH - FOOTER_H).contains(this.mouseX, this.mouseY)) return false;
+      this.clearDrag();
+      this.draggedScrollbar = column;
+      Scrollbar bar = scrollbar(column.bodyH, column.content.height(), column.scroll);
+      this.scrollbarGrab = localY >= bar.top() && localY < bar.top() + bar.height()
+         ? localY - bar.top() : bar.height() / 2;
+      this.updateScrollbar();
+      return true;
+   }
+
+   private void handleModuleClick(OpaiColumn column, Entry<Target> entry, OpaiRow row, Action action) {
+      if (action == Action.TOGGLE) {
+         row.feedback.click((float)this.mouseX - column.x,
+            (float)this.mouseY - column.y - HEADER_H - entry.top() + column.scroll, this.colW, ROW_H, OpaiMotion.now());
+         row.enabled.approach(row.module.isEnabled() ? 1 : 0, OpaiMotion.now());
+         row.module.toggle();
+         row.enabled.approach(row.module.isEnabled() ? 1 : 0, OpaiMotion.now());
+      } else if (action == Action.EXPAND) {
+         this.clearDrag();
+         row.expanded = !row.expanded;
+         if (this.bindingRow == row && !row.expanded) this.bindingRow = null;
+         this.refreshLayouts();
+         if (row.expanded) {
+            float visible = column.targetBodyH - FOOTER_H;
+            float reveal = Math.min(column.content.height(), entry.top() + ROW_H + MODE_H);
+            column.scrollTarget = Math.clamp(
+               Math.max(column.scroll, Math.min(entry.top(), reveal - visible)), 0, column.maxScroll);
+         }
+      } else if (action == Action.BIND) {
+         this.bindingRow = row;
+      }
+   }
+
+   private void handleSettingClick(OpaiColumn column, Entry<Target> entry, OpaiRow row, Setting setting, Action action) {
+      float y = column.y + HEADER_H + entry.top() - column.scroll;
+      switch (action) {
+         case TOGGLE -> {
+            BooleanSetting bool = (BooleanSetting)setting;
+            OpaiMotion toggle = this.toggleAnims.computeIfAbsent(bool, ignored -> new OpaiMotion(bool.getValue() ? 1 : 0, 30));
+            toggle.approach(bool.getValue() ? 1 : 0, OpaiMotion.now());
+            this.feedback(bool).click((float)this.mouseX - column.x - this.colW + TEXT_PAD + 26,
+               (float)this.mouseY - y - (BOOLEAN_H - 16) / 2, 26, 16, OpaiMotion.now());
+            bool.setValue(!bool.getValue());
+            toggle.approach(bool.getValue() ? 1 : 0, OpaiMotion.now());
+         }
+         case SLIDE -> {
+            if (sliderHit(column.x, y, this.colW).contains(this.mouseX, this.mouseY)) {
+               this.feedback(setting).click((float)this.mouseX - column.x - TEXT_PAD,
+                  4, this.colW - TEXT_PAD * 2, 8, OpaiMotion.now());
+               this.clearDrag();
+               this.draggingSlider = (NumberSetting)setting;
+               this.sliderRow = row;
+               this.sliderColumn = column;
+               column.scrollTarget = column.scroll;
+               this.updateSlider();
+            }
+         }
+         case EXPAND -> {
+            if (field(column.x, y, this.colW).contains(this.mouseX, this.mouseY)) {
+               Rect clicked = field(column.x, y, this.colW);
+               this.feedback(setting).click((float)this.mouseX - clicked.x(), (float)this.mouseY - clicked.y(),
+                  clicked.width(), clicked.height(), OpaiMotion.now());
+               boolean wasOpen = row.openMode == setting;
+               this.closeDropdowns();
+               row.openMode = wasOpen ? null : setting;
+            }
+         }
+         default -> { }
+      }
    }
 
    private void updateSlider() {
       double fraction = sliderFraction(this.mouseX, this.sliderColumn.x, this.colW);
-      this.draggingSlider.m223(this.draggingSlider.m218()
-         + fraction * (this.draggingSlider.m219() - this.draggingSlider.m218()));
+      this.draggingSlider.setValue(this.draggingSlider.getMinimum()
+         + fraction * (this.draggingSlider.getMaximum() - this.draggingSlider.getMinimum()));
    }
 
    private void updateScrollbar() {
@@ -723,7 +730,7 @@ public class OpaiClickGuiScreen extends Screen implements NanoGui {
 
    @Override
    public boolean mouseReleased(MouseButtonEvent event) {
-      if (normalizeMouseButton(event.button()) == 0) {
+      if (MouseButtons.normalize(event.button()) == 0) {
          boolean captured = this.configs.captured() || this.draggedColumn != null || this.draggingSlider != null || this.draggedScrollbar != null;
          this.clearDrag();
          if (captured) {
@@ -739,7 +746,7 @@ public class OpaiClickGuiScreen extends Screen implements NanoGui {
          return true;
       }
       this.setMouse(event.x(), event.y());
-      if (normalizeMouseButton(event.button()) == 0) {
+      if (MouseButtons.normalize(event.button()) == 0) {
          if (this.configs.captured()) {
             this.configs.drag(this.mouseX, this.mouseY, this.width, this.height);
             return true;
@@ -905,24 +912,8 @@ public class OpaiClickGuiScreen extends Screen implements NanoGui {
    }
 
    private static String formatNumber(NumberSetting number) {
-      int precision = Math.clamp(BigDecimal.valueOf(number.m222()).stripTrailingZeros().scale(), 0, 6);
-      return BigDecimal.valueOf(number.m220()).setScale(precision, RoundingMode.HALF_UP).toPlainString();
-   }
-
-   private static int applyAlpha(int color, float alpha) {
-      int a = (int)(Math.clamp(alpha, 0, 1) * ((color >>> 24) & 0xFF));
-      return (a << 24) | (color & 0x00FFFFFF);
-   }
-
-   private static int mixColor(int from, int to, float t) {
-      t = Math.clamp(t, 0, 1);
-      int result = 0;
-      for (int shift = 0; shift <= 24; shift += 8) {
-         int start = (from >>> shift) & 0xFF;
-         int end = (to >>> shift) & 0xFF;
-         result |= (int)(start + (end - start) * t) << shift;
-      }
-      return result;
+      int precision = Math.clamp(BigDecimal.valueOf(number.getStep()).stripTrailingZeros().scale(), 0, 6);
+      return BigDecimal.valueOf(number.getValue()).setScale(precision, RoundingMode.HALF_UP).toPlainString();
    }
 
    private final class Canvas implements OpaiSurface {

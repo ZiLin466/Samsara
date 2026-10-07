@@ -37,9 +37,9 @@ class NeverloseLayoutTest {
       assertEquals(CONTENT.y(), layout.sections().get(0).y());
       assertEquals(CONTENT.y(), layout.sections().get(1).y());
       for (int i = 0; i < layout.sections().size(); i++) {
-         Rect a = layout.sections().get(i);
+         Rect sectionBounds = layout.sections().get(i);
          for (int j = i + 1; j < layout.sections().size(); j++) {
-            Rect overlap = a.intersect(layout.sections().get(j));
+            Rect overlap = sectionBounds.intersect(layout.sections().get(j));
             assertEquals(0, overlap.width() * overlap.height());
          }
       }

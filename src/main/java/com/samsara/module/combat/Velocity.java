@@ -38,20 +38,20 @@ import net.minecraft.world.phys.Vec3;
 
 public class Velocity extends Feature {
    public final ModeSetting mode = new ModeSetting("Mode", this, "Original", new String[]{"Original", "Reduce", "Delay", "JumpReset"});
-   private final Original original = new Original(this, () -> this.mode.m228("Original"));
-   private final Knockback knockback = new Knockback(this, this.mode::m224);
-   private final JumpReset jumpReset = new JumpReset(this, () -> this.mode.m228("JumpReset"), ThreadLocalRandom.current());
-   public final List<Packet> f18 = this.original.f18;
+   private final Original original = new Original(this, () -> this.mode.is("Original"));
+   private final Knockback knockback = new Knockback(this, this.mode::getValue);
+   private final JumpReset jumpReset = new JumpReset(this, () -> this.mode.is("JumpReset"), ThreadLocalRandom.current());
+   public final List<Packet> delayedPackets = this.original.delayedPackets;
    private String activeMode = "Original";
    private net.minecraft.client.multiplayer.ClientPacketListener connection;
    private net.minecraft.client.multiplayer.ClientLevel world;
    private LocalPlayer player;
 
    public Velocity() { super("Velocity", Category.COMBAT); }
-   public boolean blocksAttacks() { return !this.f18.isEmpty() || this.knockback.delaying(); }
-   public boolean blocksBacktrack() { return !this.mode.m228("Original") && this.knockback.blocksBacktrack(); }
+   public boolean blocksAttacks() { return !this.delayedPackets.isEmpty() || this.knockback.delaying(); }
+   public boolean blocksBacktrack() { return !this.mode.is("Original") && this.knockback.blocksBacktrack(); }
 
-   @Override public int getPriority(Event event) { return event == Events.f11 ? -10 : 0; }
+   @Override public int getPriority(Event event) { return event == Events.PACKET_RECEIVE ? -10 : 0; }
    private boolean synchronizeState() {
       if (mc.player == null || mc.level == null || mc.getConnection() == null) {
          reset(false); this.jumpReset.clearDamage(); return false;
@@ -60,15 +60,15 @@ public class Velocity extends Feature {
          reset(false); this.jumpReset.clearDamage();
          this.connection = mc.getConnection(); this.world = mc.level; this.player = mc.player;
       }
-      if (!this.activeMode.equals(this.mode.m224())) {
-         reset(true); this.activeMode = this.mode.m224();
+      if (!this.activeMode.equals(this.mode.getValue())) {
+         reset(true); this.activeMode = this.mode.getValue();
       }
       return true;
    }
    public void clientTick() {
       if (!synchronizeState()) return;
       this.jumpReset.tick();
-      if (isEnabled() && (this.mode.m228("Reduce") || this.mode.m228("Delay"))) this.knockback.clientTick();
+      if (isEnabled() && (this.mode.is("Reduce") || this.mode.is("Delay"))) this.knockback.clientTick();
    }
    public void recordDamage(ClientboundDamageEventPacket packet) {
       if (synchronizeState()) {
@@ -77,16 +77,16 @@ public class Velocity extends Feature {
    }
    @Override public void onEvent(Event event) {
       if (!synchronizeState()) return;
-      if (event == Events.f3) this.setSuffix(this.mode.m224());
-      if (this.mode.m228("Original")) this.original.onEvent(event);
-      else if (this.mode.m228("JumpReset")) {
-         if (event == Events.f7) this.jumpReset.input();
-      } else if (event == Events.f11 && !event.isCancelled()) this.knockback.receive(event, Events.f11.m41());
-      else if (event == Events.f3) {
+      if (event == Events.ROTATION) this.setSuffix(this.mode.getValue());
+      if (this.mode.is("Original")) this.original.onEvent(event);
+      else if (this.mode.is("JumpReset")) {
+         if (event == Events.MOVE_INPUT) this.jumpReset.input();
+      } else if (event == Events.PACKET_RECEIVE && !event.isCancelled()) this.knockback.receive(event, Events.PACKET_RECEIVE.getPacket());
+      else if (event == Events.ROTATION) {
          this.knockback.rotate();
-         if (this.mode.m228("Delay")) this.knockback.playerTick();
-      } else if (event == Events.f2 && this.mode.m228("Reduce")) this.knockback.playerTick();
-      else if (event == Events.f7) this.knockback.input();
+         if (this.mode.is("Delay")) this.knockback.playerTick();
+      } else if (event == Events.POST_MOTION && this.mode.is("Reduce")) this.knockback.playerTick();
+      else if (event == Events.MOVE_INPUT) this.knockback.input();
    }
    private void reset(boolean flush) {
       this.original.reset(flush);
@@ -112,22 +112,22 @@ public class Velocity extends Feature {
          this.ticksMin = new NumberSetting("Ticks Until Jump Min", owner, 2, 0, 20, 1);
          this.ticksMax = new NumberSetting("Ticks Until Jump Max", owner, 2, 0, 20, 1);
          for (var setting : List.of(this.chance, this.byHits, this.byDelay)) setting.setVisible(visible);
-         this.hitsMin.setVisible(() -> visible.getAsBoolean() && this.byHits.m215());
-         this.hitsMax.setVisible(() -> visible.getAsBoolean() && this.byHits.m215());
-         this.ticksMin.setVisible(() -> visible.getAsBoolean() && this.byDelay.m215());
-         this.ticksMax.setVisible(() -> visible.getAsBoolean() && this.byDelay.m215());
+         this.hitsMin.setVisible(() -> visible.getAsBoolean() && this.byHits.getValue());
+         this.hitsMax.setVisible(() -> visible.getAsBoolean() && this.byHits.getValue());
+         this.ticksMin.setVisible(() -> visible.getAsBoolean() && this.byDelay.getValue());
+         this.ticksMax.setVisible(() -> visible.getAsBoolean() && this.byDelay.getValue());
          reset();
       }
 
       void input() {
-         if (jump(mc.player.hurtTime, mc.player.onGround(), mc.player.isSprinting())) Events.f7.m59(true);
+         if (jump(mc.player.hurtTime, mc.player.onGround(), mc.player.isSprinting())) Events.MOVE_INPUT.setJump(true);
       }
 
       boolean jump(int hurtTime, boolean onGround, boolean sprinting) {
-         boolean ready = this.byHits.m215() ? this.limit >= this.hitsUntilJump
-            : !this.byDelay.m215() || this.limit >= this.ticksUntilJump;
+         boolean ready = this.byHits.getValue() ? this.limit >= this.hitsUntilJump
+            : !this.byDelay.getValue() || this.limit >= this.ticksUntilJump;
          if (hurtTime != 9 || !onGround || !sprinting || this.fallDamageTicks > 0 || !ready || !chance()) {
-            if (!this.byHits.m215() || hurtTime == 9) this.limit++;
+            if (!this.byHits.getValue() || hurtTime == 9) this.limit++;
             return false;
          }
          this.limit = 0;
@@ -136,7 +136,7 @@ public class Velocity extends Feature {
       }
 
       private boolean chance() {
-         double value = this.chance.m220();
+         double value = this.chance.getValue();
          return value >= 100 || value > 0 && this.random.nextFloat(100) < value;
       }
 
@@ -159,215 +159,215 @@ public class Velocity extends Feature {
       }
 
       private int sample(NumberSetting first, NumberSetting second) {
-         int min = (int)Math.min(first.m220(), second.m220()), max = (int)Math.max(first.m220(), second.m220());
+         int min = (int)Math.min(first.getValue(), second.getValue()), max = (int)Math.max(first.getValue(), second.getValue());
          return min == max ? min : this.random.nextInt(min, max + 1);
       }
    }
 
    private static final class Original implements com.samsara.util.Wrapper {
-      private final ModeSetting f335;
-      private static final String f321 = "Disabled";
-      private static final String f319 = "Reduce Ticks";
-      private final NumberSetting f338;
-      private static final String f320 = "Reduce";
-      private final BooleanSetting f337;
-      private final NumberSetting f331;
-      private static final String f317 = "Vertical";
-      private static final String f329 = "Reverse";
-      private int f343;
-      private static final String f325 = "Delay";
-      private final BooleanSetting f336;
-      private static final String f330 = "Jump";
-      private final NumberSetting f333;
-      private final BooleanSetting f340;
-      private static final String f327 = "Delay Range";
-      private static final String f316 = "Horizontal";
-      private int f342;
-      private static final String f324 = "Jump Reset";
-      public final List<Packet> f18;
-      private static final String f328 = "Delay Until Ground";
-      private static final String f326 = "Delay Ticks";
-      private final NumberSetting f339;
-      private static final String f322 = "Normal";
-      private final BooleanSetting f341;
-      private static final String f318 = "Reduce Motion";
-      private int f346;
-      private final NumberSetting f332;
-      private static final String f323 = "AirPush";
-      private boolean f344;
-      private final NumberSetting f334;
-      private boolean f345;
-      private static final String f315 = "Velocity";
+      private final ModeSetting reduce;
+      private static final String DISABLED_LABEL = "Disabled";
+      private static final String REDUCE_TICKS_LABEL = "Reduce Ticks";
+      private final NumberSetting delayTicks;
+      private static final String REDUCE_LABEL = "Reduce";
+      private final BooleanSetting delay;
+      private final NumberSetting horizontal;
+      private static final String VERTICAL_LABEL = "Vertical";
+      private static final String REVERSE_LABEL = "Reverse";
+      private int delayTicksElapsed;
+      private static final String DELAY_LABEL = "Delay";
+      private final BooleanSetting jumpReset;
 
-      public void onEvent(Event var1) {
-         if (var1 == Events.f8 && mc.player.onGround() && this.f344) {
+      private final NumberSetting reduceMotion;
+      private final BooleanSetting delayUntilGround;
+      private static final String DELAY_RANGE_LABEL = "Delay Range";
+      private static final String HORIZONTAL_LABEL = "Horizontal";
+      private int reductionTicks;
+      private static final String JUMP_RESET_LABEL = "Jump Reset";
+      public final List<Packet> delayedPackets;
+      private static final String DELAY_UNTIL_GROUND_LABEL = "Delay Until Ground";
+      private static final String DELAY_TICKS_LABEL = "Delay Ticks";
+      private final NumberSetting delayRange;
+      private static final String NORMAL_LABEL = "Normal";
+      private final BooleanSetting reverse;
+      private static final String REDUCE_MOTION_LABEL = "Reduce Motion";
+      private int lastAttackTick;
+      private final NumberSetting vertical;
+      private static final String AIR_PUSH_LABEL = "AirPush";
+      private boolean pendingJump;
+      private final NumberSetting reduceTicks;
+      private boolean suppressActionPackets;
+
+
+      public void onEvent(Event event) {
+         if (event == Events.POST_MOVE_INPUT && mc.player.onGround() && this.pendingJump) {
             mc.player.input.makeJump();
-            this.f344 = false;
+            this.pendingJump = false;
          }
 
-         if (var1 == Events.f3) {
-            if (!this.f18.isEmpty()) {
-               this.f343++;
-               if ((double)this.f343 > this.f338.m220() || this.f340.m215() && mc.player.onGround()) {
-                  this.pm$76();
+         if (event == Events.ROTATION) {
+            if (!this.delayedPackets.isEmpty()) {
+               this.delayTicksElapsed++;
+               if ((double)this.delayTicksElapsed > this.delayTicks.getValue() || this.delayUntilGround.getValue() && mc.player.onGround()) {
+                  this.flushDelayedPackets();
                }
             }
 
-            if (this.f342 >= 0 && (double)this.f342 < this.f334.m220() && mc.gui.screen() == null) {
-               this.f342++;
-               Vec3 var2 = mc.player.getDeltaMovement();
-               double var3 = this.f333.m220();
-               if (this.f335.m228(f322)) {
-                  LivingEntity var5 = TargetFinder.m47(3.0, false);
-                  if (var5 != null && var5 instanceof Player && this.f346 != mc.player.tickCount && this.f18.isEmpty() && var5.isAlive()) {
-                     Vec3 var6 = mc.player.getEyePosition();
-                     Vec3 var7 = var5.getEyePosition();
-                     double var8 = var7.x - var6.x;
-                     double var10 = var7.y - var6.y;
-                     double var12 = var7.z - var6.z;
-                     double var14 = Math.sqrt(var8 * var8 + var12 * var12);
-                     float var16 = (float)(Math.toDegrees(Math.atan2(var12, var8)) - 90.0);
-                     float var17 = (float)(-Math.toDegrees(Math.atan2(var10, var14)));
-                     Events.f3.m77(var16);
-                     Events.f3.m83(var17);
-                     this.pm$74(var5);
+            if (this.reductionTicks >= 0 && (double)this.reductionTicks < this.reduceTicks.getValue() && mc.gui.screen() == null) {
+               this.reductionTicks++;
+               Vec3 motion = mc.player.getDeltaMovement();
+               double motionMultiplier = this.reduceMotion.getValue();
+               if (this.reduce.is(NORMAL_LABEL)) {
+                  LivingEntity nearbyTarget = TargetFinder.nearestTarget(3.0, false);
+                  if (nearbyTarget != null && nearbyTarget instanceof Player && this.lastAttackTick != mc.player.tickCount && this.delayedPackets.isEmpty() && nearbyTarget.isAlive()) {
+                     Vec3 playerEye = mc.player.getEyePosition();
+                     Vec3 targetEye = nearbyTarget.getEyePosition();
+                     double deltaX = targetEye.x - playerEye.x;
+                     double deltaY = targetEye.y - playerEye.y;
+                     double deltaZ = targetEye.z - playerEye.z;
+                     double horizontalDistance = Math.sqrt(deltaX * deltaX + deltaZ * deltaZ);
+                     float yaw = (float)(Math.toDegrees(Math.atan2(deltaZ, deltaX)) - 90.0);
+                     float pitch = (float)(-Math.toDegrees(Math.atan2(deltaY, horizontalDistance)));
+                     Events.ROTATION.setYaw(yaw);
+                     Events.ROTATION.setPitch(pitch);
+                     this.attackTarget(nearbyTarget);
                   }
-               } else if (this.f335.m228(f323)) {
-                  LivingEntity var23 = TargetFinder.m49(false);
-                  if (var23 != null && this.f346 != mc.player.tickCount && this.f18.isEmpty() && var23.isAlive()) {
-                     this.pm$74(var23);
+               } else if (this.reduce.is(AIR_PUSH_LABEL)) {
+                  LivingEntity airPushTarget = TargetFinder.farthestDistantPlayer(false);
+                  if (airPushTarget != null && this.lastAttackTick != mc.player.tickCount && this.delayedPackets.isEmpty() && airPushTarget.isAlive()) {
+                     this.attackTarget(airPushTarget);
                   } else {
-                     var23 = TargetFinder.m47(3.0, false);
-                     if (var23 != null && var23 instanceof Player && this.f346 != mc.player.tickCount && this.f18.isEmpty() && var23.isAlive()) {
-                        Vec3 var26 = mc.player.getEyePosition();
-                        Vec3 var27 = var23.getEyePosition();
-                        double var29 = var27.x - var26.x;
-                        double var30 = var27.y - var26.y;
-                        double var31 = var27.z - var26.z;
-                        double var32 = Math.sqrt(var29 * var29 + var31 * var31);
-                        float var33 = (float)(Math.toDegrees(Math.atan2(var31, var29)) - 90.0);
-                        float var34 = (float)(-Math.toDegrees(Math.atan2(var30, var32)));
-                        Events.f3.m77(var33);
-                        Events.f3.m83(var34);
-                        this.pm$74(var23);
+                     airPushTarget = TargetFinder.nearestTarget(3.0, false);
+                     if (airPushTarget != null && airPushTarget instanceof Player && this.lastAttackTick != mc.player.tickCount && this.delayedPackets.isEmpty() && airPushTarget.isAlive()) {
+                        Vec3 playerEye = mc.player.getEyePosition();
+                        Vec3 targetEye = airPushTarget.getEyePosition();
+                        double deltaX = targetEye.x - playerEye.x;
+                        double deltaY = targetEye.y - playerEye.y;
+                        double deltaZ = targetEye.z - playerEye.z;
+                        double horizontalDistance = Math.sqrt(deltaX * deltaX + deltaZ * deltaZ);
+                        float yaw = (float)(Math.toDegrees(Math.atan2(deltaZ, deltaX)) - 90.0);
+                        float pitch = (float)(-Math.toDegrees(Math.atan2(deltaY, horizontalDistance)));
+                        Events.ROTATION.setYaw(yaw);
+                        Events.ROTATION.setPitch(pitch);
+                        this.attackTarget(airPushTarget);
                      }
                   }
                } else {
-                  mc.player.setDeltaMovement(var2.x * var3, var2.y, var2.z * var3);
+                  mc.player.setDeltaMovement(motion.x * motionMultiplier, motion.y, motion.z * motionMultiplier);
                }
             }
          }
 
-         if (var1 == Events.f10) {
-            if (Events.f10.m44() instanceof ServerboundAttackPacket) {
-               this.f346 = mc.player.tickCount;
+         if (event == Events.PACKET_SEND) {
+            if (Events.PACKET_SEND.getPacket() instanceof ServerboundAttackPacket) {
+               this.lastAttackTick = mc.player.tickCount;
             }
 
-            if (Events.f10.m44() instanceof ServerboundPlayerActionPacket && this.f345) {
-               var1.setCancelled(true);
+            if (Events.PACKET_SEND.getPacket() instanceof ServerboundPlayerActionPacket && this.suppressActionPackets) {
+               event.setCancelled(true);
             }
          }
 
-         if (var1 == Events.f11) {
-            Packet var20 = Events.f11.m41();
-            if (var20 instanceof ClientboundSetEntityMotionPacket var21) {
-               if (var21.id() == mc.player.getId()) {
-                  Vec3 var4 = var21.movement();
-                  if (var4.y > 0.0 && !FeatureManager.f35.isEnabled()) {
-                     double var25 = this.f341.m215() ? -this.f331.m220() * 0.01 : this.f331.m220() * 0.01;
-                     double var28 = var4.x * var25;
-                     double var9 = var4.y * this.f332.m220() * 0.01;
-                     double var11 = var4.z * var25;
-                     if (this.f331.m220() != 100.0 || this.f341.m215()) {
-                        var1.setCancelled(true);
+         if (event == Events.PACKET_RECEIVE) {
+            Packet packet = Events.PACKET_RECEIVE.getPacket();
+            if (packet instanceof ClientboundSetEntityMotionPacket setEntityMotionPacket) {
+               if (setEntityMotionPacket.id() == mc.player.getId()) {
+                  Vec3 knockback = setEntityMotionPacket.movement();
+                  if (knockback.y > 0.0 && !FeatureManager.longJump.isEnabled()) {
+                     double horizontalMultiplier = this.reverse.getValue() ? -this.horizontal.getValue() * 0.01 : this.horizontal.getValue() * 0.01;
+                     double knockbackX = knockback.x * horizontalMultiplier;
+                     double knockbackY = knockback.y * this.vertical.getValue() * 0.01;
+                     double knockbackZ = knockback.z * horizontalMultiplier;
+                     if (this.horizontal.getValue() != 100.0 || this.reverse.getValue()) {
+                        event.setCancelled(true);
                      }
 
-                     if (this.f334.m220() != 0.0) {
-                        this.f342 = 0;
+                     if (this.reduceTicks.getValue() != 0.0) {
+                        this.reductionTicks = 0;
                      }
 
-                     if (this.f337.m215() && this.pm$75()) {
-                        this.f18.add(var21);
-                        var1.setCancelled(true);
+                     if (this.delay.getValue() && this.shouldDelayKnockback()) {
+                        this.delayedPackets.add(setEntityMotionPacket);
+                        event.setCancelled(true);
                      } else {
-                        if (this.f331.m220() != 100.0 || this.f341.m215()) {
-                           mc.player.setDeltaMovement(new Vec3(var28, var9, var11));
+                        if (this.horizontal.getValue() != 100.0 || this.reverse.getValue()) {
+                           mc.player.setDeltaMovement(new Vec3(knockbackX, knockbackY, knockbackZ));
                         }
 
-                        if (this.f336.m215() && mc.player.onGround() && mc.player.isSprinting()) {
-                           this.f344 = true;
+                        if (this.jumpReset.getValue() && mc.player.onGround() && mc.player.isSprinting()) {
+                           this.pendingJump = true;
                         }
                      }
                   }
                }
-            } else if (this.f337.m215() && !this.f18.isEmpty()) {
-               if (var20 instanceof ClientboundStartConfigurationPacket || var20 instanceof ClientboundDisconnectPacket) {
-                  this.pm$76();
+            } else if (this.delay.getValue() && !this.delayedPackets.isEmpty()) {
+               if (packet instanceof ClientboundStartConfigurationPacket || packet instanceof ClientboundDisconnectPacket) {
+                  this.flushDelayedPackets();
                   return;
                }
 
-               synchronized (this.f18) {
-                  this.f18.add(var20);
-                  var1.setCancelled(true);
+               synchronized (this.delayedPackets) {
+                  this.delayedPackets.add(packet);
+                  event.setCancelled(true);
                }
             }
          }
       }
 
       void reset(boolean flush) {
-         if (flush && mc.getConnection() != null) this.pm$76(); else this.f18.clear();
-         this.f342 = -1; this.f343 = 0; this.f344 = this.f345 = false;
+         if (flush && mc.getConnection() != null) this.flushDelayedPackets(); else this.delayedPackets.clear();
+         this.reductionTicks = -1; this.delayTicksElapsed = 0; this.pendingJump = this.suppressActionPackets = false;
       }
 
-      private boolean pm$75() {
-         LivingEntity var1 = TargetFinder.m47(6.0, false);
-         LivingEntity var2 = TargetFinder.m49(false);
-         return (!mc.player.onGround() || !this.f340.m215())
-            && (var1 == null || (double)mc.player.distanceTo(var1) > this.f339.m220())
-            && (!this.f335.m228(f323) || !mc.player.isSprinting() && (var2 == null || !(mc.player.distanceTo(var2) > 11.0F)));
+      private boolean shouldDelayKnockback() {
+         LivingEntity nearbyTarget = TargetFinder.nearestTarget(6.0, false);
+         LivingEntity distantTarget = TargetFinder.farthestDistantPlayer(false);
+         return (!mc.player.onGround() || !this.delayUntilGround.getValue())
+            && (nearbyTarget == null || (double)mc.player.distanceTo(nearbyTarget) > this.delayRange.getValue())
+            && (!this.reduce.is(AIR_PUSH_LABEL) || !mc.player.isSprinting() && (distantTarget == null || !(mc.player.distanceTo(distantTarget) > 11.0F)));
       }
 
-      private void pm$74(Entity var1) {
-         if (!FeatureManager.f33.isEnabled() || !FeatureManager.f33.f22) {
-            this.f345 = true;
-            mc.gameMode.attack(mc.player, var1);
+      private void attackTarget(Entity entity) {
+         if (!FeatureManager.bedAura.isEnabled() || !FeatureManager.bedAura.rotatingToBed) {
+            this.suppressActionPackets = true;
+            mc.gameMode.attack(mc.player, entity);
             mc.player.swing(InteractionHand.MAIN_HAND, net.minecraft.world.item.component.SwingAnimation.DEFAULT, false);
-            this.f345 = false;
+            this.suppressActionPackets = false;
          }
       }
 
-      private void pm$76() {
-         if (!this.f18.isEmpty()) {
-            synchronized (this.f18) {
-               for (Packet var3 : this.f18) {
-                  mc.execute(() -> var3.handle(mc.getConnection()));
+      private void flushDelayedPackets() {
+         if (!this.delayedPackets.isEmpty()) {
+            synchronized (this.delayedPackets) {
+               for (Packet packet : this.delayedPackets) {
+                  mc.execute(() -> packet.handle(mc.getConnection()));
                }
 
-               this.f18.clear();
+               this.delayedPackets.clear();
             }
 
-            this.f343 = 0;
+            this.delayTicksElapsed = 0;
          }
       }
 
       Original(Feature owner, java.util.function.BooleanSupplier visible) {
-         this.f331 = new NumberSetting(f316, owner, 100.0, 0.0, 100.0, 5.0);
-         this.f332 = new NumberSetting(f317, owner, 100.0, 0.0, 100.0, 5.0);
-         this.f333 = new NumberSetting(f318, owner, 1.0, 0.0, 1.0, 0.1);
-         this.f334 = new NumberSetting(f319, owner, 0.0, 0.0, 5.0, 1.0);
-         this.f335 = new ModeSetting(f320, owner, f321, new String[]{f321, f322, f323});
-         this.f336 = new BooleanSetting(f324, owner, false);
-         this.f337 = new BooleanSetting(f325, owner, false);
-         this.f338 = new NumberSetting(f326, owner, 4.0, 1.0, 15.0, 1.0);
-         this.f339 = new NumberSetting(f327, owner, 3.0, 1.0, 4.0, 0.5);
-         this.f340 = new BooleanSetting(f328, owner, false);
-         this.f341 = new BooleanSetting(f329, owner, false);
-         this.f18 = new ArrayList<>();
-         this.f342 = -1;
+         this.horizontal = new NumberSetting(HORIZONTAL_LABEL, owner, 100.0, 0.0, 100.0, 5.0);
+         this.vertical = new NumberSetting(VERTICAL_LABEL, owner, 100.0, 0.0, 100.0, 5.0);
+         this.reduceMotion = new NumberSetting(REDUCE_MOTION_LABEL, owner, 1.0, 0.0, 1.0, 0.1);
+         this.reduceTicks = new NumberSetting(REDUCE_TICKS_LABEL, owner, 0.0, 0.0, 5.0, 1.0);
+         this.reduce = new ModeSetting(REDUCE_LABEL, owner, DISABLED_LABEL, new String[]{DISABLED_LABEL, NORMAL_LABEL, AIR_PUSH_LABEL});
+         this.jumpReset = new BooleanSetting(JUMP_RESET_LABEL, owner, false);
+         this.delay = new BooleanSetting(DELAY_LABEL, owner, false);
+         this.delayTicks = new NumberSetting(DELAY_TICKS_LABEL, owner, 4.0, 1.0, 15.0, 1.0);
+         this.delayRange = new NumberSetting(DELAY_RANGE_LABEL, owner, 3.0, 1.0, 4.0, 0.5);
+         this.delayUntilGround = new BooleanSetting(DELAY_UNTIL_GROUND_LABEL, owner, false);
+         this.reverse = new BooleanSetting(REVERSE_LABEL, owner, false);
+         this.delayedPackets = new ArrayList<>();
+         this.reductionTicks = -1;
          for (var setting : owner.settings) if (!setting.getName().equals("Mode")) setting.setVisible(visible);
-         this.f338.setVisible(() -> visible.getAsBoolean() && this.f337.m215());
-         this.f339.setVisible(() -> visible.getAsBoolean() && this.f337.m215());
-         this.f340.setVisible(() -> visible.getAsBoolean() && this.f337.m215());
+         this.delayTicks.setVisible(() -> visible.getAsBoolean() && this.delay.getValue());
+         this.delayRange.setVisible(() -> visible.getAsBoolean() && this.delay.getValue());
+         this.delayUntilGround.setVisible(() -> visible.getAsBoolean() && this.delay.getValue());
       }
    }
 
@@ -435,7 +435,7 @@ public class Velocity extends Feature {
             && System.currentTimeMillis() - this.delayLag >= 100) {
             var movement = motion.movement();
             // Apply the initiating motion immediately; delay subsequent inbound packets.
-            if (knockback(movement.x, movement.y, movement.z)) this.delayPackets.start((int)this.delayTicks.m220());
+            if (knockback(movement.x, movement.y, movement.z)) this.delayPackets.start((int)this.delayTicks.getValue());
          }
       }
 
@@ -444,16 +444,16 @@ public class Velocity extends Feature {
       void clientTick() {
          if (!this.mode.get().equals("Reduce")) return;
          if (this.delay && (mc.player.onGround() || System.currentTimeMillis() - this.lag < 100
-            || System.currentTimeMillis() - this.startDelay >= this.maxDelay.m220()) && flushReduce()) {
+            || System.currentTimeMillis() - this.startDelay >= this.maxDelay.getValue()) && flushReduce()) {
             if (System.currentTimeMillis() - this.lag >= 100) {
-               this.attackQueue = (int)this.attackCounts.m220(); this.sprintQueue = (int)this.sprintTicks.m220();
+               this.attackQueue = (int)this.attackCounts.getValue(); this.sprintQueue = (int)this.sprintTicks.getValue();
             }
          }
       }
 
       void rotate() {
-         if (this.mode.get().equals("Reduce") && this.sprintQueue >= 1 && FeatureManager.f26.f17 == null && !FeatureManager.f29.isEnabled()) {
-            Events.f3.m77(this.yaw);
+         if (this.mode.get().equals("Reduce") && this.sprintQueue >= 1 && FeatureManager.killAura.target == null && !FeatureManager.scaffold.isEnabled()) {
+            Events.ROTATION.setYaw(this.yaw);
          }
       }
 
@@ -470,9 +470,9 @@ public class Velocity extends Feature {
                return;
             }
             Player target = hitPlayer();
-            if (target != null && target.isAlive() && !FeatureManager.f33.f22) {
+            if (target != null && target.isAlive() && !FeatureManager.bedAura.rotatingToBed) {
                mc.gameMode.attack(mc.player, target);
-               if (this.swingHand.m215()) {
+               if (this.swingHand.getValue()) {
                   mc.player.swing(InteractionHand.MAIN_HAND, mc.player.getMainHandItem().getAttackAnimation(), false);
                   mc.getConnection().send(ServerboundPunchPacket.INSTANCE);
                }
@@ -483,7 +483,7 @@ public class Velocity extends Feature {
 
       private Player hitPlayer() {
          var origin = mc.player.getEyePosition();
-         var direction = net.minecraft.world.phys.Vec3.directionFromRotation(Events.f3.m82(), Events.f3.m76());
+         var direction = net.minecraft.world.phys.Vec3.directionFromRotation(Events.ROTATION.getPitch(), Events.ROTATION.getYaw());
          var end = origin.add(direction.scale(3));
          var hit = net.minecraft.world.entity.projectile.ProjectileUtil.getEntityHitResult(mc.player, origin, end,
             mc.player.getBoundingBox().expandTowards(direction.scale(3)).inflate(1),
@@ -496,18 +496,18 @@ public class Velocity extends Feature {
 
       void input() {
          if (this.mode.get().equals("Delay")) {
-            if (this.jumpReset.m215() && mc.player.onGround() && mc.player.hurtTime == 9) Events.f7.m59(true);
+            if (this.jumpReset.getValue() && mc.player.onGround() && mc.player.hurtTime == 9) Events.MOVE_INPUT.setJump(true);
             return;
          }
          if (this.delay && mc.player.fallDistance == 0 && hitPlayer() != null && System.currentTimeMillis() - this.lag >= 100) forward();
          if (this.jump && mc.player.onGround()) {
-            if (System.currentTimeMillis() - this.lag >= 100) { Events.f7.m59(true); forward(); }
+            if (System.currentTimeMillis() - this.lag >= 100) { Events.MOVE_INPUT.setJump(true); forward(); }
             this.jump = false;
          }
-         if (this.sprintQueue-- >= 1 && FeatureManager.f26.f17 == null && !FeatureManager.f29.isEnabled() && System.currentTimeMillis() - this.lag >= 100) forward();
+         if (this.sprintQueue-- >= 1 && FeatureManager.killAura.target == null && !FeatureManager.scaffold.isEnabled() && System.currentTimeMillis() - this.lag >= 100) forward();
       }
 
-      private static void forward() { Events.f7.m55(true); Events.f7.setBackward(false); Events.f7.m57(false); Events.f7.m58(false); }
+      private static void forward() { Events.MOVE_INPUT.setForward(true); Events.MOVE_INPUT.setBackward(false); Events.MOVE_INPUT.setLeft(false); Events.MOVE_INPUT.setRight(false); }
 
       private boolean flushReduce() {
          List<Packet<?>> pending;

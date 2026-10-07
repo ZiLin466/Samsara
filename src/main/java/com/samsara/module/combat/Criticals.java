@@ -6,7 +6,6 @@ import com.samsara.module.Category;
 import com.samsara.module.Feature;
 import com.samsara.setting.ModeSetting;
 import com.samsara.util.TimerController;
-import java.nio.charset.StandardCharsets;
 import net.minecraft.network.protocol.game.ServerboundAttackPacket;
 import net.minecraft.network.protocol.game.ServerboundMovePlayerPacket;
 import net.minecraft.network.protocol.game.ServerboundMovePlayerPacket.Pos;
@@ -14,33 +13,33 @@ import net.minecraft.network.protocol.game.ServerboundMovePlayerPacket.PosRot;
 import net.minecraft.network.protocol.game.ServerboundMovePlayerPacket.Rot;
 
 public class Criticals extends Feature {
-   private double f252;
-   private static final String f247 = "Criticals";
-   private static final String f249 = "Packet";
-   private static final String f248 = "Mode";
-   private ModeSetting f251;
-   private static final String f250 = "Timer";
-   private long f253;
+   private double movementTimeBalanceMillis;
+   private static final String CRITICALS_LABEL = "Criticals";
+   private static final String PACKET_LABEL = "Packet";
+   private static final String MODE_LABEL = "Mode";
+   private ModeSetting mode;
+   private static final String TIMER_LABEL = "Timer";
+   private long lastMovementTimeMillis;
 
-   private void pm$57() {
-      double var1 = mc.player.getX();
-      double var3 = mc.player.getY();
-      double var5 = mc.player.getZ();
-      mc.getConnection().send(new Pos(var1, var3 + 0.0625, var5, false, mc.player.horizontalCollision));
-      mc.getConnection().send(new Pos(var1, var3, var5, false, mc.player.horizontalCollision));
-      mc.getConnection().send(new Pos(var1, var3 + 1.0E-6, var5, false, mc.player.horizontalCollision));
+   private void sendCriticalJumpPackets() {
+      double x = mc.player.getX();
+      double y = mc.player.getY();
+      double z = mc.player.getZ();
+      mc.getConnection().send(new Pos(x, y + 0.0625, z, false, mc.player.horizontalCollision));
+      mc.getConnection().send(new Pos(x, y, z, false, mc.player.horizontalCollision));
+      mc.getConnection().send(new Pos(x, y + 1.0E-6, z, false, mc.player.horizontalCollision));
    }
 
    @Override
    public void onEnable() {
-      this.f253 = System.currentTimeMillis();
-      this.f252 = 0.0;
+      this.lastMovementTimeMillis = System.currentTimeMillis();
+      this.movementTimeBalanceMillis = 0.0;
    }
 
    @Override
-   public void onEvent(Event var1) {
-      if (var1 == Events.f10) {
-         if (Events.f10.m44() instanceof ServerboundAttackPacket var2) {
+   public void onEvent(Event event) {
+      if (event == Events.PACKET_SEND) {
+         if (Events.PACKET_SEND.getPacket() instanceof ServerboundAttackPacket attackPacket) {
             if (mc.player == null) {
                return;
             }
@@ -53,34 +52,34 @@ public class Criticals extends Feature {
                return;
             }
 
-            if (this.f251.m228(f249)) {
-               this.pm$57();
+            if (this.mode.is(PACKET_LABEL)) {
+               this.sendCriticalJumpPackets();
             }
          }
 
-         if (Events.f10.m44() instanceof ServerboundMovePlayerPacket
-            || Events.f10.m44() instanceof Pos
-            || Events.f10.m44() instanceof Rot
-            || Events.f10.m44() instanceof PosRot) {
-            if (!var1.isCancelled()) {
-               this.f252 -= 50.0;
+         if (Events.PACKET_SEND.getPacket() instanceof ServerboundMovePlayerPacket
+            || Events.PACKET_SEND.getPacket() instanceof Pos
+            || Events.PACKET_SEND.getPacket() instanceof Rot
+            || Events.PACKET_SEND.getPacket() instanceof PosRot) {
+            if (!event.isCancelled()) {
+               this.movementTimeBalanceMillis -= 50.0;
             }
 
-            this.f252 = this.f252 + (double)(System.currentTimeMillis() - this.f253);
-            this.f253 = System.currentTimeMillis();
+            this.movementTimeBalanceMillis = this.movementTimeBalanceMillis + (double)(System.currentTimeMillis() - this.lastMovementTimeMillis);
+            this.lastMovementTimeMillis = System.currentTimeMillis();
          }
       }
 
-      if (var1 == Events.f3) {
-         if (System.currentTimeMillis() - this.f253 > 200L) {
-            this.f253 = System.currentTimeMillis();
-            this.f252 = 0.0;
+      if (event == Events.ROTATION) {
+         if (System.currentTimeMillis() - this.lastMovementTimeMillis > 200L) {
+            this.lastMovementTimeMillis = System.currentTimeMillis();
+            this.movementTimeBalanceMillis = 0.0;
          }
 
-         double var4 = mc.player.getDeltaMovement().y;
-         if (var4 > 0.0) {
+         double verticalMotion = mc.player.getDeltaMovement().y;
+         if (verticalMotion > 0.0) {
             TimerController.setMultiplier(2.5F);
-         } else if (this.f252 < 0.0) {
+         } else if (this.movementTimeBalanceMillis < 0.0) {
             TimerController.setMultiplier(0.5F);
          } else {
             TimerController.setMultiplier(1.0F);
@@ -89,7 +88,7 @@ public class Criticals extends Feature {
    }
 
    public Criticals() {
-      super(f247, Category.COMBAT);
-      this.f251 = new ModeSetting(f248, this, f249, new String[]{f249, f250});
+      super(CRITICALS_LABEL, Category.COMBAT);
+      this.mode = new ModeSetting(MODE_LABEL, this, PACKET_LABEL, new String[]{PACKET_LABEL, TIMER_LABEL});
    }
 }

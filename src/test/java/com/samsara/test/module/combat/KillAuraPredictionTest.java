@@ -214,21 +214,21 @@ final class KillAuraPredictionTest {
       var mode = (ModeSetting)aura.settings.stream().filter(setting -> setting.getName().equals("AutoBlock")).findFirst().orElseThrow();
       var predict = (BooleanSetting)aura.settings.stream().filter(setting -> setting.getName().equals("Predict")).findFirst().orElseThrow();
       var rmb = (BooleanSetting)aura.settings.stream().filter(setting -> setting.getName().equals("AutoBlock RMB")).findFirst().orElseThrow();
-      mode.m226("Watchdog"); predict.m217(true);
+      mode.setValue("Watchdog"); predict.setValue(true);
       assertFalse(aura.isAutoBlocking()); assertTrue(aura.hasAutoBlockAnimation());
-      rmb.m217(true);
+      rmb.setValue(true);
       assertFalse(aura.hasAutoBlockAnimation());
-      aura.f15 = true;
+      aura.autoBlockActive = true;
       assertTrue(aura.hasAutoBlockAnimation());
-      aura.f16 = true;
+      aura.serverBlocking = true;
       assertTrue(aura.hasAutoBlockAnimation());
-      aura.f16 = false;
+      aura.serverBlocking = false;
       assertTrue(aura.hasAutoBlockAnimation());
-      aura.f15 = false;
+      aura.autoBlockActive = false;
       assertFalse(aura.hasAutoBlockAnimation());
-      rmb.m217(false);
+      rmb.setValue(false);
       assertTrue(aura.hasAutoBlockAnimation());
-      mode.m226("None");
+      mode.setValue("None");
       assertFalse(aura.hasAutoBlockMode()); assertFalse(aura.hasAutoBlockAnimation());
    }
 
@@ -240,22 +240,22 @@ final class KillAuraPredictionTest {
       var mode = (ModeSetting)aura.settings.stream().filter(setting -> setting.getName().equals("AutoBlock")).findFirst().orElseThrow();
       var predict = (BooleanSetting)aura.settings.stream().filter(setting -> setting.getName().equals("Predict")).findFirst().orElseThrow();
       var rmb = (BooleanSetting)aura.settings.stream().filter(setting -> setting.getName().equals("AutoBlock RMB")).findFirst().orElseThrow();
-      predict.m217(true); rmb.m217(true);
-      for (String value : mode.m227()) {
+      predict.setValue(true); rmb.setValue(true);
+      for (String value : mode.getOptions()) {
          if (value.equals("None")) continue;
-         mode.m226(value);
-         aura.f15 = false; aura.f16 = false;
+         mode.setValue(value);
+         aura.autoBlockActive = false; aura.serverBlocking = false;
          assertFalse(aura.hasAutoBlockAnimation(), value);
-         aura.f15 = true;
+         aura.autoBlockActive = true;
          assertTrue(aura.hasAutoBlockAnimation(), value + " begins its cycle");
-         aura.f16 = true;
+         aura.serverBlocking = true;
          assertTrue(aura.hasAutoBlockAnimation(), value + " sends the use packet");
-         aura.f16 = false;
+         aura.serverBlocking = false;
          assertTrue(aura.hasAutoBlockAnimation(), value + " temporarily releases or swaps slots");
          inputAllowed[0] = false;
          assertFalse(aura.hasAutoBlockAnimation(), value + " pauses for UI or AutoRod");
          inputAllowed[0] = true;
-         aura.f15 = false;
+         aura.autoBlockActive = false;
          assertFalse(aura.hasAutoBlockAnimation(), value + " stops");
       }
    }

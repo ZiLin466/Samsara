@@ -8,9 +8,8 @@ import com.samsara.module.FeatureManager;
 import com.samsara.setting.BooleanSetting;
 import com.samsara.setting.ModeSetting;
 import com.samsara.setting.NumberSetting;
-import com.samsara.util.ColorUtil;
+import com.samsara.util.ClientColors;
 import com.samsara.util.WorldToScreenProjector;
-import java.nio.charset.StandardCharsets;
 import java.util.ArrayList;
 import java.util.Iterator;
 import java.util.List;
@@ -23,49 +22,49 @@ import net.minecraft.world.InteractionHand;
 import net.minecraft.world.item.Items;
 
 public class LongJump extends Feature {
-   private static final String f380 = "Mode";
-   private NumberSetting f386;
-   private double f393;
-   private int f389;
-   private int f394;
-   private ModeSetting f385;
-   private static final String f381 = "Fireball";
-   private static final String f382 = "Fireball2";
-   private int f390;
-   public final List<TimedPacket> f21;
-   private boolean f391;
-   private double f392;
-   private static final String f379 = "LongJump";
-   private BooleanSetting f387;
-   private static final String f383 = "Fireball Delay";
-   private int f395;
-   private int f388;
-   private static final String f384 = "Show Progress";
+   private static final String MODE_LABEL = "Mode";
+   private NumberSetting fireballDelay;
+   private double previousProgress;
+   private int jumpTicks;
+   private int progressAlpha;
+   private ModeSetting mode;
+   private static final String FIREBALL_LABEL = "Fireball";
+   private static final String FIREBALL2_LABEL = "Fireball2";
+   private int delayTicksElapsed;
+   public final List<TimedPacket> delayedPackets;
+   private boolean delayingPackets;
+   private double progress;
+   private static final String LONG_JUMP_LABEL = "LongJump";
+   private BooleanSetting showProgress;
+   private static final String FIREBALL_DELAY_LABEL = "Fireball Delay";
+   private int previousProgressAlpha;
+   private int previousSlot;
+   private static final String SHOW_PROGRESS_LABEL = "Show Progress";
 
-   private void pm$79() {
-      this.f393 = this.f392;
-      if (this.f391) {
-         this.f390++;
-         this.f392 = (double)((float)this.f390 * 50.0F / (float)this.f386.m220());
+   private void updatePacketDelay() {
+      this.previousProgress = this.progress;
+      if (this.delayingPackets) {
+         this.delayTicksElapsed++;
+         this.progress = (double)((float)this.delayTicksElapsed * 50.0F / (float)this.fireballDelay.getValue());
       }
 
-      if ((double)(this.f390 * 50) > this.f386.m220() || !this.f391) {
-         this.f390 = 0;
-         this.f392 = 0.0;
-         this.f391 = false;
+      if ((double)(this.delayTicksElapsed * 50) > this.fireballDelay.getValue() || !this.delayingPackets) {
+         this.delayTicksElapsed = 0;
+         this.progress = 0.0;
+         this.delayingPackets = false;
       }
 
-      int var1 = this.f391 ? 255 : 0;
-      this.f395 = this.f394;
-      this.f394 = (int)Mth.lerp(0.5F, (float)this.f394, (float)var1);
-      synchronized (this.f21) {
-         Iterator var3 = this.f21.iterator();
+      int targetAlpha = this.delayingPackets ? 255 : 0;
+      this.previousProgressAlpha = this.progressAlpha;
+      this.progressAlpha = (int)Mth.lerp(0.5F, (float)this.progressAlpha, (float)targetAlpha);
+      synchronized (this.delayedPackets) {
+         Iterator iterator = this.delayedPackets.iterator();
 
-         while (var3.hasNext()) {
-            TimedPacket var4 = (TimedPacket)var3.next();
-            if (var4.m229() || !this.f391) {
-               var3.remove();
-               mc.execute(() -> var4.f36.handle(mc.getConnection()));
+         while (iterator.hasNext()) {
+            TimedPacket timedPacket = (TimedPacket)iterator.next();
+            if (timedPacket.isReady() || !this.delayingPackets) {
+               iterator.remove();
+               mc.execute(() -> timedPacket.packet.handle(mc.getConnection()));
             }
          }
       }
@@ -73,36 +72,36 @@ public class LongJump extends Feature {
 
    @Override
    public void onEnable() {
-      this.f389 = 0;
-      this.f388 = -1;
-      this.f390 = 0;
-      this.f391 = false;
-      this.f393 = 0.0;
-      this.f392 = 0.0;
-      this.f395 = 0;
-      this.f394 = 0;
+      this.jumpTicks = 0;
+      this.previousSlot = -1;
+      this.delayTicksElapsed = 0;
+      this.delayingPackets = false;
+      this.previousProgress = 0.0;
+      this.progress = 0.0;
+      this.previousProgressAlpha = 0;
+      this.progressAlpha = 0;
    }
 
    @Override
    public void onDisable() {
-      synchronized (this.f21) {
-         for (TimedPacket var3 : this.f21) {
-            mc.execute(() -> var3.f36.handle(mc.getConnection()));
+      synchronized (this.delayedPackets) {
+         for (TimedPacket timedPacket : this.delayedPackets) {
+            mc.execute(() -> timedPacket.packet.handle(mc.getConnection()));
          }
 
-         this.f21.clear();
-         this.f391 = false;
+         this.delayedPackets.clear();
+         this.delayingPackets = false;
       }
 
-      this.f389 = 0;
-      this.f388 = -1;
-      this.f390 = 0;
+      this.jumpTicks = 0;
+      this.previousSlot = -1;
+      this.delayTicksElapsed = 0;
    }
 
-   private int pm$80() {
-      for (int var1 = 0; var1 < 9; var1++) {
-         if (mc.player.getInventory().getItem(var1).is(Items.FIRE_CHARGE)) {
-            return var1;
+   private int findFireChargeSlot() {
+      for (int slot = 0; slot < 9; slot++) {
+         if (mc.player.getInventory().getItem(slot).is(Items.FIRE_CHARGE)) {
+            return slot;
          }
       }
 
@@ -110,114 +109,114 @@ public class LongJump extends Feature {
    }
 
    @Override
-   public void onEvent(Event var1) {
-      if (var1 == Events.f5 && this.f387.m215()) {
-         if (!this.f391 && this.f394 <= 5) {
-            this.f393 = 0.0;
+   public void onEvent(Event event) {
+      if (event == Events.RENDER_2D && this.showProgress.getValue()) {
+         if (!this.delayingPackets && this.progressAlpha <= 5) {
+            this.previousProgress = 0.0;
          } else {
-            float var2 = 100.0F;
-            float var3 = 4.0F;
-            float var4 = (float)mc.getWindow().getGuiScaledWidth() * 0.5F - var2 * 0.5F;
-            float var5 = (float)mc.getWindow().getGuiScaledHeight() * 0.5F + 20.0F;
-            float var6 = Events.f5.m91();
-            double var7 = this.f393 + (this.f392 - this.f393) * (double)var6;
-            int var9 = (int)((float)this.f395 + (float)(this.f394 - this.f395) * var6);
-            int var10 = ColorUtil.m27() & 16777215 | var9 << 24;
-            int var11 = var9 << 24;
-            int var12 = (int)((float)var9 * 0.5F) << 24 | 6316128;
-            WorldToScreenProjector.m44(Events.f5, (int)var4, (int)var5, (int)var2, (int)var3, var7, var11, var12, var10);
+            float barWidth = 100.0F;
+            float barHeight = 4.0F;
+            float barX = (float)mc.getWindow().getGuiScaledWidth() * 0.5F - barWidth * 0.5F;
+            float barY = (float)mc.getWindow().getGuiScaledHeight() * 0.5F + 20.0F;
+            float partialTick = Events.RENDER_2D.getPartialTick();
+            double progress = this.previousProgress + (this.progress - this.previousProgress) * (double)partialTick;
+            int alpha = (int)((float)this.previousProgressAlpha + (float)(this.progressAlpha - this.previousProgressAlpha) * partialTick);
+            int progressColor = ClientColors.colorAtOffset(0) & 16777215 | alpha << 24;
+            int borderColor = alpha << 24;
+            int backgroundColor = (int)((float)alpha * 0.5F) << 24 | 6316128;
+            WorldToScreenProjector.drawProgressBar(Events.RENDER_2D, (int)barX, (int)barY, (int)barWidth, (int)barHeight, progress, borderColor, backgroundColor, progressColor);
          }
       }
 
-      if (var1 == Events.f3) {
-         this.setSuffix(this.f385.m224());
-         if (FeatureManager.f29.isEnabled()) {
-            FeatureManager.f29.toggle();
+      if (event == Events.ROTATION) {
+         this.setSuffix(this.mode.getValue());
+         if (FeatureManager.scaffold.isEnabled()) {
+            FeatureManager.scaffold.toggle();
          }
 
-         int var17 = this.pm$80();
-         if (var17 != -1) {
-            Events.f3.m83(90.0F);
-            switch (this.f389) {
+         int fireChargeSlot = this.findFireChargeSlot();
+         if (fireChargeSlot != -1) {
+            Events.ROTATION.setPitch(90.0F);
+            switch (this.jumpTicks) {
                case 0:
-                  this.f388 = mc.player.getInventory().getSelectedSlot();
-                  mc.player.getInventory().setSelectedSlot(var17);
+                  this.previousSlot = mc.player.getInventory().getSelectedSlot();
+                  mc.player.getInventory().setSelectedSlot(fireChargeSlot);
                   break;
                case 1:
                   ((MultiPlayerGameModeAccessor)mc.gameMode)
-                     .invokeStartPrediction(mc.level, var0 -> new ServerboundUseItemPacket(InteractionHand.MAIN_HAND, var0, Events.f3.m76(), Events.f3.m82()));
+                     .invokeStartPrediction(mc.level, sequence -> new ServerboundUseItemPacket(InteractionHand.MAIN_HAND, sequence, Events.ROTATION.getYaw(), Events.ROTATION.getPitch()));
                   break;
                case 2:
-                  if (this.f385.m228(f381)) {
-                     mc.player.getInventory().setSelectedSlot(this.f388);
+                  if (this.mode.is(FIREBALL_LABEL)) {
+                     mc.player.getInventory().setSelectedSlot(this.previousSlot);
                   }
                   break;
                case 15:
-                  if (this.f385.m228(f382)) {
+                  if (this.mode.is(FIREBALL2_LABEL)) {
                      ((MultiPlayerGameModeAccessor)mc.gameMode)
                         .invokeStartPrediction(
-                           mc.level, var0 -> new ServerboundUseItemPacket(InteractionHand.MAIN_HAND, var0, Events.f3.m76(), Events.f3.m82())
+                           mc.level, sequence -> new ServerboundUseItemPacket(InteractionHand.MAIN_HAND, sequence, Events.ROTATION.getYaw(), Events.ROTATION.getPitch())
                         );
                   }
                   break;
                case 16:
-                  mc.player.getInventory().setSelectedSlot(this.f388);
+                  mc.player.getInventory().setSelectedSlot(this.previousSlot);
             }
 
-            this.f389++;
+            this.jumpTicks++;
          } else {
-            this.f389++;
+            this.jumpTicks++;
          }
 
-         this.pm$79();
-         if (mc.player.onGround() && this.f389 > 20) {
+         this.updatePacketDelay();
+         if (mc.player.onGround() && this.jumpTicks > 20) {
             this.toggle();
          }
       }
 
-      if (var1 == Events.f8 && this.f389 == (this.f385.m228(f381) ? 4 : 20)) {
+      if (event == Events.POST_MOVE_INPUT && this.jumpTicks == (this.mode.is(FIREBALL_LABEL) ? 4 : 20)) {
          mc.player.input.makeJump();
       }
 
-      if (var1 == Events.f11) {
-         if (Events.f11.m41() instanceof ClientboundSetEntityMotionPacket var18) {
-            if (var18.id() == mc.player.getId()) {
-               synchronized (this.f21) {
-                  this.f21.add(new TimedPacket(var18, this.f385.m228(f381) ? (long)this.f386.m220() : (long)this.f386.m220() + 800L));
-                  var1.setCancelled(true);
+      if (event == Events.PACKET_RECEIVE) {
+         if (Events.PACKET_RECEIVE.getPacket() instanceof ClientboundSetEntityMotionPacket setEntityMotionPacket) {
+            if (setEntityMotionPacket.id() == mc.player.getId()) {
+               synchronized (this.delayedPackets) {
+                  this.delayedPackets.add(new TimedPacket(setEntityMotionPacket, this.mode.is(FIREBALL_LABEL) ? (long)this.fireballDelay.getValue() : (long)this.fireballDelay.getValue() + 800L));
+                  event.setCancelled(true);
                }
 
-               this.f391 = true;
+               this.delayingPackets = true;
             }
-         } else if (this.f391) {
-            synchronized (this.f21) {
-               this.f21.add(new TimedPacket(Events.f11.m41(), this.f385.m228(f381) ? (long)this.f386.m220() : (long)this.f386.m220() + 800L));
-               var1.setCancelled(true);
+         } else if (this.delayingPackets) {
+            synchronized (this.delayedPackets) {
+               this.delayedPackets.add(new TimedPacket(Events.PACKET_RECEIVE.getPacket(), this.mode.is(FIREBALL_LABEL) ? (long)this.fireballDelay.getValue() : (long)this.fireballDelay.getValue() + 800L));
+               event.setCancelled(true);
             }
          }
       }
    }
 
    public LongJump() {
-      super(f379, Category.MOVEMENT);
-      this.f385 = new ModeSetting(f380, this, f381, new String[]{f381, f382});
-      this.f386 = new NumberSetting(f383, this, 200.0, 100.0, 1000.0, 50.0);
-      this.f387 = new BooleanSetting(f384, this, false);
-      this.f21 = new ArrayList<>();
-      this.f388 = -1;
+      super(LONG_JUMP_LABEL, Category.MOVEMENT);
+      this.mode = new ModeSetting(MODE_LABEL, this, FIREBALL_LABEL, new String[]{FIREBALL_LABEL, FIREBALL2_LABEL});
+      this.fireballDelay = new NumberSetting(FIREBALL_DELAY_LABEL, this, 200.0, 100.0, 1000.0, 50.0);
+      this.showProgress = new BooleanSetting(SHOW_PROGRESS_LABEL, this, false);
+      this.delayedPackets = new ArrayList<>();
+      this.previousSlot = -1;
    }
 
    public static class TimedPacket {
-      public final Packet f36;
-      private final long f757;
+      public final Packet packet;
+      private final long releaseTimeMillis;
 
-      public TimedPacket(Packet var1, long var2) {
-         this.f36 = var1;
-         this.f757 = System.currentTimeMillis() + var2;
+      public TimedPacket(Packet packet, long delayMillis) {
+         this.packet = packet;
+         this.releaseTimeMillis = System.currentTimeMillis() + delayMillis;
       }
 
-      public boolean m229() {
-         return System.currentTimeMillis() >= this.f757;
+      public boolean isReady() {
+         return System.currentTimeMillis() >= this.releaseTimeMillis;
       }
    }
 }

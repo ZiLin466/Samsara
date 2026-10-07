@@ -29,33 +29,33 @@ public final class AccountStore {
          if (version == 1) {
             for (var value : root.getAsJsonArray("offlineAccounts")) {
                String name = validate(value.getAsString());
-               if (loaded.stream().noneMatch(a -> a.name().equalsIgnoreCase(name)))
+               if (loaded.stream().noneMatch(account -> account.name().equalsIgnoreCase(name)))
                   loaded.add(SavedAccount.cracked(name, false, offlineId(name)));
             }
          } else if (version == 2) {
             for (var value : root.getAsJsonArray("accounts")) {
-               var j = value.getAsJsonObject();
+               var accountState = value.getAsJsonObject();
                var bans = new ArrayList<SavedAccount.Ban>();
-               for (var b : j.getAsJsonArray("bans")) {
-                  var ban = b.getAsJsonObject();
+               for (var banElement : accountState.getAsJsonArray("bans")) {
+                  var ban = banElement.getAsJsonObject();
                   bans.add(new SavedAccount.Ban(ban.get("serverName").getAsString(), ban.get("reason").getAsString(), ban.get("bannedUntil").getAsLong()));
                }
-               var a = new SavedAccount(UUID.fromString(j.get("key").getAsString()), SavedAccount.Type.valueOf(j.get("type").getAsString()),
-                  j.get("name").getAsString(), UUID.fromString(j.get("profileId").getAsString()), j.get("favorite").getAsBoolean(),
-                  j.get("onlineId").getAsBoolean(), j.getAsJsonObject("credentials"), bans);
-               if (loaded.stream().anyMatch(old -> old.key().equals(a.key()))) throw new IllegalArgumentException("Duplicate key");
-               loaded.add(a);
+               var account = new SavedAccount(UUID.fromString(accountState.get("key").getAsString()), SavedAccount.Type.valueOf(accountState.get("type").getAsString()),
+                  accountState.get("name").getAsString(), UUID.fromString(accountState.get("profileId").getAsString()), accountState.get("favorite").getAsBoolean(),
+                  accountState.get("onlineId").getAsBoolean(), accountState.getAsJsonObject("credentials"), bans);
+               if (loaded.stream().anyMatch(old -> old.key().equals(account.key()))) throw new IllegalArgumentException("Duplicate key");
+               loaded.add(account);
             }
          } else throw new IllegalArgumentException("Unsupported version");
          accounts = List.copyOf(loaded);
-      } catch (RuntimeException e) { throw new IOException("账号文件格式无效，原文件已保留", e); }
+      } catch (RuntimeException error) { throw new IOException("账号文件格式无效，原文件已保留", error); }
    }
    public List<SavedAccount> accounts() { return accounts; }
-   public List<String> names() { return accounts.stream().filter(a -> a.type() == SavedAccount.Type.CRACKED).map(SavedAccount::name).toList(); }
+   public List<String> names() { return accounts.stream().filter(account -> account.type() == SavedAccount.Type.CRACKED).map(SavedAccount::name).toList(); }
    public List<SavedAccount> filtered(String search, boolean premium, boolean favorites, Set<SavedAccount.Type> types) {
       String query = search.strip().toLowerCase(Locale.ROOT);
-      return accounts.stream().filter(a -> a.name().toLowerCase(Locale.ROOT).contains(query) || a.profileId().toString().contains(query))
-         .filter(a -> !premium || a.type().premium).filter(a -> !favorites || a.favorite()).filter(a -> types.contains(a.type())).toList();
+      return accounts.stream().filter(account -> account.name().toLowerCase(Locale.ROOT).contains(query) || account.profileId().toString().contains(query))
+         .filter(account -> !premium || account.type().premium).filter(account -> !favorites || account.favorite()).filter(account -> types.contains(account.type())).toList();
    }
    public static String validate(String name) {
       String value = name.trim();
@@ -81,9 +81,9 @@ public final class AccountStore {
       for (int i = 0; i < next.size(); i++) if (next.get(i).key().equals(account.key())) { next.set(i, account); commit(next); return; }
    }
    public void remove(String name) throws IOException {
-      for (var a : accounts) if (a.name().equalsIgnoreCase(name)) { remove(a.key()); return; }
+      for (var account : accounts) if (account.name().equalsIgnoreCase(name)) { remove(account.key()); return; }
    }
-   public void remove(UUID key) throws IOException { commit(accounts.stream().filter(a -> !a.key().equals(key)).toList()); }
+   public void remove(UUID key) throws IOException { commit(accounts.stream().filter(account -> !account.key().equals(key)).toList()); }
    /** Move relative to a visible row; hidden accounts retain their relative order. */
    public void move(UUID key, UUID target) throws IOException {
       var next = new ArrayList<>(accounts); int from = index(next, key), to = index(next, target);
@@ -96,21 +96,21 @@ public final class AccountStore {
    }
    private void commit(List<SavedAccount> next) throws IOException {
       var root = new JsonObject(); var array = new JsonArray(); root.addProperty("version", 2);
-      for (var a : next) {
-         var j = new JsonObject();
-         j.addProperty("key", a.key().toString()); j.addProperty("type", a.type().name()); j.addProperty("name", a.name());
-         j.addProperty("profileId", a.profileId().toString()); j.addProperty("favorite", a.favorite()); j.addProperty("onlineId", a.onlineId());
-         j.add("credentials", a.credentials()); var bans = new JsonArray();
-         for (var b : a.bans()) {
-            var bj = new JsonObject(); bj.addProperty("serverName", b.serverName()); bj.addProperty("reason", b.reason()); bj.addProperty("bannedUntil", b.bannedUntil()); bans.add(bj);
+      for (var account : next) {
+         var accountState = new JsonObject();
+         accountState.addProperty("key", account.key().toString()); accountState.addProperty("type", account.type().name()); accountState.addProperty("name", account.name());
+         accountState.addProperty("profileId", account.profileId().toString()); accountState.addProperty("favorite", account.favorite()); accountState.addProperty("onlineId", account.onlineId());
+         accountState.add("credentials", account.credentials()); var bans = new JsonArray();
+         for (var ban : account.bans()) {
+            var banState = new JsonObject(); banState.addProperty("serverName", ban.serverName()); banState.addProperty("reason", ban.reason()); banState.addProperty("bannedUntil", ban.bannedUntil()); bans.add(banState);
          }
-         j.add("bans", bans); array.add(j);
+         accountState.add("bans", bans); array.add(accountState);
       }
       root.add("accounts", array); Files.createDirectories(file.toAbsolutePath().getParent());
       Path temporary = file.resolveSibling(file.getFileName() + ".tmp");
       Files.writeString(temporary, new GsonBuilder().setPrettyPrinting().create().toJson(root));
       try { Files.move(temporary, file, StandardCopyOption.REPLACE_EXISTING, StandardCopyOption.ATOMIC_MOVE); }
-      catch (java.nio.file.AtomicMoveNotSupportedException e) { Files.move(temporary, file, StandardCopyOption.REPLACE_EXISTING); }
+      catch (java.nio.file.AtomicMoveNotSupportedException error) { Files.move(temporary, file, StandardCopyOption.REPLACE_EXISTING); }
       accounts = List.copyOf(next);
    }
 }

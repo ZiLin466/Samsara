@@ -76,9 +76,6 @@ final class OpaiConfigRepository implements OpaiConfigPanel.Backend {
    }
    @Override public void delete(String name) throws IOException { Files.delete(file(name)); }
    @Override public void openFolder() throws IOException {
-      Path directory = directory();
-      String os = System.getProperty("os.name").toLowerCase(Locale.ROOT);
-      new ProcessBuilder(os.contains("win") ? "explorer.exe" : os.contains("mac") ? "open" : "xdg-open",
-         directory.toString()).start();
+      ConfigManager.openConfigDirectory(directory());
    }
 }

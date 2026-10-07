@@ -1,7 +1,6 @@
 package mixins;
 
 import com.samsara.command.CommandManager;
-import java.nio.charset.StandardCharsets;
 import net.minecraft.client.gui.screens.ChatScreen;
 import org.spongepowered.asm.mixin.Mixin;
 import org.spongepowered.asm.mixin.injection.At;
@@ -11,7 +10,7 @@ import org.spongepowered.asm.mixin.injection.callback.CallbackInfo;
 
 @Mixin({ChatScreen.class})
 public class MixinChatScreen {
-   private static final String f205 = ".";
+   private static final String COMMAND_PREFIX = ".";
 
    @Inject(
       method = {"handleChatInput"},
@@ -22,10 +21,10 @@ public class MixinChatScreen {
       )},
       cancellable = true
    )
-   private void pm$15(String var1, boolean var2, CallbackInfo var3) {
-      CommandManager.dispatch(var1);
-      if (var1.startsWith(f205)) {
-         var3.cancel();
+   private void samsara$handleClientCommand(String message, boolean addToHistory, CallbackInfo callback) {
+      CommandManager.dispatch(message);
+      if (message.startsWith(COMMAND_PREFIX)) {
+         callback.cancel();
       }
    }
 }

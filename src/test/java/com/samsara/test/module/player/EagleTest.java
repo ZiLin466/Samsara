@@ -41,7 +41,7 @@ final class EagleTest {
    }
 
    private static void number(Eagle eagle, String name, double value) {
-      ((NumberSetting)eagle.settings.stream().filter(s -> s.getName().equals(name)).findFirst().orElseThrow()).m223(value);
+      ((NumberSetting)eagle.settings.stream().filter(s -> s.getName().equals(name)).findFirst().orElseThrow()).setValue(value);
    }
 
    private static double distance(Eagle eagle) throws Exception {
@@ -99,30 +99,30 @@ final class EagleTest {
 
    @Test void conditionsRequireEverySelectionAndUseCurrentInputAndPitch() {
       var eagle = new Eagle();
-      var input = new EventMoveInput().m47(false, true, true, false, false, true, false);
+      var input = new EventMoveInput().reset(false, true, true, false, false, true, false);
       conditions(eagle).setSelected(List.of("Backwards", "Left", "HoldingBlocks", "OnGround", "Sneak"));
       Class<?>[] signature = {EventMoveInput.class, float.class, boolean.class, boolean.class};
       assertTrue((boolean)invoke(eagle, "conditionsMet", signature, input, 75F, true, true));
       assertFalse((boolean)invoke(eagle, "conditionsMet", signature, input, 75F, false, true));
       assertFalse((boolean)invoke(eagle, "conditionsMet", signature, input, 75F, true, false));
-      input.m60(false);
+      input.setSneak(false);
       assertFalse((boolean)invoke(eagle, "conditionsMet", signature, input, 75F, true, true));
-      input.m60(true); number(eagle, "Pitch Min", 70);
+      input.setSneak(true); number(eagle, "Pitch Min", 70);
       assertFalse((boolean)invoke(eagle, "conditionsMet", signature, input, 65F, true, true));
-      ((BooleanSetting)eagle.settings.stream().filter(s -> s.getName().equals("Conditional")).findFirst().orElseThrow()).m217(false);
+      ((BooleanSetting)eagle.settings.stream().filter(s -> s.getName().equals("Conditional")).findFirst().orElseThrow()).setValue(false);
       assertTrue((boolean)invoke(eagle, "conditionsMet", signature, input, 0F, false, false));
       assertFalse(conditions(eagle).isVisible());
    }
 
    @Test void stationaryFallbackRespectsBackwardAndDiagonalInputs() {
       Class<?>[] signature = {EventMoveInput.class, float.class};
-      var input = new EventMoveInput().m47(true, false, false, true, false, false, false);
+      var input = new EventMoveInput().reset(true, false, false, true, false, false, false);
       assertEquals(45F, invoke(null, "movementYaw", signature, input, 0F));
-      input.m47(false, true, true, false, false, false, false);
+      input.reset(false, true, true, false, false, false, false);
       assertEquals(225F, invoke(null, "movementYaw", signature, input, 0F));
-      input.m47(false, false, true, false, false, false, false);
+      input.reset(false, false, true, false, false, false, false);
       assertEquals(-90F, invoke(null, "movementYaw", signature, input, 0F));
-      assertTrue(new Eagle().getPriority(Events.f7) > 0);
+      assertTrue(new Eagle().getPriority(Events.MOVE_INPUT) > 0);
    }
 
    @Test void edgeDistanceIsRetainedUntilSneakingFinishesAndSupportsReversedRanges() throws Exception {

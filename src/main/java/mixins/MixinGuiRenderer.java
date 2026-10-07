@@ -60,7 +60,7 @@ public class MixinGuiRenderer {
 
    @Inject(method = "endFrame", at = @At("TAIL"))
    private void samsara$renderNanoGui(CallbackInfo callbackInfo) {
-      boolean hud = FeatureManager.f25 != null && (FeatureManager.f25.isEnabled() || com.samsara.ui.hud.editor.HudEditorScreen.active());
+      boolean hud = FeatureManager.hud != null && (FeatureManager.hud.isEnabled() || com.samsara.ui.hud.editor.HudEditorScreen.active());
       Minecraft mc = Minecraft.getInstance();
       Screen current = mc == null ? null : mc.gui.screen();
       boolean gui = current instanceof NanoGui && NVGRenderer.isAvailable();
@@ -73,7 +73,7 @@ public class MixinGuiRenderer {
             logged = true;
             org.slf4j.LoggerFactory.getLogger("samsara-nvg").info(
                "[samsara] nano hud skipped (module {})",
-               FeatureManager.f25 == null ? "null" : "disabled");
+               FeatureManager.hud == null ? "null" : "disabled");
          }
          return;
       }
@@ -83,7 +83,7 @@ public class MixinGuiRenderer {
          started = NVGRenderer.beginFrame();
          if (started) {
             if (hud) {
-               FeatureManager.f25.renderNano();
+               FeatureManager.hud.renderNano();
             }
             if (gui) {
                ((NanoGui) current).renderNano();

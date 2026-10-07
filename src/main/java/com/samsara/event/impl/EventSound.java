@@ -4,14 +4,14 @@ import com.samsara.event.Event;
 import net.minecraft.resources.Identifier;
 
 public class EventSound extends Event {
-   private Identifier f95;
+   private Identifier soundId;
 
-   public Identifier m46() {
-      return this.f95;
+   public Identifier getSoundId() {
+      return this.soundId;
    }
 
-   public EventSound m45(Identifier var1) {
-      this.f95 = var1;
+   public EventSound reset(Identifier soundId) {
+      this.soundId = soundId;
       return this;
    }
 }

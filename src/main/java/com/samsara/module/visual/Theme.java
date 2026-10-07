@@ -4,27 +4,26 @@ import com.samsara.module.Category;
 import com.samsara.module.Feature;
 import com.samsara.setting.ModeSetting;
 import com.samsara.setting.NumberSetting;
-import java.nio.charset.StandardCharsets;
 
 public class Theme extends Feature {
-   private static final String f724 = "Sakura";
-   private static final String f721 = "Nova";
-   private static final String f720 = "Inferno";
-   private static final String f723 = "Rainbow";
-   private static final String f714 = "Theme";
-   private static final String f722 = "Ocean";
-   private static final String f716 = "Cherry";
-   private static final String f715 = "Default";
-   private static final String f718 = "Flower";
-   public final ModeSetting f34;
-   private static final String f725 = "Speed";
-   private static final String f719 = "Gold";
-   public final NumberSetting f35;
-   private static final String f717 = "Emerald";
+   private static final String SAKURA_LABEL = "Sakura";
+   private static final String NOVA_LABEL = "Nova";
+   private static final String INFERNO_LABEL = "Inferno";
+   private static final String RAINBOW_LABEL = "Rainbow";
+   private static final String THEME_LABEL = "Theme";
+   private static final String OCEAN_LABEL = "Ocean";
+   private static final String CHERRY_LABEL = "Cherry";
+   private static final String DEFAULT_LABEL = "Default";
+   private static final String FLOWER_LABEL = "Flower";
+   public final ModeSetting theme;
+   private static final String SPEED_LABEL = "Speed";
+   private static final String GOLD_LABEL = "Gold";
+   public final NumberSetting speed;
+   private static final String EMERALD_LABEL = "Emerald";
 
    public Theme() {
-      super(f714, Category.VISUAL);
-      this.f34 = new ModeSetting(f714, this, f715, new String[]{f715, f716, f717, f718, f719, f720, f721, f722, f723, f724});
-      this.f35 = new NumberSetting(f725, this, 1.0, 0.5, 5.0, 0.25);
+      super(THEME_LABEL, Category.VISUAL);
+      this.theme = new ModeSetting(THEME_LABEL, this, DEFAULT_LABEL, new String[]{DEFAULT_LABEL, CHERRY_LABEL, EMERALD_LABEL, FLOWER_LABEL, GOLD_LABEL, INFERNO_LABEL, NOVA_LABEL, OCEAN_LABEL, RAINBOW_LABEL, SAKURA_LABEL});
+      this.speed = new NumberSetting(SPEED_LABEL, this, 1.0, 0.5, 5.0, 0.25);
    }
 }

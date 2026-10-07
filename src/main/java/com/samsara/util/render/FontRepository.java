@@ -22,12 +22,12 @@ public final class FontRepository {
       }
 
       InputStream input = FabricLoader.getInstance().getModContainer("samsara")
-         .flatMap(container -> container.findPath("assets/samsara/fonts/" + name + ".ttf"))
+         .flatMap(container -> container.findPath(RESOURCE_PREFIX + name + ".ttf"))
          .map(path -> {
             try {
                return java.nio.file.Files.newInputStream(path);
-            } catch (java.io.IOException e) {
-               throw new IllegalStateException("Unable to open font: " + name, e);
+            } catch (java.io.IOException error) {
+               throw new IllegalStateException("Unable to open font: " + name, error);
             }
          })
          .orElse(null);
@@ -39,11 +39,11 @@ public final class FontRepository {
          NVGTextRenderer renderer = new NVGTextRenderer(name, stream);
          FONTS.put(name, renderer);
          org.slf4j.LoggerFactory.getLogger("samsara-nvg").info(
-            "[samsara] font '{}' id={} dataSize={} testWidth={}",
-            name, renderer.getFontId(), renderer.getDataSize(), renderer.getStringWidth("Combat", 8F));
+            "Loaded font '{}' id={} dataSize={}",
+            name, renderer.getFontId(), renderer.getDataSize());
          return renderer;
-      } catch (Exception e) {
-         throw new IllegalStateException("Unable to load font: " + name, e);
+      } catch (Exception error) {
+         throw new IllegalStateException("Unable to load font: " + name, error);
       }
    }
 }

@@ -1,5 +1,6 @@
 package com.samsara.ui.mainmenu.launch;
 
+import com.samsara.util.render.ColorUtility;
 import com.samsara.util.animation.HoverMotion;
 import com.samsara.ClientBranding;
 import java.nio.ByteBuffer;
@@ -88,9 +89,9 @@ public final class LaunchRenderer implements AutoCloseable {
                      String hovered, String focused, boolean operator) {
       cover("scene", width, height, 1820, 1024, 1.035f - .035f * entry, 1);
       if (entry < 1) cover("menu-transition", width, height, 1600, 900, 1.035f - .035f * entry, 1 - entry);
-      var l = LaunchLayout.of(width, height);
-      nvgTranslate(vg, l.left(), l.top());
-      nvgScale(vg, l.scale(), l.scale());
+      var layout = LaunchLayout.of(width, height);
+      nvgTranslate(vg, layout.left(), layout.top());
+      nvgScale(vg, layout.scale(), layout.scale());
       if (operator) image("operator", reducedMotion ? 40 : 40 - 130 * (1 - entry), reducedMotion ? 30 : 30 - 160 * (1 - entry), 980, 980, reducedMotion ? entry : 1);
       nvgGlobalAlpha(vg, entry);
       text("SAMSARA", 395, 65, 42, WHITE, "bold", 0);
@@ -137,7 +138,7 @@ public final class LaunchRenderer implements AutoCloseable {
          String cardGlyph = switch (tile.id()) { case "accounts" -> "multi"; case "multi" -> "accounts"; default -> tile.id(); };
          glyph(cardGlyph, tile.x() + tile.width() - 52, tile.y() + tile.height() * .63f, 42,
             dark ? 0x225F6062 : 0x1A55555B);
-         rect(tile.x(), tile.y(), tile.width(), 4, alpha(0xFF00B5DC, lift));
+         rect(tile.x(), tile.y(), tile.width(), 4, ColorUtility.multiplyOpacityRounded(0xFF00B5DC, lift));
          float size = dark ? 36 : tile.id().equals("multi") ? 39 : tile.id().equals("single") ? 43 : 48;
          fitText(tile.label(), tile.x() + 20, tile.y() + 79, size, tile.width() - 36,
             dark ? WHITE : INK, "serif");
@@ -200,7 +201,7 @@ public final class LaunchRenderer implements AutoCloseable {
       float s = 1 + (reducedMotion ? 0 : .1f * p); nvgScale(vg, s, s);
       if (p > .001f) {
          shadow(-28, -28, 56, 56, 17, .4f * p);
-         rect(-28, -28, 56, 56, alpha(0xB8202226, p));
+         rect(-28, -28, 56, 56, ColorUtility.multiplyOpacityRounded(0xB8202226, p));
       }
       if (id.equals("visibility") || id.equals("replay")) circle(0, 0, 25, 3, WHITE);
       glyph(id, 0, 0, r, WHITE);
@@ -298,13 +299,13 @@ public final class LaunchRenderer implements AutoCloseable {
    int imageId(String name) {
       return images.computeIfAbsent(name, key -> {
          byte[] bytes = resources.apply("textures/launch/" + key + ".png");
-         ByteBuffer b = MemoryUtil.memAlloc(bytes.length);
+         ByteBuffer keyState = MemoryUtil.memAlloc(bytes.length);
          try {
-            b.put(bytes).flip();
-            int id = nvgCreateImageMem(vg, key.equals("intro-grain") ? NVG_IMAGE_REPEATX | NVG_IMAGE_REPEATY : 0, b);
+            keyState.put(bytes).flip();
+            int id = nvgCreateImageMem(vg, key.equals("intro-grain") ? NVG_IMAGE_REPEATX | NVG_IMAGE_REPEATY : 0, keyState);
             if (id == 0) throw new IllegalStateException("Unable to decode launch image: " + key);
             return id;
-         } finally { MemoryUtil.memFree(b); }
+         } finally { MemoryUtil.memFree(keyState); }
       });
    }
 
@@ -320,16 +321,16 @@ public final class LaunchRenderer implements AutoCloseable {
       return fonts.computeIfAbsent(name, key -> {
          String file = switch (key) { case "intro-regular", "intro-bold", "intro-italic" -> key; case "serif" -> "launch-serif"; case "bold" -> "googlesans-bold"; default -> "googlesans-regular"; };
          byte[] bytes = resources.apply("fonts/" + file + ".ttf");
-         ByteBuffer b = MemoryUtil.memAlloc(bytes.length).put(bytes).flip();
-         fontData.add(b);
-         int id = nvgCreateFontMem(vg, "samsara-launch-" + key, b, false);
+         ByteBuffer keyState = MemoryUtil.memAlloc(bytes.length).put(bytes).flip();
+         fontData.add(keyState);
+         int id = nvgCreateFontMem(vg, "samsara-launch-" + key, keyState, false);
          if (id < 0) throw new IllegalStateException("Unable to load launch font: " + key);
          return id;
       });
    }
 
-   void image(String name, float x, float y, float w, float h, float a) {
-      nvgImagePattern(vg, x, y, w, h, 0, imageId(name), a, paint);
+   void image(String name, float x, float y, float w, float h, float opacity) {
+      nvgImagePattern(vg, x, y, w, h, 0, imageId(name), opacity, paint);
       nvgBeginPath(vg); nvgRect(vg, x, y, w, h); nvgFillPaint(vg, paint); nvgFill(vg);
    }
 
@@ -354,13 +355,13 @@ public final class LaunchRenderer implements AutoCloseable {
    private static NVGColor rgba(int c, NVGColor out) { return out.r((c >> 16 & 255) / 255f).g((c >> 8 & 255) / 255f).b((c & 255) / 255f).a((c >>> 24) / 255f); }
    void shadow(float x, float y, float w, float h, float feather, float opacity) {
       nvgBoxGradient(vg, x, y + feather * .4f, w, h, 1, feather,
-         rgba(alpha(0xFF000000, opacity), color), rgba(0, secondColor), paint);
+         rgba(ColorUtility.multiplyOpacityRounded(0xFF000000, opacity), color), rgba(0, secondColor), paint);
       nvgBeginPath(vg); nvgRect(vg, x - feather, y - feather, w + feather * 2, h + feather * 3);
       nvgFillPaint(vg, paint); nvgFill(vg);
    }
    void hollowShadow(float x, float y, float w, float h, float feather, float opacity) {
       nvgBoxGradient(vg, x, y + feather * .65f, w, h, 0, feather,
-         rgba(alpha(0xFF000000, opacity), color), rgba(0, secondColor), paint);
+         rgba(ColorUtility.multiplyOpacityRounded(0xFF000000, opacity), color), rgba(0, secondColor), paint);
       nvgBeginPath(vg); nvgRect(vg, x - feather, y - feather, w + feather * 2, h + feather * 3);
       nvgRect(vg, x, y, w, h); nvgPathWinding(vg, NVG_HOLE);
       nvgFillPaint(vg, paint); nvgFill(vg);
@@ -372,7 +373,6 @@ public final class LaunchRenderer implements AutoCloseable {
    private void circle(float x, float y, float r, float stroke, int c) { setColor(c); nvgBeginPath(vg); nvgCircle(vg, x, y, r); nvgStrokeWidth(vg, stroke); nvgStrokeColor(vg, color); nvgStroke(vg); }
    void disk(float x, float y, float r, int c) { setColor(c); nvgBeginPath(vg); nvgCircle(vg, x, y, r); nvgFillColor(vg, color); nvgFill(vg); }
    void triangle(float x, float y, float xx, float yy, float xxx, float yyy, int c) { setColor(c); nvgBeginPath(vg); nvgMoveTo(vg, x, y); nvgLineTo(vg, xx, yy); nvgLineTo(vg, xxx, yyy); nvgClosePath(vg); nvgFillColor(vg, color); nvgFill(vg); }
-   private static int alpha(int c, float a) { return Math.round((c >>> 24) * Math.clamp(a, 0, 1)) << 24 | c & 0xFFFFFF; }
 
    @Override public void close() {
       images.values().forEach(id -> nvgDeleteImage(vg, id));

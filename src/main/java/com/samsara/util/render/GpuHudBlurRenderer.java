@@ -83,11 +83,11 @@ public final class GpuHudBlurRenderer implements AutoCloseable {
                      float guiWidth,float guiHeight,float opacity) {
       if (!captured || w<=0 || h<=0 || guiWidth<=0 || guiHeight<=0) return;
       float sx=target.getWidth(0)/guiWidth,sy=target.getHeight(0)/guiHeight;
-      float[] data=new float[UNIFORM_FLOATS]; data[3]=1;
-      data[4]=target.getWidth(0); data[5]=target.getHeight(0);
-      data[8]=x*sx; data[9]=y*sy; data[10]=w*sx; data[11]=h*sy;
-      data[12]=Math.min(radius,Math.min(w,h)/2)*Math.min(sx,sy); data[13]=Math.clamp(opacity,0,1);
-      draw(device.createCommandEncoder(),views[2],target,data,true,
+      float[] uniformValues=new float[UNIFORM_FLOATS]; uniformValues[3]=1;
+      uniformValues[4]=target.getWidth(0); uniformValues[5]=target.getHeight(0);
+      uniformValues[8]=x*sx; uniformValues[9]=y*sy; uniformValues[10]=w*sx; uniformValues[11]=h*sy;
+      uniformValues[12]=Math.min(radius,Math.min(w,h)/2)*Math.min(sx,sy); uniformValues[13]=Math.clamp(opacity,0,1);
+      draw(device.createCommandEncoder(),views[2],target,uniformValues,true,
          List.of(new HudBlurRenderer.Region(x,y*sy/sx,w,h*sy/sx)),guiWidth,1/sx);
    }
 
@@ -105,12 +105,12 @@ public final class GpuHudBlurRenderer implements AutoCloseable {
       }
    }
 
-   private void draw(CommandEncoder encoder,GpuTextureView source,GpuTextureView target,float[] data,boolean panel,
+   private void draw(CommandEncoder encoder,GpuTextureView source,GpuTextureView target,float[] uniformValues,boolean panel,
                      List<HudBlurRenderer.Region> regions,float guiWidth,float margin) {
       var pipeline=pipeline(panel,target.texture().getFormat());
       ByteBuffer buffer=MemoryUtil.memAlloc(UNIFORM_FLOATS*4);
       try {
-         buffer.asFloatBuffer().put(data);
+         buffer.asFloatBuffer().put(uniformValues);
          var uniform=encoder.transientMemory().uploadGpu(buffer,device.getDeviceInfo().limits().minUniformOffsetAlignment(),GpuBuffer.USAGE_UNIFORM);
          try (var pass=encoder.createRenderPass(()->"samsara/hud-blur",target,Optional.empty())) {
             pass.setPipeline(pipeline); pass.setUniform("Scene",source,sampler); pass.setUniform("Blur",uniform);
@@ -152,16 +152,16 @@ public final class GpuHudBlurRenderer implements AutoCloseable {
    private static float[] kernel(float sigma) {
       sigma=Math.max(.5f,sigma);
       int radius=Math.min(64,(int)Math.ceil(sigma*3));
-      float[] data=new float[UNIFORM_FLOATS]; data[16]=1;
+      float[] uniformValues=new float[UNIFORM_FLOATS]; uniformValues[16]=1;
       float total=1; int taps=0;
       for (int i=1;i<=radius;i+=2) {
          float first=(float)Math.exp(-i*i/(2f*sigma*sigma));
          float second=i+1<=radius ? (float)Math.exp(-(i+1)*(i+1)/(2f*sigma*sigma)) : 0;
          float weight=first+second; ++taps;
-         data[16+taps*4]=weight; data[17+taps*4]=i+second/weight; total+=2*weight;
+         uniformValues[16+taps*4]=weight; uniformValues[17+taps*4]=i+second/weight; total+=2*weight;
       }
-      for (int i=0;i<=taps;i++) data[16+i*4]/=total;
-      data[2]=taps; return data;
+      for (int i=0;i<=taps;i++) uniformValues[16+i*4]/=total;
+      uniformValues[2]=taps; return uniformValues;
    }
 
    private void closeTextures() {

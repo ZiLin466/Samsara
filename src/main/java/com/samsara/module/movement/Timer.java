@@ -6,12 +6,11 @@ import com.samsara.module.Category;
 import com.samsara.module.Feature;
 import com.samsara.setting.NumberSetting;
 import com.samsara.util.TimerController;
-import java.nio.charset.StandardCharsets;
 
 public class Timer extends Feature {
-   private final NumberSetting f433;
-   private static final String f431 = "Timer";
-   private static final String f432 = "Speed";
+   private final NumberSetting speed;
+   private static final String TIMER_LABEL = "Timer";
+   private static final String SPEED_LABEL = "Speed";
 
    @Override
    public void onDisable() {
@@ -19,14 +18,14 @@ public class Timer extends Feature {
    }
 
    public Timer() {
-      super(f431, Category.MOVEMENT);
-      this.f433 = new NumberSetting(f432, this, 1.0, 0.1, 5.0, 0.1);
+      super(TIMER_LABEL, Category.MOVEMENT);
+      this.speed = new NumberSetting(SPEED_LABEL, this, 1.0, 0.1, 5.0, 0.1);
    }
 
    @Override
-   public void onEvent(Event var1) {
-      if (var1 == Events.f3) {
-         TimerController.setMultiplier((float)this.f433.m220());
+   public void onEvent(Event event) {
+      if (event == Events.ROTATION) {
+         TimerController.setMultiplier((float)this.speed.getValue());
       }
    }
 }

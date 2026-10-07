@@ -43,20 +43,20 @@ final class InventoryBehaviorTest {
       var result = new ItemStack[36]; Arrays.fill(result, ItemStack.EMPTY); return result;
    }
    private static EnumMap<EquipmentSlot, ItemStack> armor() { return new EnumMap<>(EquipmentSlot.class); }
-   private static InvManager.Plan plan(ItemStack[] items, EnumMap<EquipmentSlot, ItemStack> armor, boolean hypixel, boolean drop) {
-      return new InvManager.Plan(items, armor, hypixel, drop, false, 0, 1, 2);
+   private static InventoryManager.Plan plan(ItemStack[] items, EnumMap<EquipmentSlot, ItemStack> armor, boolean hypixel, boolean drop) {
+      return new InventoryManager.Plan(items, armor, hypixel, drop, false, 0, 1, 2);
    }
-   private static InvManager.Action next(InvManager.Plan plan) { return plan.next(slot -> true); }
+   private static InventoryManager.Action next(InventoryManager.Plan plan) { return plan.next(slot -> true); }
 
    @Test void hypixelAloneMakesSharpnessOneStoneBeatPlainIron() {
       var stone = new ItemStack(Items.STONE_SWORD);
       stone.enchant(registries.lookupOrThrow(Registries.ENCHANTMENT).getOrThrow(Enchantments.SHARPNESS), 1);
       var iron = new ItemStack(Items.IRON_SWORD);
-      assertTrue(InvManager.Plan.swordDamage(stone, true) > InvManager.Plan.swordDamage(iron, true));
-      assertEquals(InvManager.Plan.swordDamage(stone, false), InvManager.Plan.swordDamage(iron, false));
+      assertTrue(InventoryManager.Plan.swordDamage(stone, true) > InventoryManager.Plan.swordDamage(iron, true));
+      assertEquals(InventoryManager.Plan.swordDamage(stone, false), InventoryManager.Plan.swordDamage(iron, false));
       var inventory = items(); inventory[0] = iron; inventory[20] = stone;
-      assertEquals(new InvManager.Action(20, 0, ContainerInput.SWAP), next(plan(inventory, armor(), true, true)));
-      assertEquals(new InvManager.Action(20, 1, ContainerInput.THROW), next(plan(inventory, armor(), false, true)));
+      assertEquals(new InventoryManager.Action(20, 0, ContainerInput.SWAP), next(plan(inventory, armor(), true, true)));
+      assertEquals(new InventoryManager.Action(20, 1, ContainerInput.THROW), next(plan(inventory, armor(), false, true)));
    }
 
    @Test void equalWeaponsAndApplesKeepTheirConfiguredSlots() {
@@ -66,7 +66,7 @@ final class InventoryBehaviorTest {
       inventory[2] = new ItemStack(Items.ENCHANTED_GOLDEN_APPLE, 64); inventory[12] = new ItemStack(Items.ENCHANTED_GOLDEN_APPLE, 64);
       assertNull(next(plan(inventory, armor(), false, false)));
       var drop = next(plan(inventory, armor(), false, true));
-      assertEquals(new InvManager.Action(9, 1, ContainerInput.THROW), drop);
+      assertEquals(new InventoryManager.Action(9, 1, ContainerInput.THROW), drop);
    }
 
    @Test void fullInventorySortsThenDisposesWholeJunkStacks() {
@@ -74,7 +74,7 @@ final class InventoryBehaviorTest {
       inventory[20] = new ItemStack(Items.DIAMOND_SWORD);
       inventory[21] = new ItemStack(Items.STONE, 64); inventory[22] = new ItemStack(Items.GOLDEN_APPLE, 32);
       var worn = armor(); int clicks = 0;
-      for (InvManager.Action action; (action = next(plan(inventory, worn, false, true))) != null;) {
+      for (InventoryManager.Action action; (action = next(plan(inventory, worn, false, true))) != null;) {
          assertTrue(++clicks < 45, "Cleanup must converge");
          apply(action, inventory, worn);
       }
@@ -88,9 +88,9 @@ final class InventoryBehaviorTest {
       var inventory = items(); Arrays.fill(inventory, new ItemStack(Items.STICK, 64));
       inventory[20] = new ItemStack(Items.DIAMOND_CHESTPLATE); inventory[21] = new ItemStack(Items.DIAMOND_CHESTPLATE);
       var worn = armor(); worn.put(EquipmentSlot.CHEST, new ItemStack(Items.IRON_CHESTPLATE));
-      assertEquals(new InvManager.Action(6, 1, ContainerInput.THROW), next(plan(inventory, worn, false, true)));
+      assertEquals(new InventoryManager.Action(6, 1, ContainerInput.THROW), next(plan(inventory, worn, false, true)));
       int clicks = 0;
-      for (InvManager.Action action; (action = next(plan(inventory, worn, false, true))) != null;) {
+      for (InventoryManager.Action action; (action = next(plan(inventory, worn, false, true))) != null;) {
          assertTrue(++clicks < 45, "Armor and cleanup must converge"); apply(action, inventory, worn);
       }
       assertTrue(worn.get(EquipmentSlot.CHEST).is(Items.DIAMOND_CHESTPLATE));
@@ -100,24 +100,24 @@ final class InventoryBehaviorTest {
    @Test void occupiedArmorMovesToFreeInventoryBeforeUpgrade() {
       var inventory = items(); inventory[20] = new ItemStack(Items.DIAMOND_HELMET);
       var worn = armor(); worn.put(EquipmentSlot.HEAD, new ItemStack(Items.IRON_HELMET));
-      assertEquals(new InvManager.Action(5, 0, ContainerInput.QUICK_MOVE), next(plan(inventory, worn, false, false)));
+      assertEquals(new InventoryManager.Action(5, 0, ContainerInput.QUICK_MOVE), next(plan(inventory, worn, false, false)));
       inventory[0] = new ItemStack(Items.DIAMOND_HELMET); inventory[20] = ItemStack.EMPTY;
-      assertEquals(new InvManager.Action(5, 0, ContainerInput.SWAP), next(plan(inventory, worn, false, false)));
+      assertEquals(new InventoryManager.Action(5, 0, ContainerInput.SWAP), next(plan(inventory, worn, false, false)));
    }
 
    @Test void disabledDroppingDoesNotDestroyItemsToReplaceFullArmor() {
       var inventory = items(); Arrays.fill(inventory, new ItemStack(Items.STICK, 64)); inventory[20] = new ItemStack(Items.DIAMOND_HELMET);
       var worn = armor(); worn.put(EquipmentSlot.HEAD, new ItemStack(Items.IRON_HELMET));
       assertNull(next(plan(inventory, worn, false, false)));
-      assertEquals(new InvManager.Action(36, 1, ContainerInput.THROW), plan(inventory, worn, false, true).next(slot -> slot != 5));
+      assertEquals(new InventoryManager.Action(36, 1, ContainerInput.THROW), plan(inventory, worn, false, true).next(slot -> slot != 5));
    }
 
    @Test void toolsRetainBestAndOtherWearablesCannotBlockArmorCleanup() {
       var inventory = items(); inventory[9] = new ItemStack(Items.IRON_PICKAXE); inventory[10] = new ItemStack(Items.DIAMOND_PICKAXE);
       inventory[1] = new ItemStack(Items.STONE, 64);
       inventory[11] = new ItemStack(Items.CARVED_PUMPKIN);
-      assertNull(InvManager.Plan.armorSlot(inventory[11]));
-      assertEquals(new InvManager.Action(9, 1, ContainerInput.THROW), next(plan(inventory, armor(), false, true)));
+      assertNull(InventoryManager.Plan.armorSlot(inventory[11]));
+      assertEquals(new InventoryManager.Action(9, 1, ContainerInput.THROW), next(plan(inventory, armor(), false, true)));
       inventory[9] = ItemStack.EMPTY;
       assertNull(next(plan(inventory, armor(), false, true)));
    }
@@ -126,10 +126,10 @@ final class InventoryBehaviorTest {
       var inventory = items(); inventory[0] = new ItemStack(Items.STONE, 64); inventory[20] = new ItemStack(Items.DIAMOND_SWORD);
       inventory[21] = new ItemStack(Items.ENCHANTED_GOLDEN_APPLE, 64);
       var worn = armor();
-      var action = next(new InvManager.Plan(inventory, worn, false, false, false, 0, 0, 0));
-      assertEquals(new InvManager.Action(20, 0, ContainerInput.SWAP), action);
+      var action = next(new InventoryManager.Plan(inventory, worn, false, false, false, 0, 0, 0));
+      assertEquals(new InventoryManager.Action(20, 0, ContainerInput.SWAP), action);
       apply(action, inventory, worn);
-      assertNull(next(new InvManager.Plan(inventory, worn, false, false, false, 0, 0, 0)));
+      assertNull(next(new InventoryManager.Plan(inventory, worn, false, false, false, 0, 0, 0)));
    }
 
    @Test void closedInventoryCannotSortOrDropAndOpeningItStillCleansUp() {
@@ -142,11 +142,11 @@ final class InventoryBehaviorTest {
       inventory[22] = new ItemStack(Items.GOLDEN_APPLE, 32);
       inventory[23] = new ItemStack(Items.DIAMOND_HELMET);
       var worn = armor();
-      assertNull(new InvManager.Plan(inventory, worn, true, true, true, 0, 1, 2).next(slot -> true, false));
+      assertNull(new InventoryManager.Plan(inventory, worn, true, true, true, 0, 1, 2).next(slot -> true, false));
       assertTrue(inventory[20].is(Items.DIAMOND_SWORD));
       assertTrue(worn.isEmpty());
       int clicks = 0;
-      for (InvManager.Action action; (action = new InvManager.Plan(inventory, worn, true, true, true, 0, 1, 2)
+      for (InventoryManager.Action action; (action = new InventoryManager.Plan(inventory, worn, true, true, true, 0, 1, 2)
          .next(slot -> true, true)) != null;) {
          assertTrue(++clicks < 12, "Inventory cleanup must converge");
          apply(action, inventory, worn);
@@ -165,14 +165,14 @@ final class InventoryBehaviorTest {
       inventory[20] = new ItemStack(Items.DIAMOND_HELMET);
       var worn = armor(); worn.put(EquipmentSlot.HEAD, new ItemStack(Items.IRON_HELMET));
       assertNull(plan(inventory, worn, true, true).next(slot -> true, false));
-      assertEquals(new InvManager.Action(5, 1, ContainerInput.THROW), next(plan(inventory, worn, true, true)));
+      assertEquals(new InventoryManager.Action(5, 1, ContainerInput.THROW), next(plan(inventory, worn, true, true)));
    }
 
-   private static InvManager.Rules rules(Map<InvManager.Kind, Integer> slots, boolean drop, boolean tools, boolean food,
+   private static InventoryManager.Rules rules(Map<InventoryManager.Kind, Integer> slots, boolean drop, boolean tools, boolean food,
                                         boolean equip, boolean durability, int blocks, int projectiles, int arrows, int foods) {
-      return new InvManager.Rules(false, drop, tools, food, equip, durability, slots, blocks, projectiles, arrows, foods);
+      return new InventoryManager.Rules(false, drop, tools, food, equip, durability, slots, blocks, projectiles, arrows, foods);
    }
-   private static InvManager.Rules unsorted() { return rules(Map.of(), true, false, false, true, true, 128, 64, 256, 64); }
+   private static InventoryManager.Rules unsorted() { return rules(Map.of(), true, false, false, true, true, 128, 64, 256, 64); }
 
    @Test void allConfiguredSlotsSortAndConvergeWithoutSwappingCategoriesBack() {
       var inventory = items();
@@ -186,7 +186,7 @@ final class InventoryBehaviorTest {
       inventory[27] = new ItemStack(Items.BOW);
       inventory[28] = new ItemStack(Items.COOKED_BEEF, 16);
       int clicks = 0;
-      for (InvManager.Action action; (action = next(new InvManager.Plan(inventory, armor(), InvManager.Rules.defaults()))) != null;) {
+      for (InventoryManager.Action action; (action = next(new InventoryManager.Plan(inventory, armor(), InventoryManager.Rules.defaults()))) != null;) {
          assertTrue(++clicks <= 9); apply(action, inventory, armor());
       }
       assertEquals(9, clicks);
@@ -199,12 +199,12 @@ final class InventoryBehaviorTest {
       var inventory = items();
       inventory[20] = new ItemStack(Items.IRON_PICKAXE);
       inventory[21] = new ItemStack(Items.DIAMOND_PICKAXE);
-      var plan = new InvManager.Plan(inventory, armor(), unsorted());
-      assertEquals(new InvManager.Action(20, 1, ContainerInput.THROW), next(plan));
+      var plan = new InventoryManager.Plan(inventory, armor(), unsorted());
+      assertEquals(new InventoryManager.Action(20, 1, ContainerInput.THROW), next(plan));
       assertTrue(plan.keeps(21));
       assertEquals(-1, plan.destination(21));
       inventory[20] = ItemStack.EMPTY;
-      assertNull(next(new InvManager.Plan(inventory, armor(), unsorted())));
+      assertNull(next(new InventoryManager.Plan(inventory, armor(), unsorted())));
    }
 
    @Test void toolAndFoodDisposalAreIndependentAndNeverDiscardGoldenApples() {
@@ -214,7 +214,7 @@ final class InventoryBehaviorTest {
       inventory[22] = new ItemStack(Items.GOLDEN_APPLE, 16);
       inventory[23] = new ItemStack(Items.ENCHANTED_GOLDEN_APPLE, 8);
       var options = rules(Map.of(), false, true, true, true, true, 128, 64, 256, 64);
-      var plan = new InvManager.Plan(inventory, armor(), options);
+      var plan = new InventoryManager.Plan(inventory, armor(), options);
       assertTrue(plan.disposable(20)); assertTrue(plan.disposable(21));
       assertFalse(plan.disposable(22)); assertFalse(plan.disposable(23));
       assertTrue(plan.keeps(22)); assertTrue(plan.keeps(23));
@@ -227,11 +227,11 @@ final class InventoryBehaviorTest {
       inventory[8] = new ItemStack(Items.BREAD, 64);
       inventory[20] = new ItemStack(Items.COOKED_BEEF, 64);
       inventory[21] = new ItemStack(Items.ROTTEN_FLESH, 64);
-      var plan = new InvManager.Plan(inventory, armor(), InvManager.Rules.defaults());
-      assertEquals(new InvManager.Action(20, 8, ContainerInput.SWAP), next(plan));
+      var plan = new InventoryManager.Plan(inventory, armor(), InventoryManager.Rules.defaults());
+      assertEquals(new InventoryManager.Action(20, 8, ContainerInput.SWAP), next(plan));
       assertFalse(plan.keeps(8)); assertTrue(plan.keeps(20)); assertFalse(plan.keeps(21));
       apply(next(plan), inventory, armor());
-      var sorted = new InvManager.Plan(inventory, armor(), InvManager.Rules.defaults());
+      var sorted = new InventoryManager.Plan(inventory, armor(), InventoryManager.Rules.defaults());
       assertTrue(sorted.keeps(8)); assertTrue(sorted.disposable(20));
    }
 
@@ -249,7 +249,7 @@ final class InventoryBehaviorTest {
       var chest = new ItemStack[]{new ItemStack(Items.STONE, 64), new ItemStack(Items.EGG, 16),
          new ItemStack(Items.ARROW, 64), new ItemStack(Items.IRON_SWORD), new ItemStack(Items.DIAMOND_SWORD),
          new ItemStack(Items.IRON_HELMET), new ItemStack(Items.DIAMOND_HELMET), new ItemStack(Items.GOLDEN_APPLE, 8)};
-      var loot = new ChestStealer.LootPlan(inventory, worn, chest, InvManager.Rules.defaults(), true, true);
+      var loot = new ChestStealer.LootPlan(inventory, worn, chest, InventoryManager.Rules.defaults(), true, true);
       for (int i = 0; i < 7; i++) assertFalse(loot.wanted(i), "Should skip chest slot " + i);
       assertTrue(loot.wanted(7));
    }
@@ -271,7 +271,7 @@ final class InventoryBehaviorTest {
       var inventory = items(); inventory[20] = new ItemStack(Items.DIAMOND_HELMET);
       var worn = armor(); worn.put(EquipmentSlot.HEAD, new ItemStack(Items.IRON_HELMET));
       var options = rules(Map.of(), true, false, false, false, true, 128, 64, 256, 64);
-      var plan = new InvManager.Plan(inventory, worn, options);
+      var plan = new InventoryManager.Plan(inventory, worn, options);
       assertNull(next(plan)); assertTrue(plan.keeps(20));
    }
 
@@ -293,23 +293,23 @@ final class InventoryBehaviorTest {
       var inventory = items();
       inventory[0] = new ItemStack(Items.WOODEN_SWORD); inventory[0].set(DataComponents.CUSTOM_NAME, Component.literal("Right click to select"));
       inventory[20] = new ItemStack(Items.DIAMOND_SWORD);
-      var plan = new InvManager.Plan(inventory, armor(), InvManager.Rules.defaults());
+      var plan = new InventoryManager.Plan(inventory, armor(), InventoryManager.Rules.defaults());
       assertNull(next(plan)); assertFalse(plan.disposable(0)); assertTrue(plan.keeps(20));
-      var loot = new ChestStealer.LootPlan(inventory, armor(), new ItemStack[]{new ItemStack(Items.NETHERITE_SWORD)}, InvManager.Rules.defaults(), true, true);
-      assertEquals(ContainerInput.QUICK_MOVE, loot.next("Index", 0, i -> true, i -> true, (a, b) -> true, i -> false).input());
+      var loot = new ChestStealer.LootPlan(inventory, armor(), new ItemStack[]{new ItemStack(Items.NETHERITE_SWORD)}, InventoryManager.Rules.defaults(), true, true);
+      assertEquals(ContainerInput.QUICK_MOVE, loot.next("Index", 0, i -> true, i -> true, (leftSlot, rightSlot) -> true, i -> false).input());
    }
 
    @Test void stackMergingPreservesCountAndAbortsWhenCursorOwnershipChanges() {
       var inventory = items(); inventory[10] = new ItemStack(Items.STONE, 40); inventory[11] = new ItemStack(Items.STONE, 40);
-      var merge = new InvManager.Plan(inventory, armor(), unsorted()).merge(i -> true);
-      assertEquals(new InvManager.Merge(11, 10), merge);
-      var sequence = new InvManager.MergeSequence(11, 10, inventory[11], inventory[10]);
-      assertEquals(new InvManager.Action(11, 0, ContainerInput.PICKUP), sequence.next(ItemStack.EMPTY, inventory[11], inventory[10]));
-      assertEquals(new InvManager.Action(10, 0, ContainerInput.PICKUP), sequence.next(inventory[11], ItemStack.EMPTY, inventory[10]));
-      assertEquals(new InvManager.Action(11, 0, ContainerInput.PICKUP),
+      var merge = new InventoryManager.Plan(inventory, armor(), unsorted()).merge(i -> true);
+      assertEquals(new InventoryManager.Merge(11, 10), merge);
+      var sequence = new InventoryManager.MergeSequence(11, 10, inventory[11], inventory[10]);
+      assertEquals(new InventoryManager.Action(11, 0, ContainerInput.PICKUP), sequence.next(ItemStack.EMPTY, inventory[11], inventory[10]));
+      assertEquals(new InventoryManager.Action(10, 0, ContainerInput.PICKUP), sequence.next(inventory[11], ItemStack.EMPTY, inventory[10]));
+      assertEquals(new InventoryManager.Action(11, 0, ContainerInput.PICKUP),
          sequence.next(new ItemStack(Items.STONE, 16), ItemStack.EMPTY, new ItemStack(Items.STONE, 64)));
       assertNull(sequence.next(ItemStack.EMPTY, new ItemStack(Items.STONE, 16), new ItemStack(Items.STONE, 64)));
-      var interrupted = new InvManager.MergeSequence(11, 10, inventory[11], inventory[10]);
+      var interrupted = new InventoryManager.MergeSequence(11, 10, inventory[11], inventory[10]);
       interrupted.next(ItemStack.EMPTY, inventory[11], inventory[10]);
       assertNull(interrupted.next(new ItemStack(Items.STICK, 40), ItemStack.EMPTY, inventory[10]));
    }
@@ -330,13 +330,13 @@ final class InventoryBehaviorTest {
       var inventory = items(); Arrays.fill(inventory, new ItemStack(Items.ENDER_PEARL, 16));
       inventory[0] = new ItemStack(Items.IRON_SWORD);
       var chest = new ItemStack[]{new ItemStack(Items.DIAMOND_SWORD)};
-      var plan = new ChestStealer.LootPlan(inventory, armor(), chest, InvManager.Rules.defaults(), true, true);
+      var plan = new ChestStealer.LootPlan(inventory, armor(), chest, InventoryManager.Rules.defaults(), true, true);
       assertEquals(new ChestStealer.LootAction(0, 0, ContainerInput.SWAP),
-         plan.next("Index", 0, i -> true, i -> false, (a, b) -> true, i -> false));
+         plan.next("Index", 0, i -> true, i -> false, (leftSlot, rightSlot) -> true, i -> false));
       assertEquals(-1, plan.disposableInventorySlot(i -> true));
-      var disabled = new ChestStealer.LootPlan(inventory, armor(), chest, InvManager.Rules.defaults(), true, false);
-      assertNull(disabled.next("Index", 0, i -> true, i -> false, (a, b) -> true, i -> false));
-      assertTrue(disabled.hasWanted()); assertFalse(disabled.hasRoom(i -> false, (a, b) -> true));
+      var disabled = new ChestStealer.LootPlan(inventory, armor(), chest, InventoryManager.Rules.defaults(), true, false);
+      assertNull(disabled.next("Index", 0, i -> true, i -> false, (leftSlot, rightSlot) -> true, i -> false));
+      assertTrue(disabled.hasWanted()); assertFalse(disabled.hasRoom(i -> false, (leftSlot, rightSlot) -> true));
    }
 
    @Test void failedTransfersSkipTheSlotUntilActualInventoryContentsChange() {
@@ -344,14 +344,14 @@ final class InventoryBehaviorTest {
       var plan = new ChestStealer.LootPlan(inventory, armor(),
          new ItemStack[]{new ItemStack(Items.ENDER_PEARL, 16), new ItemStack(Items.GOLDEN_APPLE, 8)}, unsorted(), true, false);
       var tracker = new ChestStealer.TransferTracker(); tracker.refresh(plan.items, plan.chestSize);
-      assertEquals(0, plan.next("Index", 0, i -> true, i -> true, (a, b) -> false, tracker::rejected).slot());
+      assertEquals(0, plan.next("Index", 0, i -> true, i -> true, (leftSlot, rightSlot) -> false, tracker::rejected).slot());
       tracker.reject(0); tracker.refresh(plan.items, plan.chestSize);
-      assertEquals(1, plan.next("Index", 0, i -> true, i -> true, (a, b) -> false, tracker::rejected).slot());
+      assertEquals(1, plan.next("Index", 0, i -> true, i -> true, (leftSlot, rightSlot) -> false, tracker::rejected).slot());
       tracker.reject(1);
       tracker.reject(plan.chestSize + 10);
       tracker.refresh(plan.items, plan.chestSize);
       assertTrue(tracker.rejected(plan.chestSize + 10));
-      assertNull(plan.next("Index", 0, i -> true, i -> true, (a, b) -> false, tracker::rejected));
+      assertNull(plan.next("Index", 0, i -> true, i -> true, (leftSlot, rightSlot) -> false, tracker::rejected));
       plan.items[0] = new ItemStack(Items.STONE, 64); tracker.refresh(plan.items, plan.chestSize);
       assertFalse(tracker.rejected(0)); assertFalse(tracker.rejected(1));
       assertFalse(tracker.rejected(plan.chestSize + 10));
@@ -362,8 +362,8 @@ final class InventoryBehaviorTest {
       var filtered = new ChestStealer.LootPlan(items(), armor(), chest, unsorted(), true, false);
       assertFalse(filtered.hasWanted());
       var all = new ChestStealer.LootPlan(items(), armor(), chest, unsorted(), false, false);
-      assertEquals(1, all.next("Index", 0, i -> i != 0, i -> true, (a, b) -> false, i -> false).slot());
-      assertNull(all.next("Index", 0, i -> false, i -> true, (a, b) -> false, i -> false));
+      assertEquals(1, all.next("Index", 0, i -> i != 0, i -> true, (leftSlot, rightSlot) -> false, i -> false).slot());
+      assertNull(all.next("Index", 0, i -> false, i -> true, (leftSlot, rightSlot) -> false, i -> false));
    }
 
    @Test void menuMappingsMatchRealSingleAndDoubleChestSlotsAndQuickMoveMerges() {
@@ -391,28 +391,28 @@ final class InventoryBehaviorTest {
       var inventory = items();
       var worn = new ItemStack(Items.DIAMOND_PICKAXE); worn.setDamageValue(worn.getMaxDamage() - 10);
       inventory[20] = worn;
-      assertTrue(new InvManager.Plan(inventory, armor(), unsorted()).keeps(20));
+      assertTrue(new InventoryManager.Plan(inventory, armor(), unsorted()).keeps(20));
       inventory[21] = new ItemStack(Items.IRON_PICKAXE);
-      var replacement = new InvManager.Plan(inventory, armor(), unsorted());
+      var replacement = new InventoryManager.Plan(inventory, armor(), unsorted());
       assertFalse(replacement.keeps(20)); assertTrue(replacement.keeps(21));
       var elytra = new ItemStack(Items.ELYTRA); elytra.setDamageValue(elytra.getMaxDamage() - 1); inventory[22] = elytra;
-      assertTrue(new InvManager.Plan(inventory, armor(), unsorted()).keeps(22));
+      assertTrue(new InventoryManager.Plan(inventory, armor(), unsorted()).keeps(22));
    }
 
    @Test void projectileSlotFallsBackToTheBestRodAndConflictsStayStable() {
       var inventory = items(); inventory[20] = new ItemStack(Items.FISHING_ROD);
-      assertEquals(new InvManager.Action(20, 6, ContainerInput.SWAP),
-         next(new InvManager.Plan(inventory, armor(), InvManager.Rules.defaults())));
+      assertEquals(new InventoryManager.Action(20, 6, ContainerInput.SWAP),
+         next(new InventoryManager.Plan(inventory, armor(), InventoryManager.Rules.defaults())));
       inventory[21] = new ItemStack(Items.SNOWBALL, 16);
-      assertEquals(new InvManager.Action(21, 6, ContainerInput.SWAP),
-         next(new InvManager.Plan(inventory, armor(), InvManager.Rules.defaults())));
-      var slots = Map.of(InvManager.Kind.SWORD, 0, InvManager.Kind.PICKAXE, 0, InvManager.Kind.BLOCK, 0, InvManager.Kind.GAPPLE, 0);
+      assertEquals(new InventoryManager.Action(21, 6, ContainerInput.SWAP),
+         next(new InventoryManager.Plan(inventory, armor(), InventoryManager.Rules.defaults())));
+      var slots = Map.of(InventoryManager.Kind.SWORD, 0, InventoryManager.Kind.PICKAXE, 0, InventoryManager.Kind.BLOCK, 0, InventoryManager.Kind.GAPPLE, 0);
       inventory = items(); inventory[20] = new ItemStack(Items.DIAMOND_SWORD); inventory[21] = new ItemStack(Items.DIAMOND_PICKAXE);
       inventory[22] = new ItemStack(Items.STONE, 64); inventory[23] = new ItemStack(Items.GOLDEN_APPLE, 8);
       var options = rules(slots, false, false, false, false, true, 128, 64, 256, 64);
-      var action = next(new InvManager.Plan(inventory, armor(), options));
-      assertEquals(new InvManager.Action(20, 0, ContainerInput.SWAP), action); apply(action, inventory, armor());
-      assertNull(next(new InvManager.Plan(inventory, armor(), options)));
+      var action = next(new InventoryManager.Plan(inventory, armor(), options));
+      assertEquals(new InventoryManager.Action(20, 0, ContainerInput.SWAP), action); apply(action, inventory, armor());
+      assertNull(next(new InventoryManager.Plan(inventory, armor(), options)));
    }
 
    @Test void chestNameCheckAcceptsLocalizedAndDoubleChestsButRejectsShops() {
@@ -425,7 +425,7 @@ final class InventoryBehaviorTest {
       assertFalse(ChestStealer.acceptsChestName("Upgrades", "箱子", "大型箱子"));
    }
    @Test void oldDelayAndSlotSettingsLoadAndExpandedSettingsRoundTrip() {
-      var manager = new InvManager(); var stealer = new ChestStealer();
+      var manager = new InventoryManager(); var stealer = new ChestStealer();
       var modules = List.<Feature>of(manager, stealer);
       var old = ModuleConfigCodec.snapshot(modules, ModuleConfigCodec.Scope.GAMEPLAY, false);
       for (String module : List.of("InvManager", "ChestStealer")) {
@@ -434,24 +434,24 @@ final class InventoryBehaviorTest {
       }
       old.getAsJsonObject("InvManager").getAsJsonObject("settings").addProperty("Gapple Slot", 3);
       ModuleConfigCodec.prepare(modules, old, ModuleConfigCodec.Scope.GAMEPLAY, true).run();
-      assertEquals(4, number(manager, "Delay Max").m220()); assertEquals(4, number(stealer, "Delay Max").m220());
+      assertEquals(4, number(manager, "Delay Max").getValue()); assertEquals(4, number(stealer, "Delay Max").getValue());
       assertFalse(old.getAsJsonObject("InvManager").getAsJsonObject("settings").has("Delay Max"));
-      number(manager, "Pickaxe Slot").m223(0);
-      number(manager, "Max Food").m223(32);
-      ((BooleanSetting)manager.settings.stream().filter(s -> s.getName().equals("Drop Food")).findFirst().orElseThrow()).m217(true);
-      number(manager, "Delay Max").m223(8);
+      number(manager, "Pickaxe Slot").setValue(0);
+      number(manager, "Max Food").setValue(32);
+      ((BooleanSetting)manager.settings.stream().filter(s -> s.getName().equals("Drop Food")).findFirst().orElseThrow()).setValue(true);
+      number(manager, "Delay Max").setValue(8);
       var saved = ModuleConfigCodec.snapshot(modules, ModuleConfigCodec.Scope.GAMEPLAY, false);
-      var loaded = new InvManager();
+      var loaded = new InventoryManager();
       ModuleConfigCodec.prepare(List.of(loaded), saved, ModuleConfigCodec.Scope.GAMEPLAY, true).run();
-      assertEquals(-1, loaded.rules().slot(InvManager.Kind.PICKAXE));
+      assertEquals(-1, loaded.rules().slot(InventoryManager.Kind.PICKAXE));
       assertTrue(loaded.rules().dropFood()); assertEquals(32, loaded.rules().maxFood());
-      assertEquals(3, number(loaded, "Gapple Slot").m220());
-      assertEquals(8, number(loaded, "Delay Max").m220());
+      assertEquals(3, number(loaded, "Gapple Slot").getValue());
+      assertEquals(8, number(loaded, "Delay Max").getValue());
    }
 
-   private static void apply(InvManager.Action action, ItemStack[] inventory, EnumMap<EquipmentSlot, ItemStack> worn) {
+   private static void apply(InventoryManager.Action action, ItemStack[] inventory, EnumMap<EquipmentSlot, ItemStack> worn) {
       int slot = action.slot();
-      EquipmentSlot armorSlot = slot >= 5 && slot <= 8 ? InvManager.Plan.ARMOR[slot - 5] : null;
+      EquipmentSlot armorSlot = slot >= 5 && slot <= 8 ? InventoryManager.Plan.ARMOR[slot - 5] : null;
       int index = slot >= 36 ? slot - 36 : slot;
       ItemStack stack = armorSlot == null ? inventory[index] : worn.getOrDefault(armorSlot, ItemStack.EMPTY);
       switch (action.input()) {
@@ -465,7 +465,7 @@ final class InventoryBehaviorTest {
                int free = 0; while (!inventory[free].isEmpty()) free++;
                inventory[free] = stack; worn.put(armorSlot, ItemStack.EMPTY);
             } else {
-               worn.put(InvManager.Plan.armorSlot(stack), stack); inventory[index] = ItemStack.EMPTY;
+               worn.put(InventoryManager.Plan.armorSlot(stack), stack); inventory[index] = ItemStack.EMPTY;
             }
          }
          default -> fail("Unexpected click " + action);

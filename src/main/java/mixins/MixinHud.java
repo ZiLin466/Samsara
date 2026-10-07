@@ -25,8 +25,8 @@ public class MixinHud {
       ),
       index = 3
    )
-   private int pm$30(int var1) {
-      return var1 - this.pm$24();
+   private int samsara$offsetScoreboardBottom(int coordinate) {
+      return coordinate - this.samsara$scoreboardOffsetY();
    }
 
    @ModifyArg(
@@ -37,8 +37,8 @@ public class MixinHud {
       ),
       index = 1
    )
-   private int pm$29(int var1) {
-      return var1 - this.pm$24();
+   private int samsara$offsetScoreboardTop(int coordinate) {
+      return coordinate - this.samsara$scoreboardOffsetY();
    }
 
    @ModifyArg(
@@ -49,16 +49,16 @@ public class MixinHud {
       ),
       index = 0
    )
-   private int pm$27(int var1) {
-      return var1 - this.pm$23();
+   private int samsara$offsetScoreboardLeft(int coordinate) {
+      return coordinate - this.samsara$scoreboardOffsetX();
    }
 
-   private int pm$23() {
-      return FeatureManager.f32.isEnabled() ? (int)FeatureManager.f32.f32.m220() : 0;
+   private int samsara$scoreboardOffsetX() {
+      return FeatureManager.scoreboard.isEnabled() ? (int)FeatureManager.scoreboard.x.getValue() : 0;
    }
 
-   private int pm$24() {
-      return FeatureManager.f32.isEnabled() ? (int)FeatureManager.f32.f33.m220() : 0;
+   private int samsara$scoreboardOffsetY() {
+      return FeatureManager.scoreboard.isEnabled() ? (int)FeatureManager.scoreboard.y.getValue() : 0;
    }
 
    @ModifyArg(
@@ -69,8 +69,8 @@ public class MixinHud {
       ),
       index = 2
    )
-   private int pm$28(int var1) {
-      return var1 - this.pm$23();
+   private int samsara$offsetScoreboardRight(int coordinate) {
+      return coordinate - this.samsara$scoreboardOffsetX();
    }
 
    @ModifyArg(
@@ -81,8 +81,8 @@ public class MixinHud {
       ),
       index = 2
    )
-   private int pm$25(int var1) {
-      return var1 - this.pm$23();
+   private int samsara$offsetScoreboardTextX(int coordinate) {
+      return coordinate - this.samsara$scoreboardOffsetX();
    }
 
    @ModifyArg(
@@ -93,7 +93,7 @@ public class MixinHud {
       ),
       index = 3
    )
-   private int pm$26(int var1) {
-      return var1 - this.pm$24();
+   private int samsara$offsetScoreboardTextY(int coordinate) {
+      return coordinate - this.samsara$scoreboardOffsetY();
    }
 }

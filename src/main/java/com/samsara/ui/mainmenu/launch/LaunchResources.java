@@ -15,7 +15,7 @@ public final class LaunchResources {
             .flatMap(c -> c.findPath("assets/samsara/" + name))
             .orElseThrow(() -> new IllegalStateException("Missing launch resource: " + name));
          try { return Files.readAllBytes(path); }
-         catch (IOException e) { throw new IllegalStateException("Cannot read launch resource: " + name, e); }
+         catch (IOException error) { throw new IllegalStateException("Cannot read launch resource: " + name, error); }
       });
       return renderer;
    }

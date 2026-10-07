@@ -3,28 +3,28 @@ package com.samsara.event.impl;
 import com.samsara.event.Event;
 
 public class EventSprint extends Event {
-   private boolean f120;
-   private int f119;
+   private boolean sprinting;
+   private int sprintTriggerTime;
 
-   public EventSprint m95(int var1, boolean var2) {
-      this.f119 = var1;
-      this.f120 = var2;
+   public EventSprint reset(int sprintTriggerTime, boolean sprinting) {
+      this.sprintTriggerTime = sprintTriggerTime;
+      this.sprinting = sprinting;
       return this;
    }
 
-   public boolean m98() {
-      return this.f120;
+   public boolean isSprinting() {
+      return this.sprinting;
    }
 
-   public int m96() {
-      return this.f119;
+   public int getSprintTriggerTime() {
+      return this.sprintTriggerTime;
    }
 
-   public void m99(boolean var1) {
-      this.f120 = var1;
+   public void setSprinting(boolean sprinting) {
+      this.sprinting = sprinting;
    }
 
-   public void m97(int var1) {
-      this.f119 = var1;
+   public void setSprintTriggerTime(int sprintTriggerTime) {
+      this.sprintTriggerTime = sprintTriggerTime;
    }
 }

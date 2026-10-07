@@ -39,10 +39,10 @@ public final class SamsaraTitleScreen extends Screen implements NanoGui {
       if (!NVGRenderer.isAvailable()) {
          for (int i = 0; i < 5; i++) {
             var tile = LaunchLayout.ACTIONS.get(i);
-            addRenderableWidget(Button.builder(Component.literal(tile.label()), b -> activate(tile.id()))
+            addRenderableWidget(Button.builder(Component.literal(tile.label()), button -> activate(tile.id()))
                .bounds(width / 2 - 100, Math.max(30, height / 2 - 68) + i * 24, 200, 20).build());
          }
-         addRenderableWidget(Button.builder(Component.literal("退出游戏"), b -> minecraft.stop())
+         addRenderableWidget(Button.builder(Component.literal("退出游戏"), button -> minecraft.stop())
             .bounds(width / 2 - 100, Math.max(30, height / 2 - 68) + 120, 200, 20).build());
       }
    }

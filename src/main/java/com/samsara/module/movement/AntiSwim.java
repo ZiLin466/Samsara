@@ -2,12 +2,11 @@ package com.samsara.module.movement;
 
 import com.samsara.module.Category;
 import com.samsara.module.Feature;
-import java.nio.charset.StandardCharsets;
 
 public class AntiSwim extends Feature {
-   private static final String f366 = "AntiSwim";
+   private static final String ANTI_SWIM_LABEL = "AntiSwim";
 
    public AntiSwim() {
-      super(f366, Category.MOVEMENT);
+      super(ANTI_SWIM_LABEL, Category.MOVEMENT);
    }
 }

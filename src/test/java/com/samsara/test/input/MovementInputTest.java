@@ -17,15 +17,15 @@ final class MovementInputTest {
       var modules = FeatureManager.getModules();
       Feature fixture = new Feature("Input fixture", Category.MOVEMENT) {
          @Override public void onEvent(Event event) {
-            if (event == Events.f7) {
-               assertTrue(Events.f7.m48()); assertFalse(Events.f7.m49());
-               assertFalse(Events.f7.m52()); assertTrue(Events.f7.m54());
-               Events.f7.m59(true);
+            if (event == Events.MOVE_INPUT) {
+               assertTrue(Events.MOVE_INPUT.isForward()); assertFalse(Events.MOVE_INPUT.isBackward());
+               assertFalse(Events.MOVE_INPUT.isJump()); assertTrue(Events.MOVE_INPUT.isSprint());
+               Events.MOVE_INPUT.setJump(true);
             }
          }
       };
       var enabled = Feature.class.getDeclaredField("enabled"); enabled.setAccessible(true); enabled.set(fixture, true);
-      modules.add(fixture); Events.f7.sortModules();
+      modules.add(fixture); Events.MOVE_INPUT.sortModules();
       try {
          Method method = MixinKeyboardInput.class.getDeclaredMethod("samsara$movementInput", Input.class);
          method.setAccessible(true);
@@ -34,6 +34,6 @@ final class MovementInputTest {
          assertFalse(original.jump()); assertTrue(changed.jump());
          assertTrue(changed.forward()); assertTrue(changed.sprint());
          assertFalse(changed.backward()); assertFalse(changed.left()); assertFalse(changed.right());
-      } finally { modules.remove(fixture); Events.f7.sortModules(); }
+      } finally { modules.remove(fixture); Events.MOVE_INPUT.sortModules(); }
    }
 }

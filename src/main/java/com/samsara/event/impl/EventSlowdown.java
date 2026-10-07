@@ -3,18 +3,18 @@ package com.samsara.event.impl;
 import com.samsara.event.Event;
 
 public class EventSlowdown extends Event {
-   private float f118;
+   private float speedMultiplier;
 
-   public EventSlowdown m92(float var1) {
-      this.f118 = var1;
+   public EventSlowdown reset(float speedMultiplier) {
+      this.speedMultiplier = speedMultiplier;
       return this;
    }
 
-   public float m93() {
-      return this.f118;
+   public float getSpeedMultiplier() {
+      return this.speedMultiplier;
    }
 
-   public void m94(float var1) {
-      this.f118 = var1;
+   public void setSpeedMultiplier(float speedMultiplier) {
+      this.speedMultiplier = speedMultiplier;
    }
 }

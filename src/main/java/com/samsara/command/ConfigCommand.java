@@ -14,9 +14,9 @@ public final class ConfigCommand extends Command {
          if (args.length < 3) { SamsaraClient.sendPrefixedMessage("Usage: ." + this.syntax); return; }
          String name = String.join(" ", java.util.Arrays.copyOfRange(args, 2, args.length));
          switch (args[1].toLowerCase(java.util.Locale.ROOT)) {
-            case "save" -> { ConfigManager.m32(name); SamsaraClient.sendPrefixedMessage("Saved " + name); }
-            case "load" -> { ConfigManager.m33(name); SamsaraClient.sendPrefixedMessage("Loaded " + name); }
-            case "delete" -> SamsaraClient.sendPrefixedMessage(ConfigManager.m36(name) ? "Deleted " + name : "Config not found");
+            case "save" -> { ConfigManager.saveConfig(name); SamsaraClient.sendPrefixedMessage("Saved " + name); }
+            case "load" -> { ConfigManager.loadConfig(name); SamsaraClient.sendPrefixedMessage("Loaded " + name); }
+            case "delete" -> SamsaraClient.sendPrefixedMessage(ConfigManager.deleteConfig(name) ? "Deleted " + name : "Config not found");
             default -> SamsaraClient.sendPrefixedMessage("Usage: ." + this.syntax);
          }
       } catch (RuntimeException error) { SamsaraClient.sendPrefixedMessage("Config error: " + error.getMessage()); }

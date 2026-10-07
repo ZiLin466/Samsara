@@ -4,18 +4,18 @@ import com.samsara.event.Event;
 import net.minecraft.network.protocol.Packet;
 
 public class EventPacketReceive extends Event {
-   private Packet f93;
+   private Packet packet;
 
-   public EventPacketReceive m40(Packet var1) {
-      this.f93 = var1;
+   public EventPacketReceive reset(Packet packet) {
+      this.packet = packet;
       return this;
    }
 
-   public Packet m41() {
-      return this.f93;
+   public Packet getPacket() {
+      return this.packet;
    }
 
-   public void m42(Packet var1) {
-      this.f93 = var1;
+   public void setPacket(Packet packet) {
+      this.packet = packet;
    }
 }

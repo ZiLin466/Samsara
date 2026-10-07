@@ -20,16 +20,16 @@ final class ModuleConfigCodecTest {
    @Test void gameplayPresetsCarryVisualBindingsButPreserveVisualParametersEvenFromOldFullConfigs() {
       var gameplay=new Fixture("Gameplay",Category.COMBAT);var visual=new Fixture("Visual",Category.VISUAL);
       var modules=List.<Feature>of(gameplay,visual);
-      gameplay.flag.m217(true);visual.flag.m217(true);visual.setKey(33);
+      gameplay.flag.setValue(true);visual.flag.setValue(true);visual.setKey(33);
       var full=ModuleConfigCodec.snapshot(modules,ModuleConfigCodec.Scope.ALL,false);
       var visualPreset=ModuleConfigCodec.snapshot(modules,ModuleConfigCodec.Scope.GAMEPLAY,false).getAsJsonObject("Visual");
       assertEquals(java.util.Set.of("key"),visualPreset.keySet());assertEquals(33,visualPreset.get("key").getAsInt());
       full.getAsJsonObject("Gameplay").remove("enabled");full.getAsJsonObject("Visual").remove("enabled");
-      gameplay.flag.m217(false);visual.flag.m217(false);visual.setKey(44);
+      gameplay.flag.setValue(false);visual.flag.setValue(false);visual.setKey(44);
       ModuleConfigCodec.prepare(modules,full,ModuleConfigCodec.Scope.GAMEPLAY).run();
-      assertTrue(gameplay.flag.m215());assertFalse(visual.flag.m215());assertEquals(33,visual.getKey());
+      assertTrue(gameplay.flag.getValue());assertFalse(visual.flag.getValue());assertEquals(33,visual.getKey());
       ModuleConfigCodec.prepare(modules,full,ModuleConfigCodec.Scope.ALL).run();
-      assertTrue(visual.flag.m215());assertEquals(33,visual.getKey());
+      assertTrue(visual.flag.getValue());assertEquals(33,visual.getKey());
    }
    @Test void defaultAndSavedPresetsRestoreBindingsForEveryCategoryWithoutVisualLifecycleChanges() {
       var modules=java.util.Arrays.stream(Category.values())
@@ -39,12 +39,12 @@ final class ModuleConfigCodecTest {
       var defaults=ModuleConfigCodec.snapshot(List.copyOf(modules),ModuleConfigCodec.Scope.GAMEPLAY,true);
       for (var module:modules) module.setKey(0);
       var visual=modules.stream().filter(m->m.getCategory()==Category.VISUAL).findFirst().orElseThrow();
-      visual.setHidden(true);visual.flag.m217(true);
+      visual.setHidden(true);visual.flag.setValue(true);
       ModuleConfigCodec.prepare(List.copyOf(modules),saved,ModuleConfigCodec.Scope.GAMEPLAY).run();
       for (var module:modules) assertEquals(module.getDefaultKey()+20,module.getKey());
       ModuleConfigCodec.prepare(List.copyOf(modules),defaults,ModuleConfigCodec.Scope.GAMEPLAY).run();
       for (var module:modules) assertEquals(module.getDefaultKey(),module.getKey());
-      assertTrue(visual.flag.m215());assertTrue(visual.isHidden());assertFalse(visual.isEnabled());assertEquals(0,visual.enabledCalls);
+      assertTrue(visual.flag.getValue());assertTrue(visual.isHidden());assertFalse(visual.isEnabled());assertEquals(0,visual.enabledCalls);
    }
    @Test void invalidLaterSettingCannotPartiallyApplyEarlierSettings() {
       var module=new Fixture("Gameplay",Category.COMBAT);
@@ -52,7 +52,7 @@ final class ModuleConfigCodecTest {
       var values=config.getAsJsonObject("Gameplay").getAsJsonObject("settings");
       values.addProperty("Flag",true);values.addProperty("Mode","missing");
       assertThrows(IllegalArgumentException.class,()->ModuleConfigCodec.prepare(List.of(module),config,ModuleConfigCodec.Scope.ALL));
-      assertFalse(module.flag.m215());
+      assertFalse(module.flag.getValue());
    }
    @Test void startupRestoresGameplayFlagsWithoutCallingWorldDependentHooks() {
       var module=new Fixture("WorldModule",Category.PLAYER);
@@ -76,6 +76,6 @@ final class ModuleConfigCodecTest {
          assertEquals("WTap",saved.getAsJsonObject("SprintReset").getAsJsonObject("settings").get("Mode").getAsString());
       }
       var mode=(ModeSetting)module.settings.stream().filter(s->s instanceof ModeSetting).findFirst().orElseThrow();
-      assertThrows(IllegalArgumentException.class,()->mode.m226("invalid"));assertEquals("WTap",mode.m224());
+      assertThrows(IllegalArgumentException.class,()->mode.setValue("invalid"));assertEquals("WTap",mode.getValue());
    }
 }

@@ -21,13 +21,13 @@ public class MixinTimer {
    private float deltaTicks;
 
    @Overwrite
-   public int advanceGameTime(long var1) {
-      this.deltaTicks = (float)(var1 - this.lastMs)
+   public int advanceGameTime(long lastMs) {
+      this.deltaTicks = (float)(lastMs - this.lastMs)
          / (TimerController.isDefault() ? this.targetMsptProvider.apply(this.msPerTick) : this.msPerTick / TimerController.getMultiplier());
-      this.lastMs = var1;
+      this.lastMs = lastMs;
       this.deltaTickResidual = this.deltaTickResidual + this.deltaTicks;
-      int var3 = (int)this.deltaTickResidual;
-      this.deltaTickResidual -= (float)var3;
-      return var3;
+      int deltaTickResidual = (int)this.deltaTickResidual;
+      this.deltaTickResidual -= (float)deltaTickResidual;
+      return deltaTickResidual;
    }
 }

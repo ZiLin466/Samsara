@@ -37,7 +37,7 @@ import net.minecraft.world.level.block.FallingBlock;
 import net.minecraft.world.level.EmptyBlockGetter;
 import net.minecraft.core.BlockPos;
 
-public class InvManager extends Feature {
+public class InventoryManager extends Feature {
    private final NumberSetting delay = new NumberSetting("Delay", this, 2, 0, 20, 1);
    private final NumberSetting delayMax = new NumberSetting("Delay Max", this, 2, 0, 20, 1);
    private final NumberSetting openDelay = new NumberSetting("Open Delay", this, 1, 0, 20, 1);
@@ -65,15 +65,15 @@ public class InvManager extends Feature {
    private int elapsed, waitTicks;
    private MergeSequence merging;
 
-   public InvManager() {
+   public InventoryManager() {
       super("InvManager", Category.PLAYER);
       this.delay.setDisplayName("Min Delay");
       this.delayMax.setDisplayName("Max Delay");
-      this.pickaxeSlot.setVisible(() -> !this.dropTools.m215());
-      this.shovelSlot.setVisible(() -> !this.dropTools.m215());
-      this.axeSlot.setVisible(() -> !this.dropTools.m215());
-      this.foodSlot.setVisible(() -> !this.dropFood.m215());
-      this.maxFood.setVisible(() -> !this.dropFood.m215());
+      this.pickaxeSlot.setVisible(() -> !this.dropTools.getValue());
+      this.shovelSlot.setVisible(() -> !this.dropTools.getValue());
+      this.axeSlot.setVisible(() -> !this.dropTools.getValue());
+      this.foodSlot.setVisible(() -> !this.dropFood.getValue());
+      this.maxFood.setVisible(() -> !this.dropFood.getValue());
    }
 
    private NumberSetting slot(String name, int value) { return new NumberSetting(name, this, value, 0, 9, 1); }
@@ -87,7 +87,7 @@ public class InvManager extends Feature {
    }
 
    @Override public void onEvent(Event event) {
-      if (event != Events.f3) return;
+      if (event != Events.ROTATION) return;
       if (mc.player == null || mc.level == null || mc.gameMode == null || mc.player.isSpectator()
           || !(mc.gui.screen() instanceof InventoryScreen) || mc.player.containerMenu != mc.player.inventoryMenu) {
          reset();
@@ -99,7 +99,7 @@ public class InvManager extends Feature {
          this.world = mc.level;
          this.player = mc.player;
          this.menu = inventoryMenu;
-         this.waitTicks = (int)this.openDelay.m220();
+         this.waitTicks = (int)this.openDelay.getValue();
       }
       if (this.lastTick == mc.player.tickCount) return;
       this.lastTick = mc.player.tickCount;
@@ -139,7 +139,7 @@ public class InvManager extends Feature {
       }
       mc.gameMode.handleContainerInput(activeMenu.containerId, action.slot(), action.button(), action.input(), mc.player);
       this.elapsed = 0;
-      this.waitTicks = randomDelay((int)this.delay.m220(), (int)this.delayMax.m220());
+      this.waitTicks = randomDelay((int)this.delay.getValue(), (int)this.delayMax.getValue());
    }
 
    private boolean isMoving() {
@@ -151,23 +151,23 @@ public class InvManager extends Feature {
 
    Rules rules() {
       var slots = new EnumMap<Kind, Integer>(Kind.class);
-      slots.put(Kind.SWORD, (int)this.swordSlot.m220() - 1);
-      slots.put(Kind.BLOCK, (int)this.blockSlot.m220() - 1);
-      slots.put(Kind.GAPPLE, (int)this.gappleSlot.m220() - 1);
-      slots.put(Kind.PICKAXE, (int)this.pickaxeSlot.m220() - 1);
-      slots.put(Kind.SHOVEL, (int)this.shovelSlot.m220() - 1);
-      slots.put(Kind.AXE, (int)this.axeSlot.m220() - 1);
-      slots.put(Kind.PROJECTILE, (int)this.projectileSlot.m220() - 1);
-      slots.put(Kind.BOW, (int)this.bowSlot.m220() - 1);
-      slots.put(Kind.FOOD, (int)this.foodSlot.m220() - 1);
-      return new Rules(this.hypixel.m215(), this.dropItems.m215(), this.dropTools.m215(), this.dropFood.m215(),
-         this.autoArmor.m215(), this.checkDurability.m215(), slots,
-         (int)this.maxBlocks.m220(), (int)this.maxProjectiles.m220(), (int)this.maxArrows.m220(), (int)this.maxFood.m220());
+      slots.put(Kind.SWORD, (int)this.swordSlot.getValue() - 1);
+      slots.put(Kind.BLOCK, (int)this.blockSlot.getValue() - 1);
+      slots.put(Kind.GAPPLE, (int)this.gappleSlot.getValue() - 1);
+      slots.put(Kind.PICKAXE, (int)this.pickaxeSlot.getValue() - 1);
+      slots.put(Kind.SHOVEL, (int)this.shovelSlot.getValue() - 1);
+      slots.put(Kind.AXE, (int)this.axeSlot.getValue() - 1);
+      slots.put(Kind.PROJECTILE, (int)this.projectileSlot.getValue() - 1);
+      slots.put(Kind.BOW, (int)this.bowSlot.getValue() - 1);
+      slots.put(Kind.FOOD, (int)this.foodSlot.getValue() - 1);
+      return new Rules(this.hypixel.getValue(), this.dropItems.getValue(), this.dropTools.getValue(), this.dropFood.getValue(),
+         this.autoArmor.getValue(), this.checkDurability.getValue(), slots,
+         (int)this.maxBlocks.getValue(), (int)this.maxProjectiles.getValue(), (int)this.maxArrows.getValue(), (int)this.maxFood.getValue());
    }
 
    static Rules sharedRules() {
       var modules = FeatureManager.getModules();
-      if (modules != null) for (Feature feature : modules) if (feature instanceof InvManager manager) return manager.rules();
+      if (modules != null) for (Feature feature : modules) if (feature instanceof InventoryManager manager) return manager.rules();
       return Rules.defaults();
    }
 
@@ -256,7 +256,7 @@ public class InvManager extends Feature {
          for (EquipmentSlot slot : ARMOR) {
             ItemStack equipped = worn.getOrDefault(slot, ItemStack.EMPTY);
             Comparator<ItemStack> comparator = armorComparator(slot);
-            int candidate = best(s -> armorSlot(s) == slot, comparator, -1);
+            int candidate = best(stack -> armorSlot(stack) == slot, comparator, -1);
             if (candidate >= 0 && !equipped.isEmpty() && usable(equipped) && comparator.compare(items[candidate], equipped) <= 0) candidate = -1;
             this.bestArmor.put(slot, candidate);
             retain(candidate);
@@ -269,13 +269,13 @@ public class InvManager extends Feature {
             if (kind == Kind.ROD && target < 0 && this.best.getOrDefault(Kind.PROJECTILE, -1) < 0) target = rules.slot(Kind.PROJECTILE);
             if (target < 0 || target > 8 || claimed[target]) target = -1;
             final int preferred = target;
-            candidates.sort((a, b) -> {
-               if (a.equals(b)) return 0;
-               int quality = comparator(kind).compare(items[b], items[a]);
+            candidates.sort((leftSlot, rightSlot) -> {
+               if (leftSlot.equals(rightSlot)) return 0;
+               int quality = comparator(kind).compare(items[rightSlot], items[leftSlot]);
                if (quality != 0) return quality;
-               if (a == preferred) return -1;
-               if (b == preferred) return 1;
-               return Integer.compare(a, b);
+               if (leftSlot == preferred) return -1;
+               if (rightSlot == preferred) return 1;
+               return Integer.compare(leftSlot, rightSlot);
             });
             int count = 0, selected = -1;
             for (int index : candidates) {
@@ -395,17 +395,17 @@ public class InvManager extends Feature {
       }
       private Comparator<ItemStack> comparator(Kind kind) {
          Comparator<ItemStack> quality = switch (kind) {
-            case SWORD -> Comparator.comparingDouble(s -> swordDamage(s, this.rules.hypixel()));
+            case SWORD -> Comparator.comparingDouble(stack -> swordDamage(stack, this.rules.hypixel()));
             case PICKAXE, SHOVEL, AXE, HOE -> Comparator.comparingDouble(Plan::toolQuality);
-            case BOW -> Comparator.comparingDouble(s -> enchantment(s, Enchantments.POWER) * 5
-               + enchantment(s, Enchantments.FLAME) + enchantment(s, Enchantments.INFINITY) * .1);
-            case CROSSBOW -> Comparator.comparingInt(s -> enchantment(s, Enchantments.QUICK_CHARGE) * 5 + enchantment(s, Enchantments.MULTISHOT));
-            case ROD -> Comparator.comparingInt(s -> enchantment(s, Enchantments.UNBREAKING));
-            case FOOD -> Comparator.<ItemStack>comparingDouble(s -> s.get(DataComponents.FOOD).saturation()
-               / Math.max(1, s.get(DataComponents.FOOD).nutrition())).thenComparingInt(s -> s.get(DataComponents.FOOD).nutrition());
-            case GAPPLE -> Comparator.comparing(s -> s.is(Items.ENCHANTED_GOLDEN_APPLE));
-            case BLOCK -> Comparator.comparing(s -> ((BlockItem)s.getItem()).getBlock().defaultBlockState().isSolidRender());
-            default -> (a, b) -> 0;
+            case BOW -> Comparator.comparingDouble(stack -> enchantment(stack, Enchantments.POWER) * 5
+               + enchantment(stack, Enchantments.FLAME) + enchantment(stack, Enchantments.INFINITY) * .1);
+            case CROSSBOW -> Comparator.comparingInt(stack -> enchantment(stack, Enchantments.QUICK_CHARGE) * 5 + enchantment(stack, Enchantments.MULTISHOT));
+            case ROD -> Comparator.comparingInt(stack -> enchantment(stack, Enchantments.UNBREAKING));
+            case FOOD -> Comparator.<ItemStack>comparingDouble(stack -> stack.get(DataComponents.FOOD).saturation()
+               / Math.max(1, stack.get(DataComponents.FOOD).nutrition())).thenComparingInt(stack -> stack.get(DataComponents.FOOD).nutrition());
+            case GAPPLE -> Comparator.comparing(stack -> stack.is(Items.ENCHANTED_GOLDEN_APPLE));
+            case BLOCK -> Comparator.comparing(stack -> ((BlockItem)stack.getItem()).getBlock().defaultBlockState().isSolidRender());
+            default -> (leftStack, rightStack) -> 0;
          };
          return unique(kind) ? quality.thenComparingInt(Plan::durability) : quality.thenComparingInt(ItemStack::getCount);
       }
@@ -419,9 +419,9 @@ public class InvManager extends Feature {
             toughness += attribute(stack, other, Attributes.ARMOR_TOUGHNESS);
          }
          final double kitDefense = defense, kitToughness = toughness;
-         return Comparator.<ItemStack>comparingDouble(s -> armorProtection(s, slot, kitDefense, kitToughness, this.rules.hypixel()))
-            .thenComparingInt(s -> enchantment(s, Enchantments.FEATHER_FALLING) * 3
-               + enchantment(s, Enchantments.THORNS) + enchantment(s, Enchantments.UNBREAKING))
+         return Comparator.<ItemStack>comparingDouble(stack -> armorProtection(stack, slot, kitDefense, kitToughness, this.rules.hypixel()))
+            .thenComparingInt(stack -> enchantment(stack, Enchantments.FEATHER_FALLING) * 3
+               + enchantment(stack, Enchantments.THORNS) + enchantment(stack, Enchantments.UNBREAKING))
             .thenComparingInt(Plan::durability);
       }
       static double swordDamage(ItemStack stack, boolean hypixel) {
@@ -487,27 +487,27 @@ public class InvManager extends Feature {
             && block.getJumpFactor() >= 1
             && block.defaultBlockState().isCollisionShapeFullBlock(EmptyBlockGetter.INSTANCE, BlockPos.ZERO);
       }
-      private static boolean ordinaryFood(ItemStack s) {
-         return s.has(DataComponents.FOOD) && !s.is(Items.GOLDEN_APPLE) && !s.is(Items.ENCHANTED_GOLDEN_APPLE);
+      private static boolean ordinaryFood(ItemStack stack) {
+         return stack.has(DataComponents.FOOD) && !stack.is(Items.GOLDEN_APPLE) && !stack.is(Items.ENCHANTED_GOLDEN_APPLE);
       }
-      private static boolean healthyFood(ItemStack s) {
-         return !s.is(Items.ROTTEN_FLESH) && !s.is(Items.SPIDER_EYE) && !s.is(Items.POISONOUS_POTATO)
-            && !s.is(Items.PUFFERFISH) && !s.is(Items.CHICKEN);
+      private static boolean healthyFood(ItemStack stack) {
+         return !stack.is(Items.ROTTEN_FLESH) && !stack.is(Items.SPIDER_EYE) && !stack.is(Items.POISONOUS_POTATO)
+            && !stack.is(Items.PUFFERFISH) && !stack.is(Items.CHICKEN);
       }
-      private static boolean goodPotion(ItemStack s) {
-         for (var effect : s.get(DataComponents.POTION_CONTENTS).getAllEffects()) {
+      private static boolean goodPotion(ItemStack stack) {
+         for (var effect : stack.get(DataComponents.POTION_CONTENTS).getAllEffects()) {
             if (effect.getEffect().value().getCategory() == MobEffectCategory.BENEFICIAL) return true;
          }
          return false;
       }
-      private static boolean usefulUtility(ItemStack s) {
-         return s.getItem() instanceof SpawnEggItem || s.is(Items.NETHER_STAR)
-            || s.is(Items.ELYTRA) || s.is(Items.TOTEM_OF_UNDYING) || s.is(Items.END_CRYSTAL)
-            || s.is(Items.ENDER_PEARL) || s.is(Items.ENDER_EYE) || s.is(Items.FIRE_CHARGE) || s.is(Items.WIND_CHARGE)
-            || s.is(Items.WATER_BUCKET) || s.is(Items.LAVA_BUCKET) || s.is(Items.MILK_BUCKET) || s.is(Items.BUCKET)
-            || s.is(Items.SHEARS) || s.is(Items.FLINT_AND_STEEL) || s.is(Items.TRIDENT) || s.is(Items.MACE)
-            || s.is(Items.SHIELD) || s.is(Items.EXPERIENCE_BOTTLE) || s.is(Items.FIREWORK_ROCKET)
-            || s.is(Items.COMPASS) || s.is(Items.CLOCK);
+      private static boolean usefulUtility(ItemStack stack) {
+         return stack.getItem() instanceof SpawnEggItem || stack.is(Items.NETHER_STAR)
+            || stack.is(Items.ELYTRA) || stack.is(Items.TOTEM_OF_UNDYING) || stack.is(Items.END_CRYSTAL)
+            || stack.is(Items.ENDER_PEARL) || stack.is(Items.ENDER_EYE) || stack.is(Items.FIRE_CHARGE) || stack.is(Items.WIND_CHARGE)
+            || stack.is(Items.WATER_BUCKET) || stack.is(Items.LAVA_BUCKET) || stack.is(Items.MILK_BUCKET) || stack.is(Items.BUCKET)
+            || stack.is(Items.SHEARS) || stack.is(Items.FLINT_AND_STEEL) || stack.is(Items.TRIDENT) || stack.is(Items.MACE)
+            || stack.is(Items.SHIELD) || stack.is(Items.EXPERIENCE_BOTTLE) || stack.is(Items.FIREWORK_ROCKET)
+            || stack.is(Items.COMPASS) || stack.is(Items.CLOCK);
       }
       static boolean serverItem(ItemStack stack) {
          var name = stack.get(DataComponents.CUSTOM_NAME);
@@ -518,12 +518,12 @@ public class InvManager extends Feature {
             || text.contains("再来") || text.contains("选择") || text.contains("离开游戏");
       }
       // Identity fallbacks are needed before server item tags have been bound.
-      private static boolean isSword(ItemStack s) { return s.is(ItemTags.SWORDS) || s.is(Items.WOODEN_SWORD) || s.is(Items.STONE_SWORD) || s.is(Items.IRON_SWORD) || s.is(Items.GOLDEN_SWORD) || s.is(Items.DIAMOND_SWORD) || s.is(Items.NETHERITE_SWORD); }
-      private static boolean isPickaxe(ItemStack s) { return s.is(ItemTags.PICKAXES) || s.is(Items.WOODEN_PICKAXE) || s.is(Items.STONE_PICKAXE) || s.is(Items.IRON_PICKAXE) || s.is(Items.GOLDEN_PICKAXE) || s.is(Items.DIAMOND_PICKAXE) || s.is(Items.NETHERITE_PICKAXE); }
-      private static boolean isAxe(ItemStack s) { return s.is(ItemTags.AXES) || s.is(Items.WOODEN_AXE) || s.is(Items.STONE_AXE) || s.is(Items.IRON_AXE) || s.is(Items.GOLDEN_AXE) || s.is(Items.DIAMOND_AXE) || s.is(Items.NETHERITE_AXE); }
-      private static boolean isShovel(ItemStack s) { return s.is(ItemTags.SHOVELS) || s.is(Items.WOODEN_SHOVEL) || s.is(Items.STONE_SHOVEL) || s.is(Items.IRON_SHOVEL) || s.is(Items.GOLDEN_SHOVEL) || s.is(Items.DIAMOND_SHOVEL) || s.is(Items.NETHERITE_SHOVEL); }
-      private static boolean isHoe(ItemStack s) { return s.is(ItemTags.HOES) || s.is(Items.WOODEN_HOE) || s.is(Items.STONE_HOE) || s.is(Items.IRON_HOE) || s.is(Items.GOLDEN_HOE) || s.is(Items.DIAMOND_HOE) || s.is(Items.NETHERITE_HOE); }
-      private static boolean isTool(ItemStack s) { return isPickaxe(s) || isAxe(s) || isShovel(s) || isHoe(s); }
+      private static boolean isSword(ItemStack stack) { return stack.is(ItemTags.SWORDS) || stack.is(Items.WOODEN_SWORD) || stack.is(Items.STONE_SWORD) || stack.is(Items.IRON_SWORD) || stack.is(Items.GOLDEN_SWORD) || stack.is(Items.DIAMOND_SWORD) || stack.is(Items.NETHERITE_SWORD); }
+      private static boolean isPickaxe(ItemStack stack) { return stack.is(ItemTags.PICKAXES) || stack.is(Items.WOODEN_PICKAXE) || stack.is(Items.STONE_PICKAXE) || stack.is(Items.IRON_PICKAXE) || stack.is(Items.GOLDEN_PICKAXE) || stack.is(Items.DIAMOND_PICKAXE) || stack.is(Items.NETHERITE_PICKAXE); }
+      private static boolean isAxe(ItemStack stack) { return stack.is(ItemTags.AXES) || stack.is(Items.WOODEN_AXE) || stack.is(Items.STONE_AXE) || stack.is(Items.IRON_AXE) || stack.is(Items.GOLDEN_AXE) || stack.is(Items.DIAMOND_AXE) || stack.is(Items.NETHERITE_AXE); }
+      private static boolean isShovel(ItemStack stack) { return stack.is(ItemTags.SHOVELS) || stack.is(Items.WOODEN_SHOVEL) || stack.is(Items.STONE_SHOVEL) || stack.is(Items.IRON_SHOVEL) || stack.is(Items.GOLDEN_SHOVEL) || stack.is(Items.DIAMOND_SHOVEL) || stack.is(Items.NETHERITE_SHOVEL); }
+      private static boolean isHoe(ItemStack stack) { return stack.is(ItemTags.HOES) || stack.is(Items.WOODEN_HOE) || stack.is(Items.STONE_HOE) || stack.is(Items.IRON_HOE) || stack.is(Items.GOLDEN_HOE) || stack.is(Items.DIAMOND_HOE) || stack.is(Items.NETHERITE_HOE); }
+      private static boolean isTool(ItemStack stack) { return isPickaxe(stack) || isAxe(stack) || isShovel(stack) || isHoe(stack); }
       private static int armorMenuSlot(EquipmentSlot slot) {
          return switch (slot) { case HEAD -> 5; case CHEST -> 6; case LEGS -> 7; case FEET -> 8; default -> throw new IllegalArgumentException(); };
       }

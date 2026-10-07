@@ -43,7 +43,7 @@ public final class TargetSettings extends Feature {
       String kind = classify(entity);
       return allowed(selection.selectedValues(), kind, living.isAlive() && living.deathTime <= 0,
          living.isInvisible(), living.isSleeping(), friend)
-         && (!(entity instanceof Player) || FeatureManager.f27 == null || !FeatureManager.f27.m136(entity));
+         && (!(entity instanceof Player) || FeatureManager.antiBot == null || !FeatureManager.antiBot.isBot(entity));
    }
 
    private static String classify(Entity entity) {

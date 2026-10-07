@@ -8,34 +8,33 @@ import com.samsara.setting.BooleanSetting;
 import com.samsara.setting.NumberSetting;
 import com.samsara.util.PacketBlinkQueue;
 import com.samsara.util.TargetFinder;
-import java.nio.charset.StandardCharsets;
 import java.util.Objects;
 import net.minecraft.network.protocol.game.ServerboundAttackPacket;
 import net.minecraft.world.entity.LivingEntity;
 import net.minecraft.world.phys.Vec3;
 
 public class LagRange extends Feature {
-   private int f528;
-   private static final String f522 = "Blink Ticks";
-   private final NumberSetting f525;
-   private double f531;
-   private static final String f521 = "Range";
-   private static final String f523 = "Lag When Close";
-   private final NumberSetting f524 = new NumberSetting(f521, this, 6.0, 4.0, 8.0, 0.5);
-   private static final String f520 = "LagRange";
-   private final BooleanSetting f526;
-   private Vec3 f529;
-   private boolean f527;
-   private String f530;
+   private int blinkTicksElapsed;
+   private static final String BLINK_TICKS_LABEL = "Blink Ticks";
+   private final NumberSetting blinkTicks;
+   private double cachedBlinkTicks;
+   private static final String RANGE_LABEL = "Range";
+   private static final String LAG_WHEN_CLOSE_LABEL = "Lag When Close";
+   private final NumberSetting range = new NumberSetting(RANGE_LABEL, this, 6.0, 4.0, 8.0, 0.5);
+   private static final String LAG_RANGE_LABEL = "LagRange";
+   private final BooleanSetting lagWhenClose;
+   private Vec3 previousPlayerPosition;
+   private boolean blinkActive;
 
-   private void pm$97() {
-      if (this.f527) {
-         this.f527 = false;
-         PacketBlinkQueue.m23();
+
+   private void stopBlink() {
+      if (this.blinkActive) {
+         this.blinkActive = false;
+         PacketBlinkQueue.disable();
       }
 
-      this.f529 = null;
-      this.f528 = 0;
+      this.previousPlayerPosition = null;
+      this.blinkTicksElapsed = 0;
    }
 
    @Override
@@ -43,54 +42,54 @@ public class LagRange extends Feature {
    }
 
    public LagRange() {
-      super(f520, Category.PLAYER);
-      this.f525 = new NumberSetting(f522, this, 5.0, 2.0, 10.0, 1.0);
-      this.f526 = new BooleanSetting(f523, this, false);
-      this.f531 = Double.NaN;
+      super(LAG_RANGE_LABEL, Category.PLAYER);
+      this.blinkTicks = new NumberSetting(BLINK_TICKS_LABEL, this, 5.0, 2.0, 10.0, 1.0);
+      this.lagWhenClose = new BooleanSetting(LAG_WHEN_CLOSE_LABEL, this, false);
+      this.cachedBlinkTicks = Double.NaN;
    }
 
-   private void pm$98() {
-      double var1 = this.f525.m220();
-      if (var1 != this.f531) {
-         this.f531 = var1;
-         this.setSuffix((int)(var1 * 50.0) + " ms");
+   private void updateDelaySuffix() {
+      double blinkTicksValue = this.blinkTicks.getValue();
+      if (blinkTicksValue != this.cachedBlinkTicks) {
+         this.cachedBlinkTicks = blinkTicksValue;
+         this.setSuffix((int)(blinkTicksValue * 50.0) + " ms");
       }
    }
 
    @Override
-   public void onEvent(Event var1) {
-      if (var1 == Events.f10 && Events.f10.m44() instanceof ServerboundAttackPacket var2) {
-         if (this.f526.m215() && mc.player.distanceTo(Objects.requireNonNull(mc.level.getEntity(var2.entityId()))) < 2.0F) {
+   public void onEvent(Event event) {
+      if (event == Events.PACKET_SEND && Events.PACKET_SEND.getPacket() instanceof ServerboundAttackPacket attackPacket) {
+         if (this.lagWhenClose.getValue() && mc.player.distanceTo(Objects.requireNonNull(mc.level.getEntity(attackPacket.entityId()))) < 2.0F) {
             return;
          }
 
-         this.pm$97();
+         this.stopBlink();
       }
 
-      if (var1 == Events.f3) {
-         this.pm$98();
-         LivingEntity var5 = TargetFinder.m47(this.f524.m220(), true);
-         if (var5 != null) {
-            PacketBlinkQueue.m22();
-            this.f527 = true;
-            this.f528++;
-            Vec3 var6 = var5.position();
-            if (this.f529 != null && this.f529.distanceTo(var6) <= mc.player.position().distanceTo(var6)) {
-               this.pm$97();
-            } else if ((double)this.f528 > this.f525.m220()) {
-               this.pm$97();
+      if (event == Events.ROTATION) {
+         this.updateDelaySuffix();
+         LivingEntity target = TargetFinder.nearestTarget(this.range.getValue(), true);
+         if (target != null) {
+            PacketBlinkQueue.enable();
+            this.blinkActive = true;
+            this.blinkTicksElapsed++;
+            Vec3 targetPosition = target.position();
+            if (this.previousPlayerPosition != null && this.previousPlayerPosition.distanceTo(targetPosition) <= mc.player.position().distanceTo(targetPosition)) {
+               this.stopBlink();
+            } else if ((double)this.blinkTicksElapsed > this.blinkTicks.getValue()) {
+               this.stopBlink();
             }
 
-            Vec3 var4 = mc.player.position();
-            this.f529 = new Vec3(var4.x, var4.y, var4.z);
+            Vec3 playerPosition = mc.player.position();
+            this.previousPlayerPosition = new Vec3(playerPosition.x, playerPosition.y, playerPosition.z);
          } else {
-            this.pm$97();
+            this.stopBlink();
          }
       }
    }
 
    @Override
    public void onDisable() {
-      this.pm$97();
+      this.stopBlink();
    }
 }

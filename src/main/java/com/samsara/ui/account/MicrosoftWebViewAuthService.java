@@ -47,7 +47,7 @@ final class MicrosoftWebViewAuthService extends MsaAuthService {
       void open(ExternalBrowserMsaAuthService browser) {
          final String url;
          try { url = browser.getAuthenticationUrl().toString(); }
-         catch (IOException e) { throw new WindowInitializationException(e); }
+         catch (IOException error) { throw new WindowInitializationException(error); }
 
          Runnable create = () -> {
             if (closed.get()) return;
@@ -70,8 +70,8 @@ final class MicrosoftWebViewAuthService extends MsaAuthService {
                stage.requestFocus();
                webView.getEngine().load(url);
                ready.complete(null);
-            } catch (Exception | LinkageError e) {
-               ready.completeExceptionally(e);
+            } catch (Exception | LinkageError error) {
+               ready.completeExceptionally(error);
                close();
             }
          };
@@ -81,14 +81,14 @@ final class MicrosoftWebViewAuthService extends MsaAuthService {
             try {
                try { Platform.startup(create); }
                catch (IllegalStateException alreadyStarted) { Platform.runLater(create); }
-            } catch (Exception | LinkageError e) { ready.completeExceptionally(e); }
+            } catch (Exception | LinkageError error) { ready.completeExceptionally(error); }
          });
          try { ready.get(STARTUP_TIMEOUT_SECONDS, TimeUnit.SECONDS); }
-         catch (InterruptedException e) {
+         catch (InterruptedException error) {
             Thread.currentThread().interrupt();
-            throw new WindowInitializationException(e);
-         } catch (ExecutionException | TimeoutException e) {
-            throw new WindowInitializationException(e instanceof ExecutionException ? e.getCause() : e);
+            throw new WindowInitializationException(error);
+         } catch (ExecutionException | TimeoutException error) {
+            throw new WindowInitializationException(error instanceof ExecutionException ? error.getCause() : error);
          }
       }
 

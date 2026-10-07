@@ -14,21 +14,21 @@ public abstract class Event {
    }
 
    public void sortModules() {
-      List var1 = FeatureManager.getModules();
+      List<Feature> registeredFeatures = FeatureManager.getModules();
       this.moduleCount = 0;
-      int var2 = 0;
+      int featureIndex = 0;
 
-      for (int var3 = var1.size(); var2 < var3; var2++) {
-         Feature var4 = (Feature)var1.get(var2);
-         if (var4.isEnabled()) {
-            int var5 = var4.getPriority(this);
+      for (int featureCount = registeredFeatures.size(); featureIndex < featureCount; featureIndex++) {
+         Feature feature = registeredFeatures.get(featureIndex);
+         if (feature.isEnabled()) {
+            int priority = feature.getPriority(this);
 
-            int var6;
-            for (var6 = this.moduleCount - 1; var6 >= 0 && this.modules[var6].getPriority(this) > var5; var6--) {
-               this.modules[var6 + 1] = this.modules[var6];
+            int insertionIndex;
+            for (insertionIndex = this.moduleCount - 1; insertionIndex >= 0 && this.modules[insertionIndex].getPriority(this) > priority; insertionIndex--) {
+               this.modules[insertionIndex + 1] = this.modules[insertionIndex];
             }
 
-            this.modules[var6 + 1] = var4;
+            this.modules[insertionIndex + 1] = feature;
             this.moduleCount++;
          }
       }
@@ -37,12 +37,12 @@ public abstract class Event {
    public void call() {
       this.cancelled = false;
 
-      for (int var1 = 0; var1 < this.moduleCount; var1++) {
-         this.modules[var1].onEvent(this);
+      for (int listenerIndex = 0; listenerIndex < this.moduleCount; listenerIndex++) {
+         this.modules[listenerIndex].onEvent(this);
       }
    }
 
-   public void setCancelled(boolean var1) {
-      this.cancelled = var1;
+   public void setCancelled(boolean cancelled) {
+      this.cancelled = cancelled;
    }
 }

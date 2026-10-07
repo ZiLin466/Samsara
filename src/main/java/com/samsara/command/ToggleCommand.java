@@ -3,40 +3,39 @@ package com.samsara.command;
 import com.samsara.SamsaraClient;
 import com.samsara.module.Feature;
 import com.samsara.module.FeatureManager;
-import java.nio.charset.StandardCharsets;
 import java.util.Collection;
 import java.util.List;
 
 public class ToggleCommand extends Command {
-   private static final String f76 = "Disabled";
-   private static final String f73 = "toggle";
-   private static final String f77 = "Invalid module";
-   private static final String f75 = "Enabled";
-   private static final String f72 = "toggle <name>";
-   private static final String f74 = "t";
-   private static final String f71 = "Toggle";
+   private static final String DISABLED_LABEL = "Disabled";
+   private static final String PRIMARY_ALIAS = "toggle";
+   private static final String INVALID_MODULE_LABEL = "Invalid module";
+   private static final String ENABLED_LABEL = "Enabled";
+   private static final String TOGGLE_NAME_LABEL = "toggle <name>";
+   private static final String T_LABEL = "t";
+   private static final String COMMAND_NAME = "Toggle";
 
    public ToggleCommand() {
-      super(f71, f72, new String[]{f73, f74});
+      super(COMMAND_NAME, TOGGLE_NAME_LABEL, new String[]{PRIMARY_ALIAS, T_LABEL});
    }
 
    @Override
-   public void execute(String[] var1, String var2) {
-      if (var1.length > 1) {
-         String var3 = var1[1];
-         boolean var4 = false;
+   public void execute(String[] arguments, String commandLine) {
+      if (arguments.length > 1) {
+         String moduleName = arguments[1];
+         boolean found = false;
 
-         for (Feature var6 : FeatureManager.getModules()) {
-            if (var6.getName().equalsIgnoreCase(var3)) {
-               var6.toggle();
-               SamsaraClient.sendPrefixedMessage((var6.isEnabled() ? f75 : f76) + " " + var3);
-               var4 = true;
+         for (Feature feature : FeatureManager.getModules()) {
+            if (feature.getName().equalsIgnoreCase(moduleName)) {
+               feature.toggle();
+               SamsaraClient.sendPrefixedMessage((feature.isEnabled() ? ENABLED_LABEL : DISABLED_LABEL) + " " + moduleName);
+               found = true;
                break;
             }
          }
 
-         if (!var4) {
-            SamsaraClient.sendPrefixedMessage(f77);
+         if (!found) {
+            SamsaraClient.sendPrefixedMessage(INVALID_MODULE_LABEL);
          }
       } else {
          SamsaraClient.sendPrefixedMessage("Usage: ." + this.syntax);
@@ -44,7 +43,7 @@ public class ToggleCommand extends Command {
    }
 
    @Override
-   public Collection complete(String[] var1) {
-      return var1.length <= 1 ? FeatureManager.getModules().stream().map(Feature::getName).toList() : List.of();
+   public Collection complete(String[] arguments) {
+      return arguments.length <= 1 ? FeatureManager.getModules().stream().map(Feature::getName).toList() : List.of();
    }
 }

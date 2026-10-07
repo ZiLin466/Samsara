@@ -32,9 +32,9 @@ public final class AccountAuthClient {
    }
    public Identity session(String input) throws Exception {
       String token = sessionToken(input);
-      var j = request(HttpRequest.newBuilder(profile).header("Authorization", "Bearer " + token).GET());
+      var profileResponse = request(HttpRequest.newBuilder(profile).header("Authorization", "Bearer " + token).GET());
       var auth = new JsonObject(); auth.addProperty("token", token);
-      return identity(j, token, auth);
+      return identity(profileResponse, token, auth);
    }
    static String sessionToken(String input) {
       if (input == null || input.isBlank()) throw new IllegalArgumentException("令牌为空，请粘贴 Minecraft 访问令牌");
@@ -42,17 +42,17 @@ public final class AccountAuthClient {
       String token = input.replace("\uFEFF", "").strip();
       if (token.startsWith("{")) {
          try {
-            var data = JsonParser.parseString(token).getAsJsonObject();
+            var tokenDetails = JsonParser.parseString(token).getAsJsonObject();
             token = null;
             for (String key : new String[]{"access_token", "token", "Token"}) {
-               var value = data.get(key);
+               var value = tokenDetails.get(key);
                if (value != null && value.isJsonPrimitive() && value.getAsJsonPrimitive().isString()) {
                   token = value.getAsString().strip();
                   break;
                }
             }
             if (token == null) throw new IllegalArgumentException();
-         } catch (RuntimeException e) {
+         } catch (RuntimeException error) {
             throw new IllegalArgumentException("令牌资料中没有有效的 Token 字段");
          }
       }
@@ -77,21 +77,21 @@ public final class AccountAuthClient {
    public Identity altening(String input, boolean generate) throws Exception {
       String token = required(input);
       if (generate) {
-         var j = request(HttpRequest.newBuilder(URI.create(generator + "?key=" + URLEncoder.encode(token, StandardCharsets.UTF_8) + "&info=true")).GET());
-         token = required(j.get("token").getAsString());
+         var generatedAccount = request(HttpRequest.newBuilder(URI.create(generator + "?key=" + URLEncoder.encode(token, StandardCharsets.UTF_8) + "&info=true")).GET());
+         token = required(generatedAccount.get("token").getAsString());
       }
       String clientToken = UUID.randomUUID().toString();
       var body = new JsonObject(); var agent = new JsonObject(); agent.addProperty("name", "Minecraft"); agent.addProperty("version", 1);
       body.add("agent", agent); body.addProperty("username", token); body.addProperty("password", "Samsara");
       body.addProperty("clientToken", clientToken); body.addProperty("requestUser", true);
-      var j = request(HttpRequest.newBuilder(altening).header("Content-Type", "application/json").POST(HttpRequest.BodyPublishers.ofString(body.toString())));
-      if (!j.has("clientToken") || !clientToken.equals(j.get("clientToken").getAsString())) throw new IOException("登录服务会话校验失败");
-      if (!j.has("selectedProfile") || j.get("selectedProfile").isJsonNull()) throw new IOException("账号没有 Minecraft 游戏许可");
+      var loginResponse = request(HttpRequest.newBuilder(altening).header("Content-Type", "application/json").POST(HttpRequest.BodyPublishers.ofString(body.toString())));
+      if (!loginResponse.has("clientToken") || !clientToken.equals(loginResponse.get("clientToken").getAsString())) throw new IOException("登录服务会话校验失败");
+      if (!loginResponse.has("selectedProfile") || loginResponse.get("selectedProfile").isJsonNull()) throw new IOException("账号没有 Minecraft 游戏许可");
       var auth = new JsonObject(); auth.addProperty("accountToken", token);
-      return identity(j.getAsJsonObject("selectedProfile"), required(j.get("accessToken").getAsString()), auth);
+      return identity(loginResponse.getAsJsonObject("selectedProfile"), required(loginResponse.get("accessToken").getAsString()), auth);
    }
-   private Identity identity(JsonObject j, String token, JsonObject auth) {
-      return new Identity(AccountStore.validate(j.get("name").getAsString()), uuid(j.get("id").getAsString()), token, auth);
+   private Identity identity(JsonObject profile, String token, JsonObject auth) {
+      return new Identity(AccountStore.validate(profile.get("name").getAsString()), uuid(profile.get("id").getAsString()), token, auth);
    }
    private JsonObject request(HttpRequest.Builder builder) throws IOException, InterruptedException {
       var response = http.send(builder.timeout(Duration.ofSeconds(25)).build(), HttpResponse.BodyHandlers.ofString());
@@ -101,7 +101,7 @@ public final class AccountAuthClient {
       if (status == 429) throw new IOException("登录请求过多，请稍后重试");
       if (status != 200) throw new IOException("登录服务返回 HTTP " + status);
       try { return JsonParser.parseString(response.body()).getAsJsonObject(); }
-      catch (RuntimeException e) { throw new IOException("登录服务返回无效数据"); }
+      catch (RuntimeException error) { throw new IOException("登录服务返回无效数据"); }
    }
    static String required(String input) {
       if (input == null || input.isBlank()) throw new IllegalArgumentException("请填写登录信息");

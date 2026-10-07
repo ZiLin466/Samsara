@@ -7,27 +7,26 @@ import com.samsara.module.Feature;
 import com.samsara.setting.BooleanSetting;
 import com.samsara.setting.NumberSetting;
 import com.mojang.blaze3d.platform.InputConstants.Key;
-import java.nio.charset.StandardCharsets;
 import java.util.Random;
 import net.minecraft.client.KeyMapping;
 import net.minecraft.world.phys.HitResult.Type;
 
 public class AutoClicker extends Feature {
-   private final BooleanSetting f244;
-   private static final String f237 = "Min CPS";
-   private static final String f238 = "Max CPS";
-   private static final String f236 = "AutoClicker";
-   private final NumberSetting f242;
-   private final NumberSetting f241 = new NumberSetting(f237, this, 8.0, 1.0, 20.0, 1.0);
-   private final BooleanSetting f243;
-   private long f246;
-   private final Random f245;
-   private static final String f239 = "Randomize";
-   private static final String f240 = "Break Blocks";
+   private final BooleanSetting breakBlocks;
+   private static final String MIN_CPS_LABEL = "Min CPS";
+   private static final String MAX_CPS_LABEL = "Max CPS";
+   private static final String AUTO_CLICKER_LABEL = "AutoClicker";
+   private final NumberSetting maxCps;
+   private final NumberSetting minCps = new NumberSetting(MIN_CPS_LABEL, this, 8.0, 1.0, 20.0, 1.0);
+   private final BooleanSetting randomize;
+   private long lastClickTimeMillis;
+   private final Random random;
+   private static final String RANDOMIZE_LABEL = "Randomize";
+   private static final String BREAK_BLOCKS_LABEL = "Break Blocks";
 
    @Override
-   public void onEvent(Event var1) {
-      if (var1 == Events.f3) {
+   public void onEvent(Event event) {
+      if (event == Events.ROTATION) {
          if (mc.gui.screen() != null) {
             return;
          }
@@ -36,44 +35,44 @@ public class AutoClicker extends Feature {
             return;
          }
 
-         if (this.f244.m215() && mc.hitResult != null && mc.hitResult.getType() == Type.BLOCK) {
-            Key var5 = com.mojang.blaze3d.platform.InputConstants.Type.MOUSE.getOrCreate(0);
-            KeyMapping.set(var5, true);
+         if (this.breakBlocks.getValue() && mc.hitResult != null && mc.hitResult.getType() == Type.BLOCK) {
+            Key attackKey = com.mojang.blaze3d.platform.InputConstants.Type.MOUSE.getOrCreate(0);
+            KeyMapping.set(attackKey, true);
             return;
          }
 
-         long var2 = this.pm$56();
-         if (System.currentTimeMillis() - this.f246 >= var2) {
-            Key var4 = com.mojang.blaze3d.platform.InputConstants.Type.MOUSE.getOrCreate(0);
-            KeyMapping.set(var4, true);
-            KeyMapping.click(var4);
-            KeyMapping.set(var4, false);
-            this.f246 = System.currentTimeMillis();
+         long clickDelayMillis = this.sampleClickDelayMillis();
+         if (System.currentTimeMillis() - this.lastClickTimeMillis >= clickDelayMillis) {
+            Key attackKey = com.mojang.blaze3d.platform.InputConstants.Type.MOUSE.getOrCreate(0);
+            KeyMapping.set(attackKey, true);
+            KeyMapping.click(attackKey);
+            KeyMapping.set(attackKey, false);
+            this.lastClickTimeMillis = System.currentTimeMillis();
          }
       }
    }
 
    @Override
    public void onEnable() {
-      this.f246 = System.currentTimeMillis();
+      this.lastClickTimeMillis = System.currentTimeMillis();
    }
 
-   private long pm$56() {
-      double var1;
-      if (this.f243.m215()) {
-         var1 = this.f241.m220() + (this.f242.m220() - this.f241.m220()) * this.f245.nextDouble();
+   private long sampleClickDelayMillis() {
+      double clicksPerSecond;
+      if (this.randomize.getValue()) {
+         clicksPerSecond = this.minCps.getValue() + (this.maxCps.getValue() - this.minCps.getValue()) * this.random.nextDouble();
       } else {
-         var1 = this.f241.m220();
+         clicksPerSecond = this.minCps.getValue();
       }
 
-      return (long)(1000.0 / var1);
+      return (long)(1000.0 / clicksPerSecond);
    }
 
    public AutoClicker() {
-      super(f236, Category.COMBAT);
-      this.f242 = new NumberSetting(f238, this, 12.0, 1.0, 20.0, 1.0);
-      this.f243 = new BooleanSetting(f239, this, true);
-      this.f244 = new BooleanSetting(f240, this, false);
-      this.f245 = new Random();
+      super(AUTO_CLICKER_LABEL, Category.COMBAT);
+      this.maxCps = new NumberSetting(MAX_CPS_LABEL, this, 12.0, 1.0, 20.0, 1.0);
+      this.randomize = new BooleanSetting(RANDOMIZE_LABEL, this, true);
+      this.breakBlocks = new BooleanSetting(BREAK_BLOCKS_LABEL, this, false);
+      this.random = new Random();
    }
 }

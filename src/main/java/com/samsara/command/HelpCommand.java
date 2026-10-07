@@ -1,27 +1,26 @@
 package com.samsara.command;
 
 import com.samsara.SamsaraClient;
-import java.nio.charset.StandardCharsets;
 
 public class HelpCommand extends Command {
-   private static final String f66 = ", ";
-   private static final String f63 = "h";
-   private static final String f65 = "Available Commands:";
-   private static final String f64 = "?";
-   private static final String f62 = "help";
-   private static final String f61 = "Help";
+   private static final String ALIAS_SEPARATOR = ", ";
+   private static final String H_LABEL = "h";
+   private static final String AVAILABLE_COMMANDS_LABEL = "Available Commands:";
+   private static final String QUESTION_ALIAS = "?";
+   private static final String PRIMARY_ALIAS = "help";
+   private static final String COMMAND_NAME = "Help";
 
    @Override
-   public void execute(String[] var1, String var2) {
-      SamsaraClient.sendPrefixedMessage(f65);
+   public void execute(String[] arguments, String commandLine) {
+      SamsaraClient.sendPrefixedMessage(AVAILABLE_COMMANDS_LABEL);
 
-      for (Command var4 : CommandManager.m7()) {
-         String var5 = String.join(f66, var4.aliases);
-         SamsaraClient.sendPrefixedMessage("." + var4.syntax + " §7[" + var5 + "]");
+      for (Command command : CommandManager.getCommands()) {
+         String aliases = String.join(ALIAS_SEPARATOR, command.aliases);
+         SamsaraClient.sendPrefixedMessage("." + command.syntax + " §7[" + aliases + "]");
       }
    }
 
    public HelpCommand() {
-      super(f61, f62, new String[]{f62, f63, f64});
+      super(COMMAND_NAME, PRIMARY_ALIAS, new String[]{PRIMARY_ALIAS, H_LABEL, QUESTION_ALIAS});
    }
 }

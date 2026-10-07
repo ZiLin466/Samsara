@@ -13,8 +13,8 @@ import net.minecraft.client.gui.screens.Screen;
 import org.lwjgl.glfw.GLFW;
 
 public class ClickGui extends Feature {
-   private static final String f616 = "ClickGUI";
-   private Screen f617;
+   private static final String CLICK_GUI_LABEL = "ClickGUI";
+   private Screen activeScreen;
    private OpaiClickGuiScreen opaiScreen;
    private NeverloseClickGuiScreen neverloseScreen;
    public final ModeSetting style = new ModeSetting("Style", this, "Opai", new String[]{"Modern", "Opai", "Neverlose"});
@@ -24,30 +24,30 @@ public class ClickGui extends Feature {
    /** HUDs read the saved ClickGUI choice every frame, even while the GUI is closed. */
    public static OpaiStyle.Palette currentOpaiPalette() {
       ClickGui gui = FeatureManager.clickGui;
-      return gui == null ? OpaiStyle.LAVENDER : OpaiStyle.palette(gui.opaiColor.m224());
+      return gui == null ? OpaiStyle.LAVENDER : OpaiStyle.palette(gui.opaiColor.getValue());
    }
 
    @Override
    public void onEnable() {
-      if (this.style.m228("Opai")) {
+      if (this.style.is("Opai")) {
          if (this.opaiScreen == null) this.opaiScreen = new OpaiClickGuiScreen(this.opaiColor);
-         this.f617 = this.opaiScreen;
-      } else if (this.style.m228("Neverlose")) {
+         this.activeScreen = this.opaiScreen;
+      } else if (this.style.is("Neverlose")) {
          if (this.neverloseScreen == null) this.neverloseScreen = new NeverloseClickGuiScreen();
-         this.f617 = this.neverloseScreen;
+         this.activeScreen = this.neverloseScreen;
       } else {
          ClickGuiScreen modern = new ClickGuiScreen(RockstarClickGuiScreen.Style.MODERN);
          modern.setRenderMode(this.renderMode);
-         this.f617 = modern;
+         this.activeScreen = modern;
       }
 
-      mc.gui.setScreen(this.f617);
+      mc.gui.setScreen(this.activeScreen);
       this.setEnabled(false);
    }
 
    public ClickGui() {
-      super(f616, GLFW.GLFW_KEY_RIGHT_SHIFT, Category.VISUAL);
-      this.renderMode.setVisible(() -> this.style.m228("Modern"));
-      this.opaiColor.setVisible(() -> this.style.m228("Opai"));
+      super(CLICK_GUI_LABEL, GLFW.GLFW_KEY_RIGHT_SHIFT, Category.VISUAL);
+      this.renderMode.setVisible(() -> this.style.is("Modern"));
+      this.opaiColor.setVisible(() -> this.style.is("Opai"));
    }
 }

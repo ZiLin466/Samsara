@@ -7,39 +7,38 @@ import com.samsara.module.Feature;
 import com.samsara.setting.BooleanSetting;
 import com.samsara.setting.NumberSetting;
 import com.samsara.util.InventoryUtil;
-import java.nio.charset.StandardCharsets;
 import mixins.MinecraftAccessor;
 
 public class FastPlace extends Feature {
-   private static final String f501 = "Delay";
-   private static final String f502 = "Blocks Only";
-   private static final String f500 = "FastPlace";
-   private int f505;
-   private BooleanSetting f504;
-   private NumberSetting f503 = new NumberSetting(f501, this, 1.0, 0.0, 3.0, 1.0);
+   private static final String DELAY_LABEL = "Delay";
+   private static final String BLOCKS_ONLY_LABEL = "Blocks Only";
+   private static final String FAST_PLACE_LABEL = "FastPlace";
+   private int placementTicks;
+   private BooleanSetting blocksOnly;
+   private NumberSetting delay = new NumberSetting(DELAY_LABEL, this, 1.0, 0.0, 3.0, 1.0);
 
    @Override
-   public void onEvent(Event var1) {
-      if (var1 == Events.f3) {
-         if (this.f504.m215() && !InventoryUtil.m40()) {
+   public void onEvent(Event event) {
+      if (event == Events.ROTATION) {
+         if (this.blocksOnly.getValue() && !InventoryUtil.isHoldingPlaceableBlock()) {
             return;
          }
 
-         if ((int)this.f503.m220() == 0) {
+         if ((int)this.delay.getValue() == 0) {
             ((MinecraftAccessor)mc).setRightClickDelay(0);
          } else {
-            if ((double)this.f505 >= this.f503.m220()) {
+            if ((double)this.placementTicks >= this.delay.getValue()) {
                ((MinecraftAccessor)mc).setRightClickDelay(0);
-               this.f505 = 0;
+               this.placementTicks = 0;
             }
 
-            this.f505++;
+            this.placementTicks++;
          }
       }
    }
 
    public FastPlace() {
-      super(f500, Category.PLAYER);
-      this.f504 = new BooleanSetting(f502, this, true);
+      super(FAST_PLACE_LABEL, Category.PLAYER);
+      this.blocksOnly = new BooleanSetting(BLOCKS_ONLY_LABEL, this, true);
    }
 }

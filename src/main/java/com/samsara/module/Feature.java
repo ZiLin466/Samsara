@@ -4,7 +4,6 @@ import com.samsara.event.Event;
 import com.samsara.event.Events;
 import com.samsara.setting.Setting;
 import com.samsara.ui.dynamicIsland.DynamicIslandManager;
-import java.nio.charset.StandardCharsets;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Objects;
@@ -21,14 +20,14 @@ public abstract class Feature {
    private final String name;
    private String suffix;
    private boolean hidden;
-   private static final String f218 = new String(new byte[0], StandardCharsets.UTF_8);
+   private static final String EMPTY_SUFFIX = "";
    private String displayName;
 
    public String getDisplayName() {
       return this.displayName;
    }
 
-   public void onEvent(Event var1) {
+   public void onEvent(Event event) {
    }
 
    public int getDefaultKey() {
@@ -39,12 +38,12 @@ public abstract class Feature {
       return this.name;
    }
 
-   public void setKey(int var1) {
-      this.keyCode = var1;
+   public void setKey(int key) {
+      this.keyCode = key;
    }
 
-   public void setEnabled(boolean var1) {
-      if (this.enabled != var1) {
+   public void setEnabled(boolean enabled) {
+      if (this.enabled != enabled) {
          this.toggle();
       }
    }
@@ -64,7 +63,7 @@ public abstract class Feature {
    public void onDisable() {
    }
 
-   public int getPriority(Event var1) {
+   public int getPriority(Event event) {
       return 0;
    }
 
@@ -72,16 +71,16 @@ public abstract class Feature {
       return this.category;
    }
 
-   public void setSuffix(String var1) {
-      if (!Objects.equals(this.suffix, var1)) {
-         this.suffix = var1;
-         this.displayName = var1 == null ? this.name : this.name + "§7 " + var1;
+   public void setSuffix(String suffix) {
+      if (!Objects.equals(this.suffix, suffix)) {
+         this.suffix = suffix;
+         this.displayName = suffix == null ? this.name : this.name + "§7 " + suffix;
          FeatureManager.sortModules();
       }
    }
 
-   public void setHidden(boolean var1) {
-      this.hidden = var1;
+   public void setHidden(boolean hidden) {
+      this.hidden = hidden;
    }
 
    public void toggle() {
@@ -93,7 +92,7 @@ public abstract class Feature {
       }
       this.pendingWorldEnable = false;
 
-      Events.m11();
+      Events.refreshListeners();
       DynamicIslandManager.onModuleToggled(this);
    }
 
@@ -101,13 +100,13 @@ public abstract class Feature {
       return this.enabled;
    }
 
-   public Feature(String var1, int var2, Category var3) {
-      this.category = var3;
-      this.name = var1;
-      this.displayName = var1;
-      this.suffix = f218;
-      this.keyCode = var2;
-      this.defaultKey = var2;
+   public Feature(String name, int keyCode, Category category) {
+      this.category = category;
+      this.name = name;
+      this.displayName = name;
+      this.suffix = EMPTY_SUFFIX;
+      this.keyCode = keyCode;
+      this.defaultKey = keyCode;
       this.enabled = false;
    }
 
@@ -118,13 +117,8 @@ public abstract class Feature {
       return this.suffix;
    }
 
-   public Feature(String var1, Category var2) {
-      this.category = var2;
-      this.name = var1;
-      this.displayName = var1;
-      this.suffix = f218;
-      this.keyCode = 0;
-      this.enabled = false;
+   public Feature(String name, Category category) {
+      this(name, 0, category);
    }
 
    public int getKey() {

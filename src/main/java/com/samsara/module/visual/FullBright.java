@@ -4,32 +4,31 @@ import com.samsara.event.Event;
 import com.samsara.event.Events;
 import com.samsara.module.Category;
 import com.samsara.module.Feature;
-import java.nio.charset.StandardCharsets;
 import mixins.OptionInstanceAccessor;
 
 public class FullBright extends Feature {
-   private double f619;
-   private static final String f618 = "FullBright";
+   private double previousGamma;
+   private static final String FULL_BRIGHT_LABEL = "FullBright";
 
    public FullBright() {
-      super(f618, Category.VISUAL);
+      super(FULL_BRIGHT_LABEL, Category.VISUAL);
    }
 
    @Override
    public void onEnable() {
-      this.f619 = (Double)mc.options.gamma().get();
+      this.previousGamma = (Double)mc.options.gamma().get();
       ((OptionInstanceAccessor)(Object)mc.options.gamma()).setValue(100.0);
    }
 
    @Override
-   public void onEvent(Event var1) {
-      if (var1 == Events.f3) {
+   public void onEvent(Event event) {
+      if (event == Events.ROTATION) {
          ((OptionInstanceAccessor)(Object)mc.options.gamma()).setValue(100.0);
       }
    }
 
    @Override
    public void onDisable() {
-      mc.options.gamma().set(this.f619);
+      mc.options.gamma().set(this.previousGamma);
    }
 }

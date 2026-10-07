@@ -300,57 +300,57 @@ final class OpaiConfigPanel {
       this.messageUntil = OpaiMotion.now() + 3500;
    }
 
-   void paint(OpaiSurface s, OpaiStyle.Palette palette, double mouseX, double mouseY, double now) {
-      this.chipWidth = Math.min(this.dockRight, s.plainTextWidth("Configurations", CHIP_TEXT_SIZE) + CHIP_PADDING);
+   void paint(OpaiSurface surface, OpaiStyle.Palette palette, double mouseX, double mouseY, double now) {
+      this.chipWidth = Math.min(this.dockRight, surface.plainTextWidth("Configurations", CHIP_TEXT_SIZE) + CHIP_PADDING);
       float opacity = this.popup.value();
-      if (opacity < 1) s.opacity((float)Math.pow(1 - opacity, 4), () -> {
+      if (opacity < 1) surface.opacity((float)Math.pow(1 - opacity, 4), () -> {
          Rect chip = chip();
-         s.rounded(chip.x(), chip.y(), chip.width(), CHIP_H, CHIP_RADIUS, CHIP_BACKGROUND);
-         feedback("chip").paint(s, chip.x(), chip.y(), chip.width(), CHIP_H, CHIP_RADIUS, palette.accent(), now);
-         s.plainText("Configurations", chip.x() + 2, chip.y() + CHIP_H / 2, CHIP_TEXT_SIZE, chip.width() - CHIP_PADDING, palette.text());
+         surface.rounded(chip.x(), chip.y(), chip.width(), CHIP_H, CHIP_RADIUS, CHIP_BACKGROUND);
+         feedback("chip").paint(surface, chip.x(), chip.y(), chip.width(), CHIP_H, CHIP_RADIUS, palette.accent(), now);
+         surface.plainText("Configurations", chip.x() + 2, chip.y() + CHIP_H / 2, CHIP_TEXT_SIZE, chip.width() - CHIP_PADDING, palette.text());
       });
       if (opacity <= .005f) return;
       double mx = inputX(mouseX), my = inputY(mouseY);
-      s.opacity(opacity, () -> s.scale(popupScale(), this.x + this.width, this.y, () -> paintPopup(s, palette, mx, my, now)));
+      surface.opacity(opacity, () -> surface.scale(popupScale(), this.x + this.width, this.y, () -> paintPopup(surface, palette, mx, my, now)));
    }
 
-   private void paintPopup(OpaiSurface s, OpaiStyle.Palette palette, double mouseX, double mouseY, double now) {
+   private void paintPopup(OpaiSurface surface, OpaiStyle.Palette palette, double mouseX, double mouseY, double now) {
       float body = this.height.value();
-      if (body > .01f) s.panel(this.x, this.y + HEADER_H, this.width, body, false, palette.body());
-      if (body > .5f) s.panel(this.x, this.y, this.width, HEADER_H, true, palette.header());
-      else s.rounded(this.x, this.y, this.width, HEADER_H, RADIUS, palette.header());
+      if (body > .01f) surface.panel(this.x, this.y + HEADER_H, this.width, body, false, palette.body());
+      if (body > .5f) surface.panel(this.x, this.y, this.width, HEADER_H, true, palette.header());
+      else surface.rounded(this.x, this.y, this.width, HEADER_H, RADIUS, palette.header());
       String title = this.page == Page.ADD ? "Add" : this.page == Page.SETTINGS ? "Settings" : this.page == Page.TARGETS ? "Targets" : "Configurations";
       float titleX = this.x + TEXT_PAD;
-      if (this.page != Page.CONFIGS) { headerIcon(s, palette, BACK, this.x + 8, 8, mouseX, mouseY, now); titleX += 10; }
-      s.text(title, titleX, this.y + HEADER_H / 2, OpaiStyle.HEADER_TEXT_SIZE,
+      if (this.page != Page.CONFIGS) { headerIcon(surface, palette, BACK, this.x + 8, 8, mouseX, mouseY, now); titleX += 10; }
+      surface.text(title, titleX, this.y + HEADER_H / 2, OpaiStyle.HEADER_TEXT_SIZE,
          this.width - (this.page == Page.CONFIGS ? 48 : 30), palette.text());
       if (this.page == Page.CONFIGS) {
-         headerIcon(s, palette, PLUS, this.x + this.width - 37, 10, mouseX, mouseY, now);
-         headerIcon(s, palette, GEAR, this.x + this.width - 21, 10, mouseX, mouseY, now);
+         headerIcon(surface, palette, PLUS, this.x + this.width - 37, 10, mouseX, mouseY, now);
+         headerIcon(surface, palette, GEAR, this.x + this.width - 21, 10, mouseX, mouseY, now);
       }
       if (body <= .01f) return;
-      s.clip(this.x, this.y + HEADER_H, this.width, body, () -> {
-         if (this.outgoing != null) s.opacity(1 - this.pageFade.value(), () -> paintPage(s, palette, this.outgoing, mouseX, mouseY));
-         s.opacity(this.pageFade.value(), () -> paintPage(s, palette, this.page, mouseX, mouseY));
+      surface.clip(this.x, this.y + HEADER_H, this.width, body, () -> {
+         if (this.outgoing != null) surface.opacity(1 - this.pageFade.value(), () -> paintPage(surface, palette, this.outgoing, mouseX, mouseY));
+         surface.opacity(this.pageFade.value(), () -> paintPage(surface, palette, this.page, mouseX, mouseY));
       });
       if (!this.message.isEmpty() && now < this.messageUntil) {
-         s.rounded(this.x + 3, this.y + HEADER_H + body + 3, this.width - 6, 15, 3, palette.field());
-         s.text(this.message, this.x + 7, this.y + HEADER_H + body + 10.5f, 7, this.width - 14, 0xFFFF9999);
+         surface.rounded(this.x + 3, this.y + HEADER_H + body + 3, this.width - 6, 15, 3, palette.field());
+         surface.text(this.message, this.x + 7, this.y + HEADER_H + body + 10.5f, 7, this.width - 14, 0xFFFF9999);
       }
    }
-   private void headerIcon(OpaiSurface s, OpaiStyle.Palette palette, OpaiIcons.Icon icon, float x, float size,
+   private void headerIcon(OpaiSurface surface, OpaiStyle.Palette palette, OpaiIcons.Icon icon, float x, float size,
                            double mx, double my, double now) {
       OpaiFeedback ink = feedback("header:" + icon);
       float hover = ink.hover(new Rect(x - 3, this.y + 3, size + 6, 16).contains(mx, my), now);
-      s.scale(1 - .12f * ink.press(now), x + size / 2, this.y + 6 + size / 2, () ->
-         s.icon(icon, x, this.y + 6, size, OpaiSurface.mix(palette.fieldLine(), palette.accent(), hover)));
+      surface.scale(1 - .12f * ink.press(now), x + size / 2, this.y + 6 + size / 2, () ->
+         surface.icon(icon, x, this.y + 6, size, OpaiSurface.mix(palette.fieldLine(), palette.accent(), hover)));
    }
-   private void paintPage(OpaiSurface s, OpaiStyle.Palette p, Page page, double mx, double my) {
+   private void paintPage(OpaiSurface surface, OpaiStyle.Palette p, Page page, double mx, double my) {
       float left = this.x + INSET, top = this.y + HEADER_H + 3, inner = this.width - INSET * 2;
       if (page == Page.CONFIGS) {
-         s.rounded(left, top, inner, listHeight(), 8, OpaiSurface.mix(p.field(), 0xFF202020, .45f));
-         s.clip(left, top, inner, listHeight(), () -> {
-            if (this.names.isEmpty()) s.text("No configurations", left + 6, top + 12, 8.3f, inner - 12, p.fieldLine());
+         surface.rounded(left, top, inner, listHeight(), 8, OpaiSurface.mix(p.field(), 0xFF202020, .45f));
+         surface.clip(left, top, inner, listHeight(), () -> {
+            if (this.names.isEmpty()) surface.text("No configurations", left + 6, top + 12, 8.3f, inner - 12, p.fieldLine());
             else for (int i = 0; i < this.names.size(); i++) {
                String name = this.names.get(i);
                float rowY = top + LIST_ROW * i - this.scrollMotion.value();
@@ -358,74 +358,74 @@ final class OpaiConfigPanel {
                float selected = this.selectionAnims.get(name).value();
                int highlight = (p.accent() & 0xFFFFFF) | Math.round(255 * selected) << 24;
                if (selected > 0) {
-                  s.rounded(left, rowY, inner, LIST_ROW, i == 0 || i == this.names.size() - 1 ? 8 : 0, highlight);
-                  if (i == 0 && this.names.size() > 1) s.rect(left, rowY + 8, inner, LIST_ROW - 8, highlight);
-                  else if (i == this.names.size() - 1 && i > 0) s.rect(left, rowY, inner, LIST_ROW - 8, highlight);
-               } else if (new Rect(left, rowY, inner, LIST_ROW).contains(mx, my)) s.rect(left, rowY, inner, LIST_ROW, p.hover());
-               feedback("row:" + name).paint(s, left, rowY, inner, LIST_ROW, 0, p.accent(), OpaiMotion.now());
-               s.text(name + ".json", left + 6, rowY + LIST_ROW / 2, 8.3f, inner - 12,
+                  surface.rounded(left, rowY, inner, LIST_ROW, i == 0 || i == this.names.size() - 1 ? 8 : 0, highlight);
+                  if (i == 0 && this.names.size() > 1) surface.rect(left, rowY + 8, inner, LIST_ROW - 8, highlight);
+                  else if (i == this.names.size() - 1 && i > 0) surface.rect(left, rowY, inner, LIST_ROW - 8, highlight);
+               } else if (new Rect(left, rowY, inner, LIST_ROW).contains(mx, my)) surface.rect(left, rowY, inner, LIST_ROW, p.hover());
+               feedback("row:" + name).paint(surface, left, rowY, inner, LIST_ROW, 0, p.accent(), OpaiMotion.now());
+               surface.text(name + ".json", left + 6, rowY + LIST_ROW / 2, 8.3f, inner - 12,
                   OpaiSurface.mix(p.text(), p.enabledText(), selected));
             }
             if (maximumScroll() > 0) {
                float track = listHeight() - 4, thumb = Math.min(track, Math.max(12, track * listHeight() / (this.names.size() * LIST_ROW)));
-               s.rounded(left + inner - 3, top + 2 + (track - thumb) * this.scrollMotion.value() / maximumScroll(), 2, thumb, 1, p.scrollbar());
+               surface.rounded(left + inner - 3, top + 2 + (track - thumb) * this.scrollMotion.value() / maximumScroll(), 2, thumb, 1, p.scrollbar());
             }
          });
          float y = top + listHeight() + 5, gap = 6, cell = (inner - gap * 3) / 4;
          OpaiIcons.Icon[] icons = {REFRESH, SAVE, LOAD, DELETE};
-         for (int i = 0; i < 4; i++) button(s, p, left + i * (cell + gap), y, cell, "", icons[i], i == 0 || this.selected != null, mx, my);
+         for (int i = 0; i < 4; i++) button(surface, p, left + i * (cell + gap), y, cell, "", icons[i], i == 0 || this.selected != null, mx, my);
          float half = (inner - gap) / 2;
-         button(s, p, left, y + BUTTON_H + 2, half, "Folder", FOLDER, true, mx, my);
-         button(s, p, left + half + gap, y + BUTTON_H + 2, half, "Upload", UPLOAD, true, mx, my);
+         button(surface, p, left, y + BUTTON_H + 2, half, "Folder", FOLDER, true, mx, my);
+         button(surface, p, left + half + gap, y + BUTTON_H + 2, half, "Upload", UPLOAD, true, mx, my);
       } else if (page == Page.ADD) {
-         s.rounded(left, top, inner, 21, 1.5f, this.focused ? p.accent() : p.toggleOutline());
-         s.rounded(left + .8f, top + .8f, inner - 1.6f, 19.4f, 1, 0xFF111014);
+         surface.rounded(left, top, inner, 21, 1.5f, this.focused ? p.accent() : p.toggleOutline());
+         surface.rounded(left + .8f, top + .8f, inner - 1.6f, 19.4f, 1, 0xFF111014);
          if (this.focused) {
-            s.rect(left + 3, top - 2, 19, 5, p.header());
-            s.text("Name", left + 4, top + .5f, 5.5f, 19, p.accent());
+            surface.rect(left + 3, top - 2, 19, 5, p.header());
+            surface.text("Name", left + 4, top + .5f, 5.5f, 19, p.accent());
          }
-         float cursorWidth = s.textWidth(this.input.substring(0, this.cursor), 8.3f);
+         float cursorWidth = surface.textWidth(this.input.substring(0, this.cursor), 8.3f);
          float offset = Math.max(0, cursorWidth - inner + 14);
-         s.clip(left + 4, top + 2, inner - 8, 17, () -> {
+         surface.clip(left + 4, top + 2, inner - 8, 17, () -> {
             float tx = left + 6 - offset;
             if (this.focused && this.cursor != this.selection) {
-               float a = s.textWidth(this.input.substring(0, Math.min(this.cursor, this.selection)), 8.3f);
-               float b = s.textWidth(this.input.substring(0, Math.max(this.cursor, this.selection)), 8.3f);
-               s.rect(tx + a, top + 3, b - a, 15, 0x665C6399);
+               float selectionStartX = surface.textWidth(this.input.substring(0, Math.min(this.cursor, this.selection)), 8.3f);
+               float selectionEndX = surface.textWidth(this.input.substring(0, Math.max(this.cursor, this.selection)), 8.3f);
+               surface.rect(tx + selectionStartX, top + 3, selectionEndX - selectionStartX, 15, 0x665C6399);
             }
-            s.text(this.input.isEmpty() && !this.focused ? "Name" : this.input, tx, top + 10.5f, 8.3f,
-               Math.max(inner, s.textWidth(this.input, 8.3f) + 1), p.text());
-            if (this.focused && ((long)OpaiMotion.now() / 500) % 2 == 0) s.rect(tx + cursorWidth, top + 4, .7f, 13, p.text());
+            surface.text(this.input.isEmpty() && !this.focused ? "Name" : this.input, tx, top + 10.5f, 8.3f,
+               Math.max(inner, surface.textWidth(this.input, 8.3f) + 1), p.text());
+            if (this.focused && ((long)OpaiMotion.now() / 500) % 2 == 0) surface.rect(tx + cursorWidth, top + 4, .7f, 13, p.text());
          });
-         button(s, p, left, top + 28, inner, "Create", PLUS, true, mx, my);
-         button(s, p, left, top + 48, inner, "Create Blank", PLUS, true, mx, my);
+         button(surface, p, left, top + 28, inner, "Create", PLUS, true, mx, my);
+         button(surface, p, left, top + 48, inner, "Create Blank", PLUS, true, mx, my);
       } else if (page == Page.TARGETS) {
-         this.targets.paint(s, p, this.x, this.y + HEADER_H, this.width);
+         this.targets.paint(surface, p, this.x, this.y + HEADER_H, this.width);
       } else {
          String[] items = {"Configurations", "Chat Translate", "Module Tweaks", "Targets", "Misc"};
          for (int i = 0; i < items.length; i++) {
-            s.text(items[i], this.x + TEXT_PAD, this.y + HEADER_H + ROW_H * (i + .5f), 8.3f, this.width - TEXT_PAD * 2, p.text());
+            surface.text(items[i], this.x + TEXT_PAD, this.y + HEADER_H + ROW_H * (i + .5f), 8.3f, this.width - TEXT_PAD * 2, p.text());
          }
       }
    }
-   private void button(OpaiSurface s, OpaiStyle.Palette p, float x, float y, float w, String label,
+   private void button(OpaiSurface surface, OpaiStyle.Palette p, float x, float y, float w, String label,
                        OpaiIcons.Icon icon, boolean active, double mx, double my) {
       double now = OpaiMotion.now();
       OpaiFeedback ink = feedback(label.isEmpty() ? icon.name() : label);
       float hover = ink.hover(new Rect(x, y, w, BUTTON_H).contains(mx, my) && active, now);
-      s.scale(1 - .06f * ink.press(now), x + w / 2, y + BUTTON_H / 2,
-         () -> paintButton(s, p, x, y, w, label, icon, active, ink, hover, now));
+      surface.scale(1 - .06f * ink.press(now), x + w / 2, y + BUTTON_H / 2,
+         () -> paintButton(surface, p, x, y, w, label, icon, active, ink, hover, now));
    }
-   private void paintButton(OpaiSurface s, OpaiStyle.Palette p, float x, float y, float w, String label,
+   private void paintButton(OpaiSurface surface, OpaiStyle.Palette p, float x, float y, float w, String label,
                             OpaiIcons.Icon icon, boolean active, OpaiFeedback ink, float hover, double now) {
       int fill = OpaiSurface.mix(p.field(), p.accent(), .15f + .10f * hover);
-      s.rounded(x, y, w, BUTTON_H, BUTTON_H / 2, fill);
-      ink.paint(s, x, y, w, BUTTON_H, BUTTON_H / 2, p.accent(), now);
-      float textW = label.isEmpty() ? 0 : s.textWidth(label, 8.3f), glyph = 9;
+      surface.rounded(x, y, w, BUTTON_H, BUTTON_H / 2, fill);
+      ink.paint(surface, x, y, w, BUTTON_H, BUTTON_H / 2, p.accent(), now);
+      float textW = label.isEmpty() ? 0 : surface.textWidth(label, 8.3f), glyph = 9;
       float left = x + (w - textW - glyph - (label.isEmpty() ? 0 : 5)) / 2;
-      s.opacity(active ? 1 : .4f, () -> {
-         s.icon(icon, left, y + (BUTTON_H - glyph) / 2, glyph, p.text());
-         if (!label.isEmpty()) s.text(label, left + glyph + 5, y + BUTTON_H / 2, 8.3f, textW + 1, p.text());
+      surface.opacity(active ? 1 : .4f, () -> {
+         surface.icon(icon, left, y + (BUTTON_H - glyph) / 2, glyph, p.text());
+         if (!label.isEmpty()) surface.text(label, left + glyph + 5, y + BUTTON_H / 2, 8.3f, textW + 1, p.text());
       });
    }
 }

@@ -19,7 +19,6 @@ import com.samsara.ui.clickgui.opai.OpaiStyle;
 import com.samsara.ui.hud.HudLayouts;
 import com.samsara.ui.hud.editor.HudEditorScreen;
 import com.samsara.util.ClientColors;
-import com.samsara.util.ColorUtil;
 import com.samsara.util.ModTextures;
 import com.samsara.util.Wrapper;
 import com.samsara.util.render.*;
@@ -29,7 +28,6 @@ import com.samsara.util.render.HudGlassStyle;
 import com.samsara.util.render.NVGRenderer;
 import com.samsara.util.render.NVGTextRenderer;
 import java.nio.FloatBuffer;
-import java.nio.charset.StandardCharsets;
 import java.util.ArrayList;
 import java.util.Comparator;
 import java.util.HashSet;
@@ -80,6 +78,7 @@ public class Hud extends Feature {
 
    private final List<ArraylistEntry> entries = new ArrayList<>();
    private final List<ArraylistEntry> visibleEntries = new ArrayList<>();
+   private final List<OpaiArraylistLayout.Row> opaiRows = new ArrayList<>();
 
    private int widestWidth;
    private int totalHeight;
@@ -103,7 +102,7 @@ public class Hud extends Feature {
    }
 
    public static boolean enabled(Widget widget) {
-      return FeatureManager.f25 != null && FeatureManager.f25.widgetEnabled(widget);
+      return FeatureManager.hud != null && FeatureManager.hud.widgetEnabled(widget);
    }
 
    @Override public void onEvent(Event event) {
@@ -122,7 +121,7 @@ public class Hud extends Feature {
 
    public void renderPreview(GuiGraphicsExtractor graphics, float partialTick) {
       if (selected(Widget.INVENTORY_HUD)) this.inventoryHud.renderInventory(graphics);
-      if (selected(Widget.TARGET_HUD)) this.targetHud.m207(graphics, partialTick, mc.player);
+      if (selected(Widget.TARGET_HUD)) this.targetHud.renderPreview(graphics, partialTick, mc.player);
       else this.targetHud.onDisable();
       if (selected(Widget.SESSION_HUD)) this.sessionHud.renderSession(graphics);
       if (selected(Widget.POTION_STATUS)) this.potionStatus.renderStatus(graphics);
@@ -144,25 +143,25 @@ public class Hud extends Feature {
       final ArraylistSettings settings = this.settings();
 
       if (this.isOpai()) {
-         List<OpaiArraylistLayout.Row> rows = new ArrayList<>();
+         this.opaiRows.clear();
          for (int i = 0; i < this.visibleEntries.size(); i++) {
             float nextWidth = i + 1 < this.visibleEntries.size() ? this.visibleEntries.get(i + 1).getWidth() : 0;
-            rows.add(this.visibleEntries.get(i).opaiRow(-OpaiArraylistLayout.EDGE_INSET, nextWidth));
+            this.opaiRows.add(this.visibleEntries.get(i).opaiRow(-OpaiArraylistLayout.EDGE_INSET, nextWidth));
          }
          long vg = NVGRenderer.getContext();
          nvgSave(vg);
          try {
             nvgTranslate(vg, Wrapper.mc.getWindow().getGuiScaledWidth(), 0);
             nvgScale(vg, scale, scale);
-            this.opaiRenderer.draw(rows, settings.background.m215(), settings.shadow.m215(), settings.edge.m215(),
+            this.opaiRenderer.draw(this.opaiRows, settings.background.getValue(), settings.shadow.getValue(), settings.edge.getValue(),
                ClickGui.currentOpaiPalette());
          } finally {
             nvgRestore(vg);
          }
       } else {
-         final ArraylistEntry.BarMode mode = parseBarMode(settings.bar.m224());
+         final ArraylistEntry.BarMode mode = parseBarMode(settings.bar.getValue());
          for (int i = 0; i < this.visibleEntries.size(); i++) {
-            this.visibleEntries.get(i).renderNano(i, mode, settings.background.m215(), scale, 0, 0);
+            this.visibleEntries.get(i).renderNano(i, mode, settings.background.getValue(), scale, 0, 0);
          }
       }
    }
@@ -186,9 +185,9 @@ public class Hud extends Feature {
             entry.resetLayout();
          }
          if (opai) {
-            entry.updateOpaiText(settings.suffix.m215(), settings.lowercase.m215(), this.opaiRenderer);
+            entry.updateOpaiText(settings.suffix.getValue(), settings.lowercase.getValue(), this.opaiRenderer);
          } else {
-            entry.updateText(settings.suffix.m215(), settings.lowercase.m215());
+            entry.updateText(settings.suffix.getValue(), settings.lowercase.getValue());
          }
       }
       this.lastOpai = opai;
@@ -228,7 +227,7 @@ public class Hud extends Feature {
    }
 
    private boolean isOpai() {
-      return this.arraylistMode.m228("Opai");
+      return this.arraylistMode.is("Opai");
    }
 
    private ArraylistSettings settings() {
@@ -314,7 +313,7 @@ public class Hud extends Feature {
          text = lowercase ? name.toLowerCase(Locale.ROOT) : name; width = font().getStringWidth(text, 8);
       }
       public void updateOpaiText(boolean suffix, boolean lowercase, OpaiArraylistRenderer renderer) {
-         opaiText = OpaiArraylistLayout.measure(module.getName(), suffixMode == null ? "" : suffixMode.m224(), lowercase, suffix, renderer::measure);
+         opaiText = OpaiArraylistLayout.measure(module.getName(), suffixMode == null ? "" : suffixMode.getValue(), lowercase, suffix, renderer::measure);
          width = opaiText.width();
       }
       public void visibility(boolean visible, long now) { motion.visibility(visible, now); }
@@ -327,7 +326,7 @@ public class Hud extends Feature {
       public void renderNano(int index, BarMode barMode, boolean background, float scale, int xOffset, int yOffset) {
          int screenWidth = NVGRenderer.getMinecraft().getWindow().getGuiScaledWidth();
          float x = screenWidth + xOffset - width + slide(), y = motion.y() + yOffset;
-         int color = ClientColors.m52(index * 20);
+         int color = ClientColors.colorAtOffset(index * 20);
          NVGRenderer.scale(scale, screenWidth + xOffset, 0, 0, 0, () -> {
             if (background) NVGRenderer.rect(x - 6.5f, y, width + 6.5f, OFFSET, 0x80090909);
             if (barMode != BarMode.NONE) {
@@ -603,8 +602,8 @@ public class Hud extends Feature {
       }
 
       public void onEvent(Event event) {
-         if (event == Events.f5 && !HudEditorScreen.active()) {
-            renderInventory(Events.f5.m89());
+         if (event == Events.RENDER_2D && !HudEditorScreen.active()) {
+            renderInventory(Events.RENDER_2D.getGraphics());
          }
       }
 
@@ -697,128 +696,127 @@ public class Hud extends Feature {
       private final OpaiTargetHudHealth opaiHealth = new OpaiTargetHudHealth();
       private Player opaiTarget;
       private OpaiTargetHudPainter.Bounds opaiBounds;
-      private static final String f676 = "HP: 4";
-      private float f698;
-      private String f706;
-      private static final String f665 = "Show Win or Loss";
-      private Player f703;
-      private final BooleanSetting f693;
-      private static final String f666 = "Health Animation";
-      private static final String f688 = "HP: 16";
-      private static final String f685 = "HP: 13";
-      private float f700;
-      private static final String f671 = "HP: 20";
-      private static final String f691 = "HP: 19";
-      private final BooleanSetting f696;
-      private static final String f682 = "HP: 10";
-      private Player f705;
-      private final BooleanSetting f692;
-      private int f701;
-      private static final String f677 = "HP: 5";
-      private static final String f674 = "HP: 2";
-      private static final String f683 = "HP: 11";
-      private static final String f681 = "HP: 9";
-      private int f702;
-      private float f697;
-      private static final String f687 = "HP: 15";
-      private final BooleanSetting f695;
-      private static final String f690 = "HP: 18";
-      private static final String f668 = "\u00a7aW";
-      private static final String f663 = "Outline";
-      private static final String f675 = "HP: 3";
-      private static final String f689 = "HP: 17";
-      private Identifier f704;
-      private static final String[] f713 = new String[]{
-         TargetHud.f672,
-         TargetHud.f673,
-         f674,
-         f675,
-         f676,
-         f677,
-         TargetHud.f678,
-         TargetHud.f679,
-         TargetHud.f680,
-         f681,
-         f682,
-         f683,
-         TargetHud.f684,
-         f685,
-         TargetHud.f686,
-         f687,
-         f688,
-         f689,
-         f690,
-         f691,
-         f671
+      private static final String HP4_LABEL = "HP: 4";
+      private float trailingHealth;
+      private String targetName;
+      private static final String SHOW_WIN_OR_LOSS_LABEL = "Show Win or Loss";
+      private Player lastTarget;
+      private final BooleanSetting outline;
+      private static final String HEALTH_ANIMATION_LABEL = "Health Animation";
+      private static final String HP16_LABEL = "HP: 16";
+      private static final String HP13_LABEL = "HP: 13";
+      private float health;
+      private static final String HP20_LABEL = "HP: 20";
+      private static final String HP19_LABEL = "HP: 19";
+      private final BooleanSetting healthAnimation;
+      private static final String HP10_LABEL = "HP: 10";
+      private Player skinTarget;
+      private final BooleanSetting themeColor;
+      private int alpha;
+      private static final String HP5_LABEL = "HP: 5";
+      private static final String HP2_LABEL = "HP: 2";
+      private static final String HP11_LABEL = "HP: 11";
+      private static final String HP9_LABEL = "HP: 9";
+      private int previousAlpha;
+      private float previousHealth;
+      private static final String HP15_LABEL = "HP: 15";
+      private final BooleanSetting showWinOrLoss;
+      private static final String HP18_LABEL = "HP: 18";
+      private static final String WIN_LABEL = "\u00a7aW";
+      private static final String OUTLINE_LABEL = "Outline";
+      private static final String HP3_LABEL = "HP: 3";
+      private static final String HP17_LABEL = "HP: 17";
+      private Identifier skinTexture;
+      private static final String[] healthLabels = new String[]{
+         TargetHud.HP0_LABEL,
+         TargetHud.HP1_LABEL,
+         HP2_LABEL,
+         HP3_LABEL,
+         HP4_LABEL,
+         HP5_LABEL,
+         TargetHud.HP6_LABEL,
+         TargetHud.HP7_LABEL,
+         TargetHud.HP8_LABEL,
+         HP9_LABEL,
+         HP10_LABEL,
+         HP11_LABEL,
+         TargetHud.HP12_LABEL,
+         HP13_LABEL,
+         TargetHud.HP14_LABEL,
+         HP15_LABEL,
+         HP16_LABEL,
+         HP17_LABEL,
+         HP18_LABEL,
+         HP19_LABEL,
+         HP20_LABEL
       };
-      private static final String f667 = new String(new byte[0], StandardCharsets.UTF_8);
-      private static final String f662 = "Theme Color";
-      private static final String f680 = "HP: 8";
-      private static final String f672 = "HP: 0";
-      private static final String f679 = "HP: 7";
-      private static final String f684 = "HP: 12";
-      private static final String f669 = "\u00a7cL";
-      private static final String f686 = "HP: 14";
-      private int f707;
-      private static final String f678 = "HP: 6";
-      private int f711;
-      private static final String f673 = "HP: 1";
-      private int f710;
-      private float f699;
-      private static final String f670 = "Player";
-      private static final String f661 = "TargetHUD";
+      private static final String EMPTY_NAME = "";
+      private static final String THEME_COLOR_LABEL = "Theme Color";
+      private static final String HP8_LABEL = "HP: 8";
+      private static final String HP0_LABEL = "HP: 0";
+      private static final String HP7_LABEL = "HP: 7";
+      private static final String HP12_LABEL = "HP: 12";
+      private static final String LOSS_LABEL = "\u00a7cL";
+      private static final String HP14_LABEL = "HP: 14";
+      private int targetNameWidth;
+      private static final String HP6_LABEL = "HP: 6";
+      private int height;
+      private static final String HP1_LABEL = "HP: 1";
+      private int width;
+      private float previousTrailingHealth;
 
-      public void onEvent(Event var1) {
-         if (var1 == Events.f5) {
+
+      public void onEvent(Event event) {
+         if (event == Events.RENDER_2D) {
             if (HudEditorScreen.active()) {
                return;
             }
 
-            this.render(Events.f5);
+            this.render(Events.RENDER_2D);
          }
 
-         if (var1 == Events.f3) {
-            if (this.mode.m228("Opai")) return;
+         if (event == Events.ROTATION) {
+            if (this.mode.is("Opai")) return;
 
-            KillAura var2 = FeatureManager.f26;
-            boolean var3 = var2 != null && var2.f17 instanceof Player;
-            float var4 = var3 ? 255.0F : 0.0F;
-            this.f702 = this.f701;
-            this.f701 = (int)Mth.lerp(0.5F, (float)this.f701, var4);
-            if (!var3) {
+            KillAura killAura = FeatureManager.killAura;
+            boolean hasPlayerTarget = killAura != null && killAura.target instanceof Player;
+            float targetAlpha = hasPlayerTarget ? 255.0F : 0.0F;
+            this.previousAlpha = this.alpha;
+            this.alpha = (int)Mth.lerp(0.5F, (float)this.alpha, targetAlpha);
+            if (!hasPlayerTarget) {
                return;
             }
 
-            Player var5 = (Player)var2.f17;
-            this.f699 = this.f698;
-            this.f698 = this.f697;
-            this.f697 = this.f700;
-            this.f700 = var5.getHealth();
+            Player player = (Player)killAura.target;
+            this.previousTrailingHealth = this.trailingHealth;
+            this.trailingHealth = this.previousHealth;
+            this.previousHealth = this.health;
+            this.health = player.getHealth();
          }
       }
 
-      public void m207(GuiGraphicsExtractor var1, float var2, Player var3) {
-         if (this.mode.m228("Opai")) {
-            renderOpai(var1, var3);
+      public void renderPreview(GuiGraphicsExtractor graphics, float partialTick, Player player) {
+         if (this.mode.is("Opai")) {
+            renderOpai(graphics, player);
             return;
          }
-         if (var3 == null) return;
-         String var8 = var3.getName().getString();
-         int var9 = mc.font.width(var8);
-         int var10 = Math.max(80, 38 + var9);
-         this.f710 = var10;
-         this.f711 = 42;
-         var box = classicBox(var10);
-         var1.pose().pushMatrix();
+         if (player == null) return;
+         String playerName = player.getName().getString();
+         int nameWidth = mc.font.width(playerName);
+         int width = Math.max(80, 38 + nameWidth);
+         this.width = width;
+         this.height = 42;
+         var box = classicBox(width);
+         graphics.pose().pushMatrix();
          try {
-            var1.pose().translate(box.x(), box.y()); var1.pose().scale(box.width()/var10, box.width()/var10);
+            graphics.pose().translate(box.x(), box.y()); graphics.pose().scale(box.width()/width, box.width()/width);
             int alpha = (int)(255 * HudEditorScreen.previewOpacity()), white = alpha << 24 | 0xFFFFFF;
-            var1.fill(0,0,var10,42,((int)(170*HudEditorScreen.previewOpacity()))<<24);
-            var1.text(mc.font,var8,34,5,white,false);
-            var1.text(mc.font,"HP: " + Math.round(var3.getHealth()),var10-35,22,white,false);
-            var1.fill(4,34,var10-4,38,white);
-            new OpaiTargetHudSurface(var1,var3,8,OpaiTargetHudPainter.PANEL_RESOURCE,122,40,6,HudEditorScreen.previewOpacity()).face(4,4,26,0);
-         } finally { var1.pose().popMatrix(); }
+            graphics.fill(0,0,width,42,((int)(170*HudEditorScreen.previewOpacity()))<<24);
+            graphics.text(mc.font,playerName,34,5,white,false);
+            graphics.text(mc.font,"HP: " + Math.round(player.getHealth()),width-35,22,white,false);
+            graphics.fill(4,34,width-4,38,white);
+            new OpaiTargetHudSurface(graphics,player,8,OpaiTargetHudPainter.PANEL_RESOURCE,122,40,6,HudEditorScreen.previewOpacity()).face(4,4,26,0);
+         } finally { graphics.pose().popMatrix(); }
       }
 
       private HudLayouts.Box classicBox(int width) {
@@ -827,89 +825,89 @@ public class Hud extends Feature {
          HudLayouts.INSTANCE.drawn(HudLayouts.Element.TARGET,box); return box;
       }
 
-      private void render(EventRender2D var1) {
+      private void render(EventRender2D render2DEvent) {
          if (mc.player == null || mc.level == null || mc.gui.overlay() != null) {
             clearTarget();
             return;
          }
-         if (this.mode.m228("Opai")) {
-            KillAura aura = FeatureManager.f26;
-            Player target = aura != null && aura.isEnabled() && aura.f17 instanceof Player player ? player : null;
-            renderOpai(var1.m89(), target);
+         if (this.mode.is("Opai")) {
+            KillAura aura = FeatureManager.killAura;
+            Player target = aura != null && aura.isEnabled() && aura.target instanceof Player player ? player : null;
+            renderOpai(render2DEvent.getGraphics(), target);
             return;
          }
          this.opaiTarget = null;
          this.opaiBounds = null;
-         KillAura var2 = FeatureManager.f26;
-         if (var2 != null) {
-            boolean var3 = var2.f17 instanceof Player || this.f703 != null && this.f701 > 10;
-            if (var3) {
-               Player var4 = var2.f17 instanceof Player ? (Player)var2.f17 : this.f703;
-               if (this.f705 != var4) {
-                  this.f705 = var4;
-                  this.f704 = null;
-                  this.f706 = var4.getDisplayName().getString();
-                  this.f707 = mc.font.width(this.f706);
-                  mc.getSkinManager().get(var4.getGameProfile()).thenAccept(var1x -> var1x.ifPresent(var1xx -> this.f704 = var1xx.body().texturePath()));
+         KillAura killAura = FeatureManager.killAura;
+         if (killAura != null) {
+            boolean visible = killAura.target instanceof Player || this.lastTarget != null && this.alpha > 10;
+            if (visible) {
+               Player player = killAura.target instanceof Player ? (Player)killAura.target : this.lastTarget;
+               if (this.skinTarget != player) {
+                  this.skinTarget = player;
+                  this.skinTexture = null;
+                  this.targetName = player.getDisplayName().getString();
+                  this.targetNameWidth = mc.font.width(this.targetName);
+                  mc.getSkinManager().get(player.getGameProfile()).thenAccept(skinResult -> skinResult.ifPresent(skin -> this.skinTexture = skin.body().texturePath()));
                }
 
-               int var5 = mc.getWindow().getGuiScaledWidth();
-               int var6 = mc.getWindow().getGuiScaledHeight();
-               int var7 = 0, var8 = 0;
-               int var9 = Math.max(80, 48 + this.f707);
-               float var10 = Mth.lerp(var1.m91(), this.f699, this.f698);
-               float var11 = Mth.lerp(var1.m91(), this.f697, this.f700);
-               float var12 = var4.getMaxHealth();
-               float var13 = var11 / var12;
-               float var14 = var10 / var12;
-               GuiGraphicsExtractor var15 = var1.m89();
-               int var16 = ColorUtil.m27();
-               int var17 = this.f692.m215() ? var16 : ColorUtil.m26(var13);
-               int var18 = this.f692.m215() ? var16 : ColorUtil.m26(var13);
-               var18 = var18 & 16777215 | 1677721600;
-               int var19 = (int)((float)this.f702 + (float)(this.f701 - this.f702) * var1.m91());
-               var17 = var19 << 24 | var17 & 16777215;
-               int var20 = var19 * 170 / 255 << 24;
-               int var21 = Math.round(var11);
-               if (var21 < 0) {
-                  var21 = 0;
-               } else if (var21 > 20) {
-                  var21 = 20;
+               int screenWidth = mc.getWindow().getGuiScaledWidth();
+               int screenHeight = mc.getWindow().getGuiScaledHeight();
+               int panelX = 0, panelY = 0;
+               int width = Math.max(80, 48 + this.targetNameWidth);
+               float trailingHealth = Mth.lerp(render2DEvent.getPartialTick(), this.previousTrailingHealth, this.trailingHealth);
+               float health = Mth.lerp(render2DEvent.getPartialTick(), this.previousHealth, this.health);
+               float maxHealth = player.getMaxHealth();
+               float healthRatio = health / maxHealth;
+               float trailingHealthRatio = trailingHealth / maxHealth;
+               GuiGraphicsExtractor graphics = render2DEvent.getGraphics();
+               int themeColor = ClientColors.colorAtOffset(0);
+               int healthBarColor = this.themeColor.getValue() ? themeColor : ClientColors.healthColor(healthRatio);
+               int trailingHealthBarColor = this.themeColor.getValue() ? themeColor : ClientColors.healthColor(healthRatio);
+               trailingHealthBarColor = trailingHealthBarColor & 16777215 | 1677721600;
+               int alpha = (int)((float)this.previousAlpha + (float)(this.alpha - this.previousAlpha) * render2DEvent.getPartialTick());
+               healthBarColor = alpha << 24 | healthBarColor & 16777215;
+               int backgroundColor = alpha * 170 / 255 << 24;
+               int roundedHealth = Math.round(health);
+               if (roundedHealth < 0) {
+                  roundedHealth = 0;
+               } else if (roundedHealth > 20) {
+                  roundedHealth = 20;
                }
 
-               String var22 = f713[var21];
-               var box = classicBox(var9);
-               var15.pose().pushMatrix();
+               String healthLabel = healthLabels[roundedHealth];
+               var box = classicBox(width);
+               graphics.pose().pushMatrix();
                try {
-               var15.pose().translate(box.x(),box.y()); var15.pose().scale(box.width()/var9,box.width()/var9);
-               var15.fill(var7, var8, var7 + var9, var8 + 42, var20);
-               if (this.f693.m215()) {
-                  var15.fill(var7, var8, var7 + 1, var8 + 42, var19 << 24 | var16 & 16777215);
-                  var15.fill(var7 + var9 - 1, var8, var7 + var9, var8 + 42, var19 << 24 | var16 & 16777215);
-                  var15.fill(var7, var8, var7 + var9, var8 + 1, var19 << 24 | var16 & 16777215);
-                  var15.fill(var7, var8 + 41, var7 + var9, var8 + 42, var19 << 24 | var16 & 16777215);
+               graphics.pose().translate(box.x(),box.y()); graphics.pose().scale(box.width()/width,box.width()/width);
+               graphics.fill(panelX, panelY, panelX + width, panelY + 42, backgroundColor);
+               if (this.outline.getValue()) {
+                  graphics.fill(panelX, panelY, panelX + 1, panelY + 42, alpha << 24 | themeColor & 16777215);
+                  graphics.fill(panelX + width - 1, panelY, panelX + width, panelY + 42, alpha << 24 | themeColor & 16777215);
+                  graphics.fill(panelX, panelY, panelX + width, panelY + 1, alpha << 24 | themeColor & 16777215);
+                  graphics.fill(panelX, panelY + 41, panelX + width, panelY + 42, alpha << 24 | themeColor & 16777215);
                }
 
-               if (this.f696.m215() && this.f701 > 200) {
-                  var15.fill(var7 + 4, var8 + 34, var7 + 8 + (int)((float)(var9 - 12) * var14), var8 + 38, var18);
+               if (this.healthAnimation.getValue() && this.alpha > 200) {
+                  graphics.fill(panelX + 4, panelY + 34, panelX + 8 + (int)((float)(width - 12) * trailingHealthRatio), panelY + 38, trailingHealthBarColor);
                }
 
-               var15.fill(var7 + 4, var8 + 34, var7 + 8 + (int)((float)(var9 - 12) * var13), var8 + 38, var17);
-               this.f710 = var9;
-               this.f711 = 42;
-               if (this.f695.m215()) {
-                  String var23 = var4.getHealth() <= mc.player.getHealth() ? f668 : f669;
-                  var15.text(mc.font, var23, var7 + var9 - 10, var8 + 5, var19 << 24 | 16777215, false);
+               graphics.fill(panelX + 4, panelY + 34, panelX + 8 + (int)((float)(width - 12) * healthRatio), panelY + 38, healthBarColor);
+               this.width = width;
+               this.height = 42;
+               if (this.showWinOrLoss.getValue()) {
+                  String advantageLabel = player.getHealth() <= mc.player.getHealth() ? WIN_LABEL : LOSS_LABEL;
+                  graphics.text(mc.font, advantageLabel, panelX + width - 10, panelY + 5, alpha << 24 | 16777215, false);
                }
 
-               var15.text(mc.font, this.f706, var7 + 34, var8 + 5, var19 << 24 | 16777215, false);
-               var15.text(mc.font, var22, var7 + var9 - 35, var8 + 22, var17, false);
-               if (this.f704 != null) {
-                  var15.blit(RenderPipelines.GUI_TEXTURED, this.f704, var7 + 4, var8 + 4, 8.0F, 8.0F, 26, 26, 8, 8, 64, 64, var19 << 24 | 16777215);
+               graphics.text(mc.font, this.targetName, panelX + 34, panelY + 5, alpha << 24 | 16777215, false);
+               graphics.text(mc.font, healthLabel, panelX + width - 35, panelY + 22, healthBarColor, false);
+               if (this.skinTexture != null) {
+                  graphics.blit(RenderPipelines.GUI_TEXTURED, this.skinTexture, panelX + 4, panelY + 4, 8.0F, 8.0F, 26, 26, 8, 8, 64, 64, alpha << 24 | 16777215);
                }
 
-               this.f703 = var4;
-               } finally { var15.pose().popMatrix(); }
+               this.lastTarget = player;
+               } finally { graphics.pose().popMatrix(); }
             }
          }
       }
@@ -919,22 +917,22 @@ public class Hud extends Feature {
          this.mode = new ModeSetting("Target Mode", owner, "Classic", new String[]{"Classic", "Opai"});
          this.mode.setDisplayName("Target HUD mode");
          this.showArmor = new BooleanSetting("Target Show Armor", owner, true);
-         this.f692 = new BooleanSetting("Target " + f662, owner, false);
-         this.f693 = new BooleanSetting("Target " + f663, owner, false);
-         this.f695 = new BooleanSetting("Target " + f665, owner, false);
-         this.f696 = new BooleanSetting("Target " + f666, owner, false);
-         this.f706 = f667;
+         this.themeColor = new BooleanSetting("Target " + THEME_COLOR_LABEL, owner, false);
+         this.outline = new BooleanSetting("Target " + OUTLINE_LABEL, owner, false);
+         this.showWinOrLoss = new BooleanSetting("Target " + SHOW_WIN_OR_LOSS_LABEL, owner, false);
+         this.healthAnimation = new BooleanSetting("Target " + HEALTH_ANIMATION_LABEL, owner, false);
+         this.targetName = EMPTY_NAME;
          for (Setting setting : owner.settings.subList(start + 1, owner.settings.size()))
             setting.setDisplayName(setting.getName());
          this.mode.setVisible(() -> owner.selected(Widget.TARGET_HUD));
-         this.showArmor.setVisible(() -> owner.selected(Widget.TARGET_HUD) && this.mode.m228("Opai"));
-         for (BooleanSetting setting : new BooleanSetting[]{this.f692, this.f693, this.f695, this.f696})
-            setting.setVisible(() -> owner.selected(Widget.TARGET_HUD) && !this.mode.m228("Opai"));
+         this.showArmor.setVisible(() -> owner.selected(Widget.TARGET_HUD) && this.mode.is("Opai"));
+         for (BooleanSetting setting : new BooleanSetting[]{this.themeColor, this.outline, this.showWinOrLoss, this.healthAnimation})
+            setting.setVisible(() -> owner.selected(Widget.TARGET_HUD) && !this.mode.is("Opai"));
       }
 
       private void renderOpai(GuiGraphicsExtractor graphics, Player target) {
-         this.f703 = null;
-         this.f701 = this.f702 = 0;
+         this.lastTarget = null;
+         this.alpha = this.previousAlpha = 0;
          if (mc.player == null || mc.level == null || mc.gui.overlay() != null || target == null
              || target.level() != mc.level || target.isRemoved()) {
             this.opaiTarget = null;
@@ -957,22 +955,22 @@ public class Hud extends Feature {
          HudLayouts.INSTANCE.drawn(HudLayouts.Element.TARGET, box);
          float scale = box.width() / content.width();
          this.opaiBounds = new OpaiTargetHudPainter.Bounds(0, 0, content.width(), content.height());
-         this.f710 = this.opaiBounds.width();
-         this.f711 = this.opaiBounds.height();
+         this.width = this.opaiBounds.width();
+         this.height = this.opaiBounds.height();
          HudBackdrop.widget(box, OpaiTargetHudPainter.RADIUS * scale);
          graphics.pose().pushMatrix();
          try {
             graphics.pose().translate(box.x(), box.y()); graphics.pose().scale(scale, scale);
             OpaiTargetHudPainter.paint(surface, this.opaiBounds, name, health,
-               this.showArmor.m215(), ClickGui.currentOpaiPalette());
+               this.showArmor.getValue(), ClickGui.currentOpaiPalette());
          } finally { graphics.pose().popMatrix(); }
       }
 
       private void clearTarget() {
-         this.opaiTarget = this.f703 = this.f705 = null;
+         this.opaiTarget = this.lastTarget = this.skinTarget = null;
          this.opaiBounds = null;
-         this.f704 = null;
-         this.f701 = this.f702 = 0;
+         this.skinTexture = null;
+         this.alpha = this.previousAlpha = 0;
       }
 
       public void onDisable() { clearTarget(); }
@@ -1261,7 +1259,7 @@ public class Hud extends Feature {
    public static final class SessionHud {
       public SessionHud() { }
       public void onEvent(Event event) {
-         if (event == Events.f5 && !HudEditorScreen.active()) renderSession(Events.f5.m89());
+         if (event == Events.RENDER_2D && !HudEditorScreen.active()) renderSession(Events.RENDER_2D.getGraphics());
       }
       public void renderSession(GuiGraphicsExtractor graphics) {
          if (mc.player == null || mc.level == null || mc.gui.overlay() != null) return;
@@ -1400,7 +1398,7 @@ public class Hud extends Feature {
       public PotionStatus() { }
       public void onDisable() { motion.clear(); }
       public void onEvent(Event event) {
-         if (event==Events.f5 && !HudEditorScreen.active()) renderStatus(Events.f5.m89());
+         if (event==Events.RENDER_2D && !HudEditorScreen.active()) renderStatus(Events.RENDER_2D.getGraphics());
       }
       public void renderStatus(GuiGraphicsExtractor graphics) {
          if (mc.player==null || mc.level==null || mc.gui.overlay()!=null) { motion.clear(); return; }
@@ -1558,9 +1556,9 @@ public class Hud extends Feature {
             void advance(long now) {
                if (!moving) return;
                double t=Math.clamp((now-changedAt)/1000.0/duration,0,1),d=target-start;
-               double a=startVelocity*duration,b=endVelocity*duration;
-               double raw=start+a*t+(3*d-2*a-b)*t*t+(-2*d+a+b)*t*t*t;
-               double speed=(a+2*(3*d-2*a-b)*t+3*(-2*d+a+b)*t*t)/duration;
+               double startTangent=startVelocity*duration,endTangent=endVelocity*duration;
+               double raw=start+startTangent*t+(3*d-2*startTangent-endTangent)*t*t+(-2*d+startTangent+endTangent)*t*t*t;
+               double speed=(startTangent+2*(3*d-2*startTangent-endTangent)*t+3*(-2*d+startTangent+endTangent)*t*t)/duration;
                // Hold group cards in place during exit anticipation.
                value=groupExit?Math.min(start,raw):raw;
                velocity=groupExit && raw>start?0:speed;

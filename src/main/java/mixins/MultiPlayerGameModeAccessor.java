@@ -10,16 +10,16 @@ import org.spongepowered.asm.mixin.gen.Invoker;
 @Mixin({MultiPlayerGameMode.class})
 public interface MultiPlayerGameModeAccessor {
    @Accessor("destroyProgress")
-   void setDestroyProgress(float var1);
+   void setDestroyProgress(float destroyProgress);
 
    @Accessor("destroyDelay")
-   void setDestroyDelay(int var1);
+   void setDestroyDelay(int destroyDelay);
 
    @Accessor("destroyProgress")
    float getDestroyProgress();
 
    @Invoker("startPrediction")
-   void invokeStartPrediction(ClientLevel var1, PredictiveAction var2);
+   void invokeStartPrediction(ClientLevel level, PredictiveAction action);
 
    @Invoker("ensureHasSentCarriedItem")
    void invokeEnsureHasSentCarriedItem();

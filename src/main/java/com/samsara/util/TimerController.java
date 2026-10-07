@@ -7,8 +7,8 @@ public class TimerController {
       multiplier = 1.0F;
    }
 
-   public static void setMultiplier(float var0) {
-      multiplier = var0;
+   public static void setMultiplier(float desiredMultiplier) {
+      multiplier = desiredMultiplier;
    }
 
    public static boolean isDefault() {

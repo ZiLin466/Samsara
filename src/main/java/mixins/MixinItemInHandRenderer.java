@@ -30,15 +30,15 @@ public abstract class MixinItemInHandRenderer {
    private void samsara$blocking(PlayerRenderState player, FirstPersonHandsAndItemsRenderState hands,
       float partialTick, float pitch, InteractionHand hand, float swing, ItemStack item, float equip,
       PoseStack pose, SubmitNodeCollector collector, int light, CallbackInfo callback) {
-      Animations animations = FeatureManager.f34;
+      Animations animations = FeatureManager.animations;
       if (animations == null || !animations.shouldBlock(hand, item) || hands.isScoping || player.avatarRenderState == null) return;
       HumanoidArm arm = player.avatarRenderState.mainArm;
       pose.pushPose();
       try {
          applyItemArmTransform(pose, arm, equip);
          samsara$viewModel(pose, animations);
-         BlockingAnimation.transform(pose, arm, equip, swing, animations.blockingAnimation.m224(),
-            (float)animations.blockY.m220(), (float)animations.swingScale.m220());
+         BlockingAnimation.transform(pose, arm, equip, swing, animations.blockingAnimation.getValue(),
+            (float)animations.blockY.getValue(), (float)animations.swingScale.getValue());
          hands.mainHandRenderState.submit(pose, collector, light, OverlayTexture.NO_OVERLAY, 0);
       } finally { pose.popPose(); }
       callback.cancel();
@@ -50,7 +50,7 @@ public abstract class MixinItemInHandRenderer {
       int light, int overlay, int outline, Operation<Void> original,
       PlayerRenderState player, FirstPersonHandsAndItemsRenderState hands, float partialTick, float pitch,
       InteractionHand hand) {
-      Animations animations = FeatureManager.f34;
+      Animations animations = FeatureManager.animations;
       pose.pushPose();
       try {
          if (animations != null && animations.isEnabled() && hand == InteractionHand.MAIN_HAND) samsara$viewModel(pose, animations);
@@ -60,8 +60,8 @@ public abstract class MixinItemInHandRenderer {
 
    @Unique
    private static void samsara$viewModel(PoseStack pose, Animations animations) {
-      pose.translate((float)animations.f28.m220(), (float)animations.f29.m220(), (float)animations.f30.m220());
-      float scale = (float)animations.f27.m220();
+      pose.translate((float)animations.x.getValue(), (float)animations.y.getValue(), (float)animations.z.getValue());
+      float scale = (float)animations.scale.getValue();
       pose.scale(scale, scale, scale);
    }
 }

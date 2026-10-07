@@ -23,19 +23,19 @@ public abstract class MixinEntityRenderer<T extends Entity, S extends EntityRend
       at = {@At("HEAD")},
       cancellable = true
    )
-   private void pm$49(EntityRenderState var1, PoseStack var2, SubmitNodeCollector var3, CameraRenderState var4, int var5, CallbackInfo var6) {
-      if (((NameTags.ReplacementState)var1).samsara$replaceNameTag()) var6.cancel();
+   private void samsara$replaceNameTag(EntityRenderState renderState, PoseStack poseStack, SubmitNodeCollector submitNodeCollector, CameraRenderState cameraRenderState, int packedLight, CallbackInfo callback) {
+      if (((NameTags.ReplacementState)renderState).samsara$replaceNameTag()) callback.cancel();
    }
 
    @Inject(
       method = {"extractRenderState(Lnet/minecraft/world/entity/Entity;Lnet/minecraft/client/renderer/entity/state/EntityRenderState;F)V"},
       at = {@At("TAIL")}
    )
-   private void pm$50(Entity var1, EntityRenderState var2, float var3, CallbackInfo var4) {
-      ((NameTags.ReplacementState)var2).samsara$replaceNameTag(NameTags.replaces(var1));
-      boolean var5 = Minecraft.getInstance().shouldEntityAppearGlowing(var1);
-      EventEntityOutline var6 = Events.f14.m36(var5 ? ARGB.opaque(var1.getTeamColor()) : 0, var1);
-      var6.call();
-      var2.outlineColor = var6.m37();
+   private void samsara$extractOutline(Entity entity, EntityRenderState renderState, float partialTick, CallbackInfo callback) {
+      ((NameTags.ReplacementState)renderState).samsara$replaceNameTag(NameTags.replaces(entity));
+      boolean glowing = Minecraft.getInstance().shouldEntityAppearGlowing(entity);
+      EventEntityOutline entityOutlineEvent = Events.ENTITY_OUTLINE.reset(glowing ? ARGB.opaque(entity.getTeamColor()) : 0, entity);
+      entityOutlineEvent.call();
+      renderState.outlineColor = entityOutlineEvent.getColor();
    }
 }

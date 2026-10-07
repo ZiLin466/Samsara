@@ -42,7 +42,7 @@ final class ArraylistSettingsTest {
       ModuleConfigCodec.prepare(List.of(hud), saved, ModuleConfigCodec.Scope.ALL).run();
       assertFalse(hud.normal.shows(Category.VISUAL));assertTrue(hud.opai.shows(Category.VISUAL));
       assertFalse(hud.opai.shows(Category.COMBAT));assertFalse(hud.opai.shows(Category.MISC));
-      assertTrue(hud.opai.lowercase.m215());
+      assertTrue(hud.opai.lowercase.getValue());
       var next = ModuleConfigCodec.snapshot(List.of(hud), ModuleConfigCodec.Scope.ALL, false);
       var restarted = new Hud();
       ModuleConfigCodec.prepare(List.of(restarted), next, ModuleConfigCodec.Scope.ALL).run();
@@ -64,10 +64,10 @@ final class ArraylistSettingsTest {
       var invalid = new JsonArray();invalid.add("Invented");settings.add("Opai Categories", invalid);
       assertThrows(IllegalArgumentException.class,
          () -> ModuleConfigCodec.prepare(List.of(hud), defaults, ModuleConfigCodec.Scope.ALL));
-      assertFalse(hud.opai.lowercase.m215());
+      assertFalse(hud.opai.lowercase.getValue());
       List<String> warnings = new java.util.ArrayList<>();
       ModuleConfigCodec.prepare(List.of(hud), defaults, ModuleConfigCodec.Scope.ALL, true, warnings::add).run();
-      assertEquals(1, warnings.size());assertTrue(hud.opai.lowercase.m215());
+      assertEquals(1, warnings.size());assertTrue(hud.opai.lowercase.getValue());
       assertEquals(5, hud.opai.categories.selectedValues().size());
    }
 }

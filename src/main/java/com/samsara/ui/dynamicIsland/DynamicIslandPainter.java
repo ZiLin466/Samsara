@@ -1,5 +1,6 @@
 package com.samsara.ui.dynamicIsland;
 
+import com.samsara.util.render.ColorUtility;
 import com.samsara.ui.clickgui.opai.OpaiStyle;
 import com.samsara.ui.clickgui.opai.OpaiStyle.Palette;
 import com.samsara.util.render.HudGlassStyle;
@@ -68,7 +69,7 @@ public final class DynamicIslandPainter {
       // The layout is based on final content width, so FPS changes only animate the clip.
       DynamicIslandStatus.Symbol previousIcon = null;
       for (var part : frame.idle().parts()) {
-         int color = alpha(part.icon() == DynamicIslandStatus.Symbol.CHROME || previousIcon == DynamicIslandStatus.Symbol.CHROME
+         int color = ColorUtility.multiplyOpacityRounded(part.icon() == DynamicIslandStatus.Symbol.CHROME || previousIcon == DynamicIslandStatus.Symbol.CHROME
             ? palette.accent() : part.color(), frame.idleOpacity());
          previousIcon = part.icon();
          if (part.icon() == null) {
@@ -90,24 +91,24 @@ public final class DynamicIslandPainter {
       // Reveal a stable line through the animated clip; never re-ellipsize "has been" while growing.
       float textWidth = Math.max(0, contentWidth - NOTICE_TEXT_X - NOTICE_RIGHT_PADDING);
       surface.text(fit(row.title(), TITLE_FONT, textWidth, surface), textX, y + 13.5f,
-         TITLE_FONT, alpha(TEXT, opacity));
+         TITLE_FONT, ColorUtility.multiplyOpacityRounded(TEXT, opacity));
       float punctuationWidth = row.status().isEmpty() ? 0 : surface.measure("!", DETAIL_FONT);
       DetailLine line = detailLine(row.detail(), row.status(), Math.max(0, textWidth - punctuationWidth), surface);
-      surface.text(line.prefix(), textX, y + 24.75f, DETAIL_FONT, alpha(DETAIL, opacity));
+      surface.text(line.prefix(), textX, y + 24.75f, DETAIL_FONT, ColorUtility.multiplyOpacityRounded(DETAIL, opacity));
       // Drawing returns no width: always measure the prefix once, independent of screen X.
       surface.text(line.status(), textX + line.statusOffset(), y + 24.75f, DETAIL_FONT,
-         alpha(row.enabled() ? ENABLED : DISABLED, opacity));
+         ColorUtility.multiplyOpacityRounded(row.enabled() ? ENABLED : DISABLED, opacity));
       if (!line.status().isEmpty()) {
          surface.text("!", textX + line.statusOffset() + surface.measure(line.status(), DETAIL_FONT),
-            y + 24.75f, DETAIL_FONT, alpha(TEXT, opacity));
+            y + 24.75f, DETAIL_FONT, ColorUtility.multiplyOpacityRounded(TEXT, opacity));
       }
    }
 
    private static void drawProgressPanel(Surface surface, Row row, float x, float y, float width, float contentWidth,
                                     float opacity, Palette palette) {
       boolean breaking = row.icon() == Icon.BREAKING;
-      int tile = alpha(0xC8141616, opacity);
-      int ink = alpha(palette.accent(), opacity);
+      int tile = ColorUtility.multiplyOpacityRounded(0xC8141616, opacity);
+      int ink = ColorUtility.multiplyOpacityRounded(palette.accent(), opacity);
       float tileSize = breaking ? 27 : 28;
       surface.rounded(x + 4, y + 5, tileSize, tileSize, 7, tile);
       if (breaking) {
@@ -121,21 +122,21 @@ public final class DynamicIslandPainter {
          surface.breakingText(fit(row.title(), BREAKING_TITLE_FONT, textWidth, measure), x + SCAFFOLD_TEXT_X,
             y + 12, BREAKING_TITLE_FONT, ink);
          surface.breakingText(fit(row.detail(), BREAKING_DETAIL_FONT, textWidth, measure), x + SCAFFOLD_TEXT_X,
-            y + 24, BREAKING_DETAIL_FONT, alpha(TEXT, opacity));
+            y + 24, BREAKING_DETAIL_FONT, ColorUtility.multiplyOpacityRounded(TEXT, opacity));
       } else {
          surface.text(fit(row.title(), TITLE_FONT, textWidth, surface), x + SCAFFOLD_TEXT_X, y + 13,
             TITLE_FONT, ink);
          surface.text(fit(row.detail(), DETAIL_FONT, textWidth, surface), x + SCAFFOLD_TEXT_X, y + 25,
-            DETAIL_FONT, alpha(TEXT, opacity));
+            DETAIL_FONT, ColorUtility.multiplyOpacityRounded(TEXT, opacity));
       }
       float barWidth = Math.max(0, width - 8);
       float barY = y + (breaking ? 35 : 37);
       float barHeight = breaking ? 7.5f : 8;
       surface.rounded(x + 4, barY, barWidth, barHeight, barHeight / 2,
-         alpha(breaking ? 0x7034343D : 0xFF343636, opacity));
+         ColorUtility.multiplyOpacityRounded(breaking ? 0x7034343D : 0xFF343636, opacity));
       float filledWidth = barWidth * Math.clamp(row.progress(), 0, 1);
       if (filledWidth > 0) {
-         surface.rounded(x + 4, barY, filledWidth, barHeight, Math.min(barHeight / 2, filledWidth / 2), alpha(palette.hudProgress(), opacity));
+         surface.rounded(x + 4, barY, filledWidth, barHeight, Math.min(barHeight / 2, filledWidth / 2), ColorUtility.multiplyOpacityRounded(palette.hudProgress(), opacity));
       }
    }
 
@@ -159,14 +160,14 @@ public final class DynamicIslandPainter {
    }
 
    private static void drawIcon(Surface surface, Row row, float x, float y, Palette palette) {
-      float a = row.opacity();
+      float opacity = row.opacity();
       if (row.icon() == Icon.TOGGLE) {
          float t = row.toggle();
-         surface.rounded(x + 5, y + 10, 26, 16, 8, alpha(mix(palette.toggleOutline(), palette.accent(), t), a));
-         surface.rounded(x + 6, y + 11, 24, 14, 7, alpha(mix(0xFF36343B, palette.accent(), t), a));
+         surface.rounded(x + 5, y + 10, 26, 16, 8, ColorUtility.multiplyOpacityRounded(mix(palette.toggleOutline(), palette.accent(), t), opacity));
+         surface.rounded(x + 6, y + 11, 24, 14, 7, ColorUtility.multiplyOpacityRounded(mix(0xFF36343B, palette.accent(), t), opacity));
          float knobSize = 8 + 3.5f * t;
          surface.rounded(x + 8.5f + 8.5f * t, y + 13.5f - 1.25f * t,
-            knobSize, knobSize, knobSize / 2, alpha(mix(0xFF858488, palette.hudKnob(), t), a));
+            knobSize, knobSize, knobSize / 2, ColorUtility.multiplyOpacityRounded(mix(0xFF858488, palette.hudKnob(), t), opacity));
          return;
       }
       int tile = switch (row.icon()) {
@@ -174,8 +175,8 @@ public final class DynamicIslandPainter {
          case WARNING -> 0xC88F5050;
          default -> 0xC8307593;
       };
-      surface.rounded(x + 7, y + 8, 24, 24, 7, alpha(tile, a));
-      int ink = alpha(TEXT, a);
+      surface.rounded(x + 7, y + 8, 24, 24, 7, ColorUtility.multiplyOpacityRounded(tile, opacity));
+      int ink = ColorUtility.multiplyOpacityRounded(TEXT, opacity);
       if (row.icon() == Icon.SUCCESS) {
          surface.line(x + 13, y + 20, x + 18, y + 25, 2, ink);
          surface.line(x + 18, y + 25, x + 26, y + 14, 2, ink);
@@ -186,10 +187,6 @@ public final class DynamicIslandPainter {
          surface.line(x + 19, y + 16, x + 19, y + 26, 2, ink);
          surface.rounded(x + 18, y + 12, 2, 2, 1, ink);
       }
-   }
-
-   private static int alpha(int color, float opacity) {
-      return (Math.round((color >>> 24) * Math.clamp(opacity, 0, 1)) << 24) | (color & 0xFFFFFF);
    }
 
    public static float shadowCoverage(float distance) {
@@ -206,9 +203,9 @@ public final class DynamicIslandPainter {
    private static int mix(int from, int to, float amount) {
       int result = 0;
       for (int shift = 0; shift <= 24; shift += 8) {
-         int a = (from >>> shift) & 255;
-         int b = (to >>> shift) & 255;
-         result |= Math.round(a + (b - a) * amount) << shift;
+         int fromChannel = (from >>> shift) & 255;
+         int toChannel = (to >>> shift) & 255;
+         result |= Math.round(fromChannel + (toChannel - fromChannel) * amount) << shift;
       }
       return result;
    }

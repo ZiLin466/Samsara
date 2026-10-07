@@ -12,35 +12,35 @@ public final class ClientStateCodec {
    private ClientStateCodec() { }
 
    public static JsonObject snapshot(List<Feature> modules,HudLayouts hud) {
-      var data=new JsonObject();data.addProperty("version",1);
-      data.add("modules",ModuleConfigCodec.snapshot(modules,ModuleConfigCodec.Scope.ALL,false));
-      data.add("hud",hud.snapshot());data.add("clickGui",ClickGuiLayouts.snapshot());
+      var state=new JsonObject();state.addProperty("version",1);
+      state.add("modules",ModuleConfigCodec.snapshot(modules,ModuleConfigCodec.Scope.ALL,false));
+      state.add("hud",hud.snapshot());state.add("clickGui",ClickGuiLayouts.snapshot());
       var friends = new com.google.gson.JsonArray();
-      com.samsara.util.Friends.names().forEach(friends::add); data.add("friends", friends);
-      return data;
+      com.samsara.util.Friends.names().forEach(friends::add); state.add("friends", friends);
+      return state;
    }
 
-   public static void restore(List<Feature> modules,HudLayouts hud,JsonObject data,Consumer<String> warning) {
-      if (data.has("version") && data.get("version").getAsInt()!=1)
+   public static void restore(List<Feature> modules,HudLayouts hud,JsonObject state,Consumer<String> warning) {
+      if (state.has("version") && state.get("version").getAsInt()!=1)
          throw new IllegalArgumentException("Unsupported automatic state version");
       var actions=new java.util.ArrayList<Runnable>();
-      if (data.has("friends")) {
+      if (state.has("friends")) {
          try {
             var friends = new java.util.ArrayList<String>();
-            for (var value : data.getAsJsonArray("friends")) {
+            for (var value : state.getAsJsonArray("friends")) {
                if (!value.isJsonPrimitive() || !value.getAsJsonPrimitive().isString()) throw new IllegalArgumentException("Invalid friend name");
                friends.add(value.getAsString());
             }
             actions.add(() -> com.samsara.util.Friends.restore(friends));
          } catch (RuntimeException error) { warning.accept("friends: " + error.getMessage()); }
       }
-      if (data.has("modules")) {
-         try { actions.add(ModuleConfigCodec.prepare(modules,data.getAsJsonObject("modules"),ModuleConfigCodec.Scope.ALL,true,warning)); }
+      if (state.has("modules")) {
+         try { actions.add(ModuleConfigCodec.prepare(modules,state.getAsJsonObject("modules"),ModuleConfigCodec.Scope.ALL,true,warning)); }
          catch (RuntimeException error) { warning.accept("modules: "+error.getMessage()); }
       }
-      if (data.has("hud")) {
+      if (state.has("hud")) {
          try {
-            var source=data.getAsJsonObject("hud");
+            var source=state.getAsJsonObject("hud");
             for (HudLayouts.Element element:HudLayouts.Element.values()) {
                if (!source.has(element.name())) continue;
                try {
@@ -51,10 +51,10 @@ public final class ClientStateCodec {
             }
          } catch (RuntimeException error) { warning.accept("hud: "+error.getMessage()); }
       }
-      if (data.has("clickGui")) {
+      if (state.has("clickGui")) {
          try {
             var gui=ClickGuiLayouts.snapshot();
-            for (var entry:data.getAsJsonObject("clickGui").entrySet()) {
+            for (var entry:state.getAsJsonObject("clickGui").entrySet()) {
                try {
                   var row=new JsonObject();row.add(entry.getKey(),entry.getValue());
                   gui.add(entry.getKey(),ClickGuiLayouts.validate(row).get(entry.getKey()));

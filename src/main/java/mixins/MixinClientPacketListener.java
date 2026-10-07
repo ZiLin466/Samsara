@@ -16,7 +16,7 @@ public class MixinClientPacketListener implements DynamicIslandLatency.Source {
    @Inject(method = "handleMoveEntity", at = @At("TAIL"))
    private void samsara$predictMovedPlayer(net.minecraft.network.protocol.game.ClientboundMoveEntityPacket packet, CallbackInfo callback) {
       var mc = Minecraft.getInstance();
-      var aura = com.samsara.module.FeatureManager.f26;
+      var aura = com.samsara.module.FeatureManager.killAura;
       if (aura != null && mc.level != null && mc.getConnection() == (ClientPacketListener)(Object)this) {
          aura.onPredictEntityUpdate(packet.getEntity(mc.level), packet.hasRotation(), packet.hasPosition(), false);
       }
@@ -25,7 +25,7 @@ public class MixinClientPacketListener implements DynamicIslandLatency.Source {
    @Inject(method = "handleRotateMob", at = @At("TAIL"))
    private void samsara$predictPlayerHead(net.minecraft.network.protocol.game.ClientboundRotateHeadPacket packet, CallbackInfo callback) {
       var mc = Minecraft.getInstance();
-      var aura = com.samsara.module.FeatureManager.f26;
+      var aura = com.samsara.module.FeatureManager.killAura;
       if (aura != null && mc.level != null && mc.getConnection() == (ClientPacketListener)(Object)this) {
          aura.onPredictHeadUpdate(packet.getEntity(mc.level), packet.getYHeadRot());
       }
@@ -34,7 +34,7 @@ public class MixinClientPacketListener implements DynamicIslandLatency.Source {
    @Inject(method = "handleEntityPositionSync", at = @At("TAIL"))
    private void samsara$predictSyncedPlayer(net.minecraft.network.protocol.game.ClientboundEntityPositionSyncPacket packet, CallbackInfo callback) {
       var mc = Minecraft.getInstance();
-      var aura = com.samsara.module.FeatureManager.f26;
+      var aura = com.samsara.module.FeatureManager.killAura;
       if (aura != null && mc.level != null && mc.getConnection() == (ClientPacketListener)(Object)this) {
          aura.onPredictEntityUpdate(mc.level.getEntity(packet.id()), true, true, false);
       }
@@ -43,7 +43,7 @@ public class MixinClientPacketListener implements DynamicIslandLatency.Source {
    @Inject(method = "handleTeleportEntity", at = @At("TAIL"))
    private void samsara$predictTeleportedPlayer(net.minecraft.network.protocol.game.ClientboundTeleportEntityPacket packet, CallbackInfo callback) {
       var mc = Minecraft.getInstance();
-      var aura = com.samsara.module.FeatureManager.f26;
+      var aura = com.samsara.module.FeatureManager.killAura;
       if (aura != null && mc.level != null && mc.getConnection() == (ClientPacketListener)(Object)this) {
          aura.onPredictEntityUpdate(mc.level.getEntity(packet.id()), true, true, true);
       }
@@ -52,7 +52,7 @@ public class MixinClientPacketListener implements DynamicIslandLatency.Source {
    @Inject(method = "handleDamageEvent", at = @At("TAIL"))
    private void samsara$recordVelocityDamage(net.minecraft.network.protocol.game.ClientboundDamageEventPacket packet, CallbackInfo callback) {
       var mc = Minecraft.getInstance();
-      var velocity = com.samsara.module.FeatureManager.f28;
+      var velocity = com.samsara.module.FeatureManager.velocity;
       if (velocity != null && mc.getConnection() == (ClientPacketListener)(Object)this) velocity.recordDamage(packet);
    }
    @Inject(method = "handleLogin", at = @At("TAIL"))

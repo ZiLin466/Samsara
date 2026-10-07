@@ -69,7 +69,7 @@ public final class NVGRenderer {
       }
       try {
          return GL.getCapabilities() != null && GL.getCapabilities().OpenGL33;
-      } catch (Throwable t) {
+      } catch (Throwable error) {
          return false;
       }
    }
@@ -187,9 +187,11 @@ public final class NVGRenderer {
       nvgScale(vg, factor, factor);
       nvgTranslate(vg, -translateX, -translateY);
 
-      content.run();
-
-      nvgRestore(vg);
+      try {
+         content.run();
+      } finally {
+         nvgRestore(vg);
+      }
    }
 
    public static void rectStroke(float x, float y, float width, float height, float strokeThickness, int color, int strokeColor) {
@@ -206,9 +208,11 @@ public final class NVGRenderer {
       nvgTranslate(vg, translateX, translateY);
       nvgRotate(vg, (float)Math.toRadians(degrees));
 
-      content.run();
-
-      nvgRestore(vg);
+      try {
+         content.run();
+      } finally {
+         nvgRestore(vg);
+      }
    }
 
    public static void rectOutline(float x, float y, float width, float height, float thickness, int color) {
@@ -246,12 +250,14 @@ public final class NVGRenderer {
       ScreenPosition scissor = new ScreenPosition(x, y, width, height);
       scissors.add(scissor);
 
-      nvgIntersectScissor(vg, x, y, width, height);
-      content.run();
-      nvgResetScissor(vg);
-
-      scissors.remove(scissor);
-      useCurrentScissors();
+      try {
+         nvgIntersectScissor(vg, x, y, width, height);
+         content.run();
+      } finally {
+         nvgResetScissor(vg);
+         scissors.remove(scissor);
+         useCurrentScissors();
+      }
    }
 
    private static void useCurrentScissors() {
@@ -307,8 +313,8 @@ public final class NVGRenderer {
    }
 
    public static void applyColor(int color, NVGColor nvgColor) {
-      int[] rgba = ColorUtility.hexToRGBA(color);
-      nvgRGBAf(rgba[0] / 255f, rgba[1] / 255f, rgba[2] / 255f, rgba[3] / 255f, nvgColor);
+      nvgRGBAf((color >> 16 & 255) / 255f, (color >> 8 & 255) / 255f,
+         (color & 255) / 255f, (color >>> 24) / 255f, nvgColor);
    }
 
    public static Minecraft getMinecraft() {

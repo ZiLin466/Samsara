@@ -7,105 +7,104 @@ import com.mojang.blaze3d.platform.InputConstants;
 import com.mojang.blaze3d.platform.InputConstants.Key;
 import com.mojang.blaze3d.platform.InputConstants.Type;
 import java.lang.reflect.Field;
-import java.nio.charset.StandardCharsets;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.Iterator;
 import java.util.List;
 
 public class BindCommand extends Command {
-   private static final String f56 = "none";
-   private static final String f57 = "unbind";
-   private static final List f60 = pm$4();
-   private static final String f59 = "NONE";
-   private static final String f58 = "KEY_";
-   private static final String f52 = "Bind";
-   private static final String f54 = "bind";
-   private static final String f53 = "bind <name> <key>";
-   private static final String f55 = "b";
+   private static final String NO_KEY_ALIAS = "none";
+   private static final String UNBIND_LABEL = "unbind";
+   private static final List bindableKeys = collectBindableKeys();
+   private static final String UNBOUND_KEY_LABEL = "NONE";
+   private static final String KEY_LABEL = "KEY_";
+   private static final String COMMAND_NAME = "Bind";
+   private static final String PRIMARY_ALIAS = "bind";
+   private static final String BIND_NAME_KEY_LABEL = "bind <name> <key>";
+   private static final String B_LABEL = "b";
 
-   private static List pm$4() {
-      ArrayList var0 = new ArrayList();
+   private static List collectBindableKeys() {
+      ArrayList keyNames = new ArrayList();
 
-      for (Field var4 : InputConstants.class.getDeclaredFields()) {
-         if (var4.getName().startsWith(f58) && var4.getType() == int.class) {
-            String var5 = var4.getName().substring(4);
-            var0.add(var5);
+      for (Field keyField : InputConstants.class.getDeclaredFields()) {
+         if (keyField.getName().startsWith(KEY_LABEL) && keyField.getType() == int.class) {
+            String keyName = keyField.getName().substring(4);
+            keyNames.add(keyName);
          }
       }
 
-      var0.add(f59);
-      return var0;
+      keyNames.add(UNBOUND_KEY_LABEL);
+      return keyNames;
    }
 
    @Override
-   public Collection complete(String[] var1) {
-      if (var1.length <= 1) {
+   public Collection complete(String[] arguments) {
+      if (arguments.length <= 1) {
          return FeatureManager.getModules().stream().map(Feature::getName).toList();
       } else {
-         return var1.length == 2 ? f60 : List.of();
+         return arguments.length == 2 ? bindableKeys : List.of();
       }
    }
 
-   private static Key pm$5(String var0) {
-      String var1 = var0.toUpperCase();
+   private static Key resolveKey(String keyName) {
+      String uppercaseName = keyName.toUpperCase();
 
       try {
-         Field var2 = InputConstants.class.getDeclaredField("KEY_" + var1);
-         if (var2.getType() != int.class) {
+         Field keyField = InputConstants.class.getDeclaredField("KEY_" + uppercaseName);
+         if (keyField.getType() != int.class) {
             return InputConstants.UNKNOWN;
          } else {
-            int var3 = var2.getInt(null);
-            return Type.KEYBOARD.getOrCreate(var3);
+            int keyCode = keyField.getInt(null);
+            return Type.KEYBOARD.getOrCreate(keyCode);
          }
-      } catch (ReflectiveOperationException var4) {
+      } catch (ReflectiveOperationException error) {
          return InputConstants.UNKNOWN;
       }
    }
 
    public BindCommand() {
-      super(f52, f53, new String[]{f54, f55});
+      super(COMMAND_NAME, BIND_NAME_KEY_LABEL, new String[]{PRIMARY_ALIAS, B_LABEL});
    }
 
    @Override
-   public void execute(String[] var1, String var2) {
-      if (var1.length <= 2) {
+   public void execute(String[] arguments, String commandLine) {
+      if (arguments.length <= 2) {
          SamsaraClient.sendPrefixedMessage("Usage: ." + this.syntax);
       } else {
-         String var3 = var1[1];
-         String var4 = var1[2];
-         Feature var5 = null;
-         Iterator var6 = FeatureManager.getModules().iterator();
+         String moduleName = arguments[1];
+         String keyName = arguments[2];
+         Feature feature = null;
+         Iterator resolvedKey = FeatureManager.getModules().iterator();
 
          while (true) {
-            if (var6.hasNext()) {
-               Feature var7 = (Feature)var6.next();
-               if (!var7.getName().equalsIgnoreCase(var3)) {
+            if (resolvedKey.hasNext()) {
+               Feature boundFeature = (Feature)resolvedKey.next();
+               if (!boundFeature.getName().equalsIgnoreCase(moduleName)) {
                   continue;
                }
 
-               var5 = var7;
+               feature = boundFeature;
             }
 
-            if (var5 == null) {
-               SamsaraClient.sendPrefixedMessage("Invalid module: " + var3);
+            if (feature == null) {
+               SamsaraClient.sendPrefixedMessage("Invalid module: " + moduleName);
                return;
             }
 
-            if (var4.equalsIgnoreCase(f56) || var4.equalsIgnoreCase(f57)) {
-               var5.setKey(InputConstants.UNKNOWN.getValue());
-               SamsaraClient.sendPrefixedMessage("Unbound " + var5.getName());
+            if (keyName.equalsIgnoreCase(NO_KEY_ALIAS) || keyName.equalsIgnoreCase(UNBIND_LABEL)) {
+               feature.setKey(InputConstants.UNKNOWN.getValue());
+               SamsaraClient.sendPrefixedMessage("Unbound " + feature.getName());
                return;
             }
 
-            Key var8 = pm$5(var4);
-            if (var8 == InputConstants.UNKNOWN) {
-               SamsaraClient.sendPrefixedMessage("Invalid key: " + var4);
+            Key attackKey = resolveKey(keyName);
+            if (attackKey == InputConstants.UNKNOWN) {
+               SamsaraClient.sendPrefixedMessage("Invalid key: " + keyName);
                return;
             }
 
-            var5.setKey(var8.getValue());
-            SamsaraClient.sendPrefixedMessage("Bound " + var5.getName() + " to " + var4.toUpperCase());
+            feature.setKey(attackKey.getValue());
+            SamsaraClient.sendPrefixedMessage("Bound " + feature.getName() + " to " + keyName.toUpperCase());
             break;
          }
       }

@@ -16,10 +16,10 @@ public class MixinGameRenderer {
       at = {@At("HEAD")},
       cancellable = true
    )
-   private void pm$51(CameraRenderState var1, PoseStack var2, CallbackInfo var3) {
-      Events.f6.call();
-      if (Events.f6.isCancelled()) {
-         var3.cancel();
+   private void samsara$dispatchHurtCamera(CameraRenderState cameraRenderState, PoseStack poseStack, CallbackInfo callback) {
+      Events.HURT_CAMERA.call();
+      if (Events.HURT_CAMERA.isCancelled()) {
+         callback.cancel();
       }
    }
 }

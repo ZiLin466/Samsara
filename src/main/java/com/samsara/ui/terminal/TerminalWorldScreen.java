@@ -9,7 +9,7 @@ public final class TerminalWorldScreen extends SelectWorldScreen implements Term
    public TerminalWorldScreen(Screen parent) { super(parent); }
    @Override protected void init() { super.init(); TerminalTheme.arrange(this); }
    @Override protected void repositionElements() { super.repositionElements(); TerminalTheme.arrange(this); }
-   @Override public void extractBackground(GuiGraphicsExtractor g, int x, int y, float delta) { }
+   @Override public void extractBackground(GuiGraphicsExtractor graphics, int x, int y, float delta) { }
    @Override public String terminalTitle() { return "单人游戏"; }
    @Override public String terminalCode() { return "01 / WORLD ARCHIVE"; }
    @Override public String terminalDescription() { return "探索与记录\n从一片方块开始。"; }

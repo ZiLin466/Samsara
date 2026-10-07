@@ -46,32 +46,32 @@ final class OpaiTargetsPanel {
          return;
       }
    }
-   void paint(OpaiSurface s, OpaiStyle.Palette p, float x, float y, float width) {
+   void paint(OpaiSurface surface, OpaiStyle.Palette p, float x, float y, float width) {
       for (int group = 0; group < 2; group++) {
          MultiSelectSetting choices = choices(group);
          float top = y + groupTop(group), left = x + TEXT_PAD - 2, fieldWidth = width - TEXT_PAD * 2 + 4;
-         s.text(choices.getName(), x + TEXT_PAD, top + 8, 8.5f, fieldWidth, p.text());
-         s.rounded(left, top + FIELD_Y, fieldWidth, FIELD_H, 2, 0xFF2A2A2D);
-         s.text(choices.selectionLabel(), left + 6, top + FIELD_Y + FIELD_H / 2, 8.5f, fieldWidth - 12, p.text());
-         s.rect(left + 1, top + FIELD_Y + FIELD_H - 1, fieldWidth - 2, 1, this.open == group && this.expanded ? p.accent() : p.fieldLine());
+         surface.text(choices.getName(), x + TEXT_PAD, top + 8, 8.5f, fieldWidth, p.text());
+         surface.rounded(left, top + FIELD_Y, fieldWidth, FIELD_H, 2, 0xFF2A2A2D);
+         surface.text(choices.selectionLabel(), left + 6, top + FIELD_Y + FIELD_H / 2, 8.5f, fieldWidth - 12, p.text());
+         surface.rect(left + 1, top + FIELD_Y + FIELD_H - 1, fieldWidth - 2, 1, this.open == group && this.expanded ? p.accent() : p.fieldLine());
          if (this.open != group || this.reveal.value() <= 0) continue;
          float listTop = top + FIELD_Y + FIELD_H, shown = this.listHeight * this.reveal.value();
-         s.rounded(left, listTop, fieldWidth, shown, 2, 0xFF2A2A2D);
-         s.clip(left, listTop, fieldWidth, shown, () -> {
+         surface.rounded(left, listTop, fieldWidth, shown, 2, 0xFF2A2A2D);
+         surface.clip(left, listTop, fieldWidth, shown, () -> {
             String[] options = choices.options();
             for (int i = 0; i < options.length; i++) {
                float rowY = listTop + i * OPTION_H - this.scroll;
                if (rowY + OPTION_H <= listTop || rowY >= listTop + shown) continue;
                if (choices.selected(i)) {
-                  s.rect(left + 1, rowY, fieldWidth - 2, OPTION_H, OpaiSurface.mix(0xFF2A2A2D, p.accent(), .10f));
-                  s.icon(OpaiIcons.Icon.CHECK, left + 5.5f, rowY + 6, 8, p.text());
+                  surface.rect(left + 1, rowY, fieldWidth - 2, OPTION_H, OpaiSurface.mix(0xFF2A2A2D, p.accent(), .10f));
+                  surface.icon(OpaiIcons.Icon.CHECK, left + 5.5f, rowY + 6, 8, p.text());
                }
-               s.text(options[i], left + 17, rowY + OPTION_H / 2, 8.5f, fieldWidth - 23, p.text());
+               surface.text(options[i], left + 17, rowY + OPTION_H / 2, 8.5f, fieldWidth - 23, p.text());
             }
             float total = options.length * OPTION_H;
             if (total > this.listHeight) {
                float thumb = Math.max(8, this.listHeight * this.listHeight / total);
-               s.rounded(left + fieldWidth - 3, listTop + (this.listHeight - thumb) * this.scroll / (total - this.listHeight), 2, thumb, 1, p.scrollbar());
+               surface.rounded(left + fieldWidth - 3, listTop + (this.listHeight - thumb) * this.scroll / (total - this.listHeight), 2, thumb, 1, p.scrollbar());
             }
          });
       }

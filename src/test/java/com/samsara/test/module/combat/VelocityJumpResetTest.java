@@ -37,10 +37,10 @@ final class VelocityJumpResetTest {
          jump = constructor.newInstance(owner, (BooleanSupplier)() -> true, random);
       }
       void flag(String name, boolean value) {
-         ((BooleanSetting)owner.settings.stream().filter(s -> s.getName().equals(name)).findFirst().orElseThrow()).m217(value);
+         ((BooleanSetting)owner.settings.stream().filter(s -> s.getName().equals(name)).findFirst().orElseThrow()).setValue(value);
       }
       void number(String name, double value) {
-         ((NumberSetting)owner.settings.stream().filter(s -> s.getName().equals(name)).findFirst().orElseThrow()).m223(value);
+         ((NumberSetting)owner.settings.stream().filter(s -> s.getName().equals(name)).findFirst().orElseThrow()).setValue(value);
       }
       Object invoke(String name, Class<?>[] parameters, Object... values) throws Exception {
          Method method = type.getDeclaredMethod(name, parameters); method.setAccessible(true);

@@ -20,29 +20,29 @@ import java.util.List;
 import net.minecraft.client.Minecraft;
 
 public class Events {
-   public static final EventPreMotion f1 = new EventPreMotion();
-   public static final EventSprint f12 = new EventSprint();
-   public static final EventMouseButton f15 = new EventMouseButton();
-   public static final EventTick f4 = new EventTick();
-   public static final EventPostMoveInput f8 = new EventPostMoveInput();
-   public static final EventSound f16 = new EventSound();
-   public static final EventPostMotion f2 = new EventPostMotion();
-   public static final EventHurtCamera f6 = new EventHurtCamera();
-   public static final EventPacketReceive f11 = new EventPacketReceive();
-   public static final EventRender2D f5 = new EventRender2D();
-   public static final EventSlowdown f9 = new EventSlowdown();
-   public static final EventMoveInput f7 = new EventMoveInput();
-   public static final EventRotation f3 = new EventRotation();
-   public static final EventRenderNameTag f13 = new EventRenderNameTag();
-   public static final EventEntityOutline f14 = new EventEntityOutline();
-   public static final EventPacketSend f10 = new EventPacketSend();
+   public static final EventPreMotion PRE_MOTION = new EventPreMotion();
+   public static final EventSprint SPRINT = new EventSprint();
+   public static final EventMouseButton MOUSE_BUTTON = new EventMouseButton();
+   public static final EventTick TICK = new EventTick();
+   public static final EventPostMoveInput POST_MOVE_INPUT = new EventPostMoveInput();
+   public static final EventSound SOUND = new EventSound();
+   public static final EventPostMotion POST_MOTION = new EventPostMotion();
+   public static final EventHurtCamera HURT_CAMERA = new EventHurtCamera();
+   public static final EventPacketReceive PACKET_RECEIVE = new EventPacketReceive();
+   public static final EventRender2D RENDER_2D = new EventRender2D();
+   public static final EventSlowdown SLOWDOWN = new EventSlowdown();
+   public static final EventMoveInput MOVE_INPUT = new EventMoveInput();
+   public static final EventRotation ROTATION = new EventRotation();
+   public static final EventRenderNameTag RENDER_NAME_TAG = new EventRenderNameTag();
+   public static final EventEntityOutline ENTITY_OUTLINE = new EventEntityOutline();
+   public static final EventPacketSend PACKET_SEND = new EventPacketSend();
    // Initialize the list after every event field; List.of rejects nulls.
-   public static final List<Event> f17 = List.of(f1, f2, f3, f4, f5, f6, f7, f8, f9, f10, f11, f12, f13, f14, f15, f16);
+   public static final List<Event> ALL_EVENTS = List.of(PRE_MOTION, POST_MOTION, ROTATION, TICK, RENDER_2D, HURT_CAMERA, MOVE_INPUT, POST_MOVE_INPUT, SLOWDOWN, PACKET_SEND, PACKET_RECEIVE, SPRINT, RENDER_NAME_TAG, ENTITY_OUTLINE, MOUSE_BUTTON, SOUND);
 
-   public static void m11() {
+   public static void refreshListeners() {
       if (Minecraft.getInstance().player != null) {
-         for (Event var1 : f17) {
-            var1.sortModules();
+         for (Event event : ALL_EVENTS) {
+            event.sortModules();
          }
       }
    }

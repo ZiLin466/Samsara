@@ -152,7 +152,7 @@ public final class NanoVGBackend implements AutoCloseable {
    private void cancel(MemorySegment unused) { draws.clear(); }
    private void flush(MemorySegment unused) { }
 
-   private int createTexture(MemorySegment unused,int type,int w,int h,int flags,MemorySegment data) {
+   private int createTexture(MemorySegment unused,int type,int w,int h,int flags,MemorySegment pixelData) {
       GpuTexture texture=null; GpuTextureView view=null; GpuSampler sampler=null;
       try {
          int id=++imageId;
@@ -163,9 +163,9 @@ public final class NanoVGBackend implements AutoCloseable {
             (flags&NVG_IMAGE_REPEATY)!=0 ? AddressMode.REPEAT : AddressMode.CLAMP_TO_EDGE,filter,filter,1,OptionalDouble.empty());
          view=device.createTextureView(texture);
          int size=w*h*(type==1 ? 1 : 4);
-         ByteBuffer pixels=data.address()==0 ? MemoryUtil.memCalloc(size) : data.reinterpret(size).asByteBuffer();
+         ByteBuffer pixels=pixelData.address()==0 ? MemoryUtil.memCalloc(size) : pixelData.reinterpret(size).asByteBuffer();
          try { device.createCommandEncoder().writeToTexture(texture,pixels,0,0,0,0,w,h); }
-         finally { if (data.address()==0) MemoryUtil.memFree(pixels); }
+         finally { if (pixelData.address()==0) MemoryUtil.memFree(pixels); }
          images.put(id,new Image(texture,view,sampler,type,flags));
          return id;
       } catch (Throwable error) {
@@ -180,13 +180,13 @@ public final class NanoVGBackend implements AutoCloseable {
       return image==null ? 0 : 1;
    }
 
-   private int updateTexture(MemorySegment unused,int id,int x,int y,int w,int h,MemorySegment data) {
+   private int updateTexture(MemorySegment unused,int id,int x,int y,int w,int h,MemorySegment pixelData) {
       try {
          Image image=images.get(id); if (image==null) return 0;
          int stride=image.texture.getWidth(0)*(image.type==1 ? 1 : 4),row=w*(image.type==1 ? 1 : 4);
          ByteBuffer pixels=MemoryUtil.memAlloc(row*h);
          try {
-            for (int i=0;i<h;i++) pixels.put(data.reinterpret((long)stride*image.texture.getHeight(0))
+            for (int i=0;i<h;i++) pixels.put(pixelData.reinterpret((long)stride*image.texture.getHeight(0))
                .asSlice((long)(y+i)*stride+(long)x*(image.type==1 ? 1 : 4),row).asByteBuffer());
             pixels.flip();
             device.createCommandEncoder().writeToTexture(image.texture,pixels,0,0,x,y,w,h);
@@ -275,11 +275,11 @@ public final class NanoVGBackend implements AutoCloseable {
    }
 
    static float[] inverse(MemorySegment transform) {
-      double a=transform.get(FLOAT,0),b=transform.get(FLOAT,4),c=transform.get(FLOAT,8),d=transform.get(FLOAT,12);
-      double e=transform.get(FLOAT,16),f=transform.get(FLOAT,20),det=a*d-b*c;
-      if (Math.abs(det)<1.0E-6) return new float[]{1,0,0,1,0,0};
-      return new float[]{(float)(d/det),(float)(-b/det),(float)(-c/det),(float)(a/det),
-         (float)((c*f-d*e)/det),(float)((b*e-a*f)/det)};
+      double m00=transform.get(FLOAT,0),m10=transform.get(FLOAT,4),m01=transform.get(FLOAT,8),m11=transform.get(FLOAT,12);
+      double translateX=transform.get(FLOAT,16),translateY=transform.get(FLOAT,20),determinant=m00*m11-m10*m01;
+      if (Math.abs(determinant)<1.0E-6) return new float[]{1,0,0,1,0,0};
+      return new float[]{(float)(m11/determinant),(float)(-m10/determinant),(float)(-m01/determinant),(float)(m00/determinant),
+         (float)((m01*translateY-m11*translateX)/determinant),(float)((m10*translateX-m00*translateY)/determinant)};
    }
 
    private static void matrix(float[] target,int offset,float[] m) {
@@ -396,10 +396,10 @@ public final class NanoVGBackend implements AutoCloseable {
       }
       // Split crossing edges before sorting so each slab preserves nonzero winding.
       for (int i=0;i<edges.size();i++) for (int j=i+1;j<edges.size();j++) {
-         var a=edges.get(i); var b=edges.get(j); double low=Math.max(a.minY(),b.minY()),high=Math.min(a.maxY(),b.maxY());
-         double slope=a.slope()-b.slope();
+         var firstEdge=edges.get(i); var secondEdge=edges.get(j); double low=Math.max(firstEdge.minY(),secondEdge.minY()),high=Math.min(firstEdge.maxY(),secondEdge.maxY());
+         double slope=firstEdge.slope()-secondEdge.slope();
          if (high>low && Math.abs(slope)>1.0E-9) {
-            double y=(b.x(0)-a.x(0))/slope;
+            double y=(secondEdge.x(0)-firstEdge.x(0))/slope;
             if (y>low+1.0E-7 && y<high-1.0E-7) levels.add(y);
          }
       }
@@ -447,7 +447,7 @@ public final class NanoVGBackend implements AutoCloseable {
    }
    private record PipelineKey(int srcRgb,int dstRgb,int srcAlpha,int dstAlpha,GpuFormat format) {
       static final PipelineKey MASK=new PipelineKey(-1,-1,-1,-1);
-      PipelineKey(int a,int b,int c,int d) { this(a,b,c,d,null); }
+      PipelineKey(int srcRgb,int dstRgb,int srcAlpha,int dstAlpha) { this(srcRgb,dstRgb,srcAlpha,dstAlpha,null); }
       PipelineKey withFormat(GpuFormat format) { return new PipelineKey(srcRgb,dstRgb,srcAlpha,dstAlpha,format); }
       BlendFunction function() { return new BlendFunction(factor(srcRgb),factor(dstRgb),factor(srcAlpha),factor(dstAlpha)); }
       static BlendFactor factor(int factor) {
@@ -469,7 +469,7 @@ public final class NanoVGBackend implements AutoCloseable {
       void vertex(MemorySegment vertices,int i) { long offset=i*16L; add(vertices.get(FLOAT,offset),vertices.get(FLOAT,offset+4),vertices.get(FLOAT,offset+8),vertices.get(FLOAT,offset+12)); }
       void fan(MemorySegment vertices,int count) { for(int i=2;i<count;i++) { vertex(vertices,0); vertex(vertices,i-1); vertex(vertices,i); } }
       void strip(MemorySegment vertices,int count) { for(int i=2;i<count;i++) { vertex(vertices,i-2); vertex(vertices,i-1); vertex(vertices,i); } }
-      void triangle(float x,float y,float a,float b,float c,float d) { add(x,y,0.5F,1); add(a,b,0.5F,1); add(c,d,0.5F,1); }
+      void triangle(float x,float y,float secondX,float secondY,float thirdX,float thirdY) { add(x,y,0.5F,1); add(secondX,secondY,0.5F,1); add(thirdX,thirdY,0.5F,1); }
       void quad(float x,float y,float w,float h) { triangle(x,y,x+w,y,x+w,y+h); triangle(x,y,x+w,y+h,x,y+h); }
       float[] array() { return Arrays.copyOf(values,size); }
    }

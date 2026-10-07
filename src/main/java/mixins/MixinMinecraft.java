@@ -14,7 +14,7 @@ import org.spongepowered.asm.mixin.injection.callback.CallbackInfoReturnable;
 
 @Mixin({Minecraft.class})
 public class MixinMinecraft {
-   private boolean f211 = false;
+   private boolean modulesInitialized = false;
 
    @Inject(method = "createTitle", at = @At("HEAD"), cancellable = true)
    private void samsara$windowTitle(CallbackInfoReturnable<String> callback) {
@@ -30,11 +30,11 @@ public class MixinMinecraft {
       method = {"onResourceLoadFinished"},
       at = {@At("TAIL")}
    )
-   private void pm$38(CallbackInfo var1) {
-      if (!this.f211) {
+   private void samsara$initializeModules(CallbackInfo callback) {
+      if (!this.modulesInitialized) {
          FeatureManager.loadEnabled();
          com.samsara.config.ConfigManager.loadState();
-         this.f211 = true;
+         this.modulesInitialized = true;
       }
    }
 
@@ -46,8 +46,8 @@ public class MixinMinecraft {
          shift = Shift.AFTER
       )}
    )
-   private void pm$40(CallbackInfo var1) {
-      Events.f4.call();
+   private void samsara$dispatchTick(CallbackInfo callback) {
+      Events.TICK.call();
    }
 
    @Inject(method = "tick", at = @At("TAIL"))
@@ -58,9 +58,9 @@ public class MixinMinecraft {
 
    @Inject(method = "tick", at = @At("HEAD"))
    private void samsara$initializeRestoredWorldModules(CallbackInfo callback) {
-      if (this.f211) FeatureManager.getModules().forEach(com.samsara.module.Feature::initializeWorldState);
-      if (this.f211 && FeatureManager.f28 != null) FeatureManager.f28.clientTick();
-      if (this.f211 && FeatureManager.autoRod != null) FeatureManager.autoRod.clientTick();
+      if (this.modulesInitialized) FeatureManager.getModules().forEach(com.samsara.module.Feature::initializeWorldState);
+      if (this.modulesInitialized && FeatureManager.velocity != null) FeatureManager.velocity.clientTick();
+      if (this.modulesInitialized && FeatureManager.autoRod != null) FeatureManager.autoRod.clientTick();
    }
 
    @Inject(method = "close", at = @At("HEAD"))

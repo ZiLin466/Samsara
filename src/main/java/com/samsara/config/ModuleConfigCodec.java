@@ -19,26 +19,26 @@ public final class ModuleConfigCodec {
    public static JsonObject snapshot(List<Feature> modules, Scope scope, boolean defaults) {
       var root = new JsonObject();
       for (Feature module : modules) {
-         var data = new JsonObject(); var settings = new JsonObject();
-         data.addProperty("key", defaults ? module.getDefaultKey() : module.getKey());
+         var moduleState = new JsonObject(); var settings = new JsonObject();
+         moduleState.addProperty("key", defaults ? module.getDefaultKey() : module.getKey());
          if (!included(module, scope)) {
-            root.add(module.getName(), data);
+            root.add(module.getName(), moduleState);
             continue;
          }
-         data.addProperty("enabled", !defaults && !module.getName().equals("ClickGUI") && module.isEnabled());
-         data.addProperty("hidden", !defaults && module.isHidden());
+         moduleState.addProperty("enabled", !defaults && !module.getName().equals("ClickGUI") && module.isEnabled());
+         moduleState.addProperty("hidden", !defaults && module.isHidden());
          for (Setting setting : module.settings) {
             if (scope == Scope.GAMEPLAY && module instanceof com.samsara.module.combat.TargetSettings && setting.getName().equals("Visual")) continue;
-            if (setting instanceof BooleanSetting v) settings.addProperty(setting.getName(), defaults ? v.m216() : v.m215());
-            else if (setting instanceof NumberSetting v) settings.addProperty(setting.getName(), defaults ? v.m221() : v.m220());
-            else if (setting instanceof ModeSetting v) settings.addProperty(setting.getName(), defaults ? v.m225() : v.m224());
-            else if (setting instanceof MultiSelectSetting v) {
+            if (setting instanceof BooleanSetting flag) settings.addProperty(setting.getName(), defaults ? flag.getDefaultValue() : flag.getValue());
+            else if (setting instanceof NumberSetting number) settings.addProperty(setting.getName(), defaults ? number.getDefaultValue() : number.getValue());
+            else if (setting instanceof ModeSetting mode) settings.addProperty(setting.getName(), defaults ? mode.getDefaultValue() : mode.getValue());
+            else if (setting instanceof MultiSelectSetting choices) {
                var selected = new JsonArray();
-               (defaults ? v.defaultValues() : v.selectedValues()).forEach(selected::add);
+               (defaults ? choices.defaultValues() : choices.selectedValues()).forEach(selected::add);
                settings.add(setting.getName(), selected);
             }
          }
-         data.add("settings", settings); root.add(module.getName(), data);
+         moduleState.add("settings", settings); root.add(module.getName(), moduleState);
       }
       return root;
    }
@@ -55,58 +55,32 @@ public final class ModuleConfigCodec {
          if (module == null || !module.isJsonObject()) continue;
          var values = module.getAsJsonObject().get("settings");
          if (values == null || !values.isJsonObject()) continue;
-         var data = values.getAsJsonObject();
-         if (data.has("Delay") && !data.has("Delay Max")) data.add("Delay Max", data.get("Delay").deepCopy());
+         var moduleState = values.getAsJsonObject();
+         if (moduleState.has("Delay") && !moduleState.has("Delay Max")) moduleState.add("Delay Max", moduleState.get("Delay").deepCopy());
       }
       var settings = new ArrayList<Runnable>(); var lifecycle = new ArrayList<Runnable>();
       for (Feature module : modules) {
          if (!root.has(module.getName())) continue;
          try {
-            var data = root.getAsJsonObject(module.getName());
-            if (data.has("key")) { int key = data.get("key").getAsInt(); settings.add(() -> module.setKey(key)); }
+            var moduleState = root.getAsJsonObject(module.getName());
+            if (moduleState.has("key")) { int key = moduleState.get("key").getAsInt(); settings.add(() -> module.setKey(key)); }
             if (!included(module, scope)) continue;
-            if (data.has("settings")) {
-               var values = data.getAsJsonObject("settings");
+            if (moduleState.has("settings")) {
+               var values = moduleState.getAsJsonObject("settings");
                for (Setting setting : module.settings) {
                   if (scope == Scope.GAMEPLAY && module instanceof com.samsara.module.combat.TargetSettings && setting.getName().equals("Visual")) continue;
                   if (!values.has(setting.getName()) && !(setting instanceof MultiSelectSetting)) continue;
                   try {
-                     var value = values.get(setting.getName());
-                     if (setting instanceof BooleanSetting bool) {
-                        if (!value.isJsonPrimitive() || !value.getAsJsonPrimitive().isBoolean()) throw new IllegalArgumentException("Invalid boolean");
-                        boolean desired = value.getAsBoolean(); settings.add(() -> bool.m217(desired));
-                     } else if (setting instanceof NumberSetting number) {
-                        double desired = value.getAsDouble();
-                        if (!Double.isFinite(desired)) throw new IllegalArgumentException("Non-finite setting");
-                        settings.add(() -> number.m223(desired));
-                     } else if (setting instanceof ModeSetting mode) {
-                        String selected = mode.canonical(value.getAsString());
-                        settings.add(() -> mode.m226(selected));
-                     } else if (setting instanceof MultiSelectSetting choices) {
-                        List<String> selected;
-                        if (value == null) selected = choices.legacySelection(values);
-                        else {
-                           if (!value.isJsonArray()) throw new IllegalArgumentException("Invalid selection array");
-                           var entries = new ArrayList<String>();
-                           for (var entry : value.getAsJsonArray()) {
-                              if (!entry.isJsonPrimitive() || !entry.getAsJsonPrimitive().isString()) {
-                                 throw new IllegalArgumentException("Invalid choice");
-                              }
-                              entries.add(entry.getAsString());
-                           }
-                           selected = choices.canonical(entries);
-                        }
-                        settings.add(() -> choices.setSelected(selected));
-                     }
+                     prepareSetting(settings, setting, values);
                   } catch (RuntimeException error) {
                      if (!startup) throw error;
                      warning.accept(module.getName()+" / "+setting.getName()+": "+error.getMessage());
                   }
                }
             }
-            if (data.has("hidden")) { boolean hidden = data.get("hidden").getAsBoolean(); settings.add(() -> module.setHidden(hidden)); }
-            if (!module.getName().equals("ClickGUI") && data.has("enabled")) {
-               boolean enabled = data.get("enabled").getAsBoolean();
+            if (moduleState.has("hidden")) { boolean hidden = moduleState.get("hidden").getAsBoolean(); settings.add(() -> module.setHidden(hidden)); }
+            if (!module.getName().equals("ClickGUI") && moduleState.has("enabled")) {
+               boolean enabled = moduleState.get("enabled").getAsBoolean();
                lifecycle.add(() -> {
                   try { if (startup) module.restoreEnabled(enabled); else module.setEnabled(enabled); }
                   catch (RuntimeException error) {
@@ -121,5 +95,35 @@ public final class ModuleConfigCodec {
          }
       }
       return () -> { settings.forEach(Runnable::run); lifecycle.forEach(Runnable::run); };
+   }
+
+   private static void prepareSetting(List<Runnable> actions, Setting setting, JsonObject values) {
+      var value = values.get(setting.getName());
+      if (setting instanceof BooleanSetting bool) {
+         if (!value.isJsonPrimitive() || !value.getAsJsonPrimitive().isBoolean()) throw new IllegalArgumentException("Invalid boolean");
+         boolean desired = value.getAsBoolean(); actions.add(() -> bool.setValue(desired));
+      } else if (setting instanceof NumberSetting number) {
+         double desired = value.getAsDouble();
+         if (!Double.isFinite(desired)) throw new IllegalArgumentException("Non-finite setting");
+         actions.add(() -> number.setValue(desired));
+      } else if (setting instanceof ModeSetting mode) {
+         String selected = mode.canonical(value.getAsString());
+         actions.add(() -> mode.setValue(selected));
+      } else if (setting instanceof MultiSelectSetting choices) {
+         List<String> selected;
+         if (value == null) selected = choices.legacySelection(values);
+         else {
+            if (!value.isJsonArray()) throw new IllegalArgumentException("Invalid selection array");
+            var entries = new ArrayList<String>();
+            for (var entry : value.getAsJsonArray()) {
+               if (!entry.isJsonPrimitive() || !entry.getAsJsonPrimitive().isString()) {
+                  throw new IllegalArgumentException("Invalid choice");
+               }
+               entries.add(entry.getAsString());
+            }
+            selected = choices.canonical(entries);
+         }
+         actions.add(() -> choices.setSelected(selected));
+      }
    }
 }

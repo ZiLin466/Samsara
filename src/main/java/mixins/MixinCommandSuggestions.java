@@ -6,7 +6,6 @@ import com.mojang.brigadier.CommandDispatcher;
 import com.mojang.brigadier.ParseResults;
 import com.mojang.brigadier.StringReader;
 import com.mojang.brigadier.suggestion.SuggestionsBuilder;
-import java.nio.charset.StandardCharsets;
 import java.util.Arrays;
 import java.util.Collection;
 import java.util.List;
@@ -28,9 +27,9 @@ import org.spongepowered.asm.mixin.injection.callback.CallbackInfoReturnable;
 
 @Mixin({CommandSuggestions.class})
 public class MixinCommandSuggestions {
-   private static final String f206 = ".";
-   private static final String f208 = new String(new byte[0], StandardCharsets.UTF_8);
-   private static final String f207 = " ";
+   private static final String COMMAND_PREFIX = ".";
+   private static final String EMPTY_INPUT = "";
+   private static final String ARGUMENT_SEPARATOR = " ";
    @Shadow
    @Final
    private EditBox input;
@@ -40,12 +39,12 @@ public class MixinCommandSuggestions {
       at = @At("STORE"),
       ordinal = 0
    )
-   private StringReader pm$17(StringReader var1) {
-      if (this.input.getValue().startsWith(f206) && var1.canRead() && var1.peek() == '.') {
-         var1.skip();
+   private StringReader samsara$parseClientCommand(StringReader reader) {
+      if (this.input.getValue().startsWith(COMMAND_PREFIX) && reader.canRead() && reader.peek() == '.') {
+         reader.skip();
       }
 
-      return var1;
+      return reader;
    }
 
    @Inject(
@@ -53,9 +52,9 @@ public class MixinCommandSuggestions {
       at = {@At("HEAD")},
       cancellable = true
    )
-   private void pm$19(String var1, int var2, CallbackInfoReturnable var3) {
-      if (this.input.getValue().startsWith(f206)) {
-         var3.setReturnValue(FormattedCharSequence.forward(var1, Style.EMPTY.withColor(ChatFormatting.GRAY)));
+   private void samsara$formatClientCommand(String commandLine, int cursor, CallbackInfoReturnable callback) {
+      if (this.input.getValue().startsWith(COMMAND_PREFIX)) {
+         callback.setReturnValue(FormattedCharSequence.forward(commandLine, Style.EMPTY.withColor(ChatFormatting.GRAY)));
       }
    }
 
@@ -66,45 +65,45 @@ public class MixinCommandSuggestions {
          target = "Lcom/mojang/brigadier/CommandDispatcher;getCompletionSuggestions(Lcom/mojang/brigadier/ParseResults;I)Ljava/util/concurrent/CompletableFuture;"
       )
    )
-   private CompletableFuture pm$18(CommandDispatcher var1, ParseResults var2, int var3) {
-      String var4 = this.input.getValue();
-      if (!var4.startsWith(f206)) {
-         return var1.getCompletionSuggestions(var2, var3);
+   private CompletableFuture samsara$suggestClientCommands(CommandDispatcher dispatcher, ParseResults parseResults, int cursor) {
+      String inputName = this.input.getValue();
+      if (!inputName.startsWith(COMMAND_PREFIX)) {
+         return dispatcher.getCompletionSuggestions(parseResults, cursor);
       } else {
-         String var5 = var4.substring(1);
-         int var6 = Math.max(0, var3 - 1);
-         var6 = Math.min(var6, var5.length());
-         String var7 = var5.substring(0, var6);
-         if (!var7.contains(f207)) {
-            SuggestionsBuilder var17 = new SuggestionsBuilder(var4, 1);
-            return SharedSuggestionProvider.suggest(CommandManager.m9(), var17);
+         String commandLine = inputName.substring(1);
+         int commandCursor = Math.max(0, cursor - 1);
+         commandCursor = Math.min(commandCursor, commandLine.length());
+         String beforeCursor = commandLine.substring(0, commandCursor);
+         if (!beforeCursor.contains(ARGUMENT_SEPARATOR)) {
+            SuggestionsBuilder suggestionsBuilder = new SuggestionsBuilder(inputName, 1);
+            return SharedSuggestionProvider.suggest(CommandManager.getAliases(), suggestionsBuilder);
          } else {
-            String[] var8 = var7.split(f207, -1);
-            String var9 = var8.length > 0 ? var8[0] : f208;
-            Command var10 = CommandManager.getCommand(var9);
-            if (var10 == null) {
-               List var18 = CommandManager.m9();
-               SuggestionsBuilder var19 = new SuggestionsBuilder(var4, 1);
-               return SharedSuggestionProvider.suggest(var18, var19);
+            String[] arguments = beforeCursor.split(ARGUMENT_SEPARATOR, -1);
+            String commandName = arguments.length > 0 ? arguments[0] : EMPTY_INPUT;
+            Command command = CommandManager.getCommand(commandName);
+            if (command == null) {
+               List aliases = CommandManager.getAliases();
+               SuggestionsBuilder suggestionsBuilder = new SuggestionsBuilder(inputName, 1);
+               return SharedSuggestionProvider.suggest(aliases, suggestionsBuilder);
             } else {
-               String[] var11;
-               if (var8.length <= 1) {
-                  var11 = new String[0];
+               String[] completionArguments;
+               if (arguments.length <= 1) {
+                  completionArguments = new String[0];
                } else {
-                  var11 = Arrays.copyOfRange(var8, 1, var8.length);
+                  completionArguments = Arrays.copyOfRange(arguments, 1, arguments.length);
                }
 
-               Collection var12 = var10.complete(var11);
-               int var13 = var7.lastIndexOf(32);
-               int var14;
-               if (var13 == -1) {
-                  var14 = 1;
+               Collection completions = command.complete(completionArguments);
+               int lastSpace = beforeCursor.lastIndexOf(32);
+               int replacementStart;
+               if (lastSpace == -1) {
+                  replacementStart = 1;
                } else {
-                  var14 = var13 + 1 + 1;
+                  replacementStart = lastSpace + 1 + 1;
                }
 
-               SuggestionsBuilder var15 = new SuggestionsBuilder(var4, var14);
-               return SharedSuggestionProvider.suggest(var12, var15);
+               SuggestionsBuilder suggestionsBuilder = new SuggestionsBuilder(inputName, replacementStart);
+               return SharedSuggestionProvider.suggest(completions, suggestionsBuilder);
             }
          }
       }
@@ -115,7 +114,7 @@ public class MixinCommandSuggestions {
       at = @At("STORE"),
       ordinal = 1
    )
-   private boolean pm$16(boolean var1) {
-      return var1 || this.input.getValue().startsWith(f206);
+   private boolean samsara$includeClientCommands(boolean original) {
+      return original || this.input.getValue().startsWith(COMMAND_PREFIX);
    }
 }

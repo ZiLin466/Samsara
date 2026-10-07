@@ -70,8 +70,8 @@ public class ChestStealer extends Feature {
           || mc.player.isSpectator()
           || !(screen instanceof ContainerScreen container)
           || !(mc.player.containerMenu instanceof ChestMenu menu) || container.getMenu() != menu
-          || !acceptsTitle(screen.getTitle().getString(), this.hypixelChest.m215())
-          || this.nameCheck.m215() && !acceptsChestName(screen.getTitle().getString(),
+          || !acceptsTitle(screen.getTitle().getString(), this.hypixelChest.getValue())
+          || this.nameCheck.getValue() && !acceptsChestName(screen.getTitle().getString(),
              I18n.get("container.chest"), I18n.get("container.chestDouble"))) return null;
       return menu;
    }
@@ -96,7 +96,7 @@ public class ChestStealer extends Feature {
 
    @Override
    public void onEvent(Event event) {
-      if (event != Events.f3) return;
+      if (event != Events.ROTATION) return;
       ChestMenu menu = workingMenu(mc.gui.screen());
       if (menu == null) {
          onDisable();
@@ -107,7 +107,7 @@ public class ChestStealer extends Feature {
          this.currentMenu = menu;
          this.world = mc.level;
          this.player = mc.player;
-         this.waitTicks = (int)this.openDelay.m220();
+         this.waitTicks = (int)this.openDelay.getValue();
       }
       if (this.lastTick == mc.player.tickCount) return;
       this.lastTick = mc.player.tickCount;
@@ -115,13 +115,13 @@ public class ChestStealer extends Feature {
       this.animation.attach(menu, menu.getRowCount());
       LootPlan plan = lootPlan(menu);
       this.transfers.refresh(plan.items, plan.chestSize);
-      LootAction action = plan.next(this.selection.m224(), this.lastSlot,
+      LootAction action = plan.next(this.selection.getValue(), this.lastSlot,
          slot -> menu.getSlot(slot).mayPickup(mc.player),
          slot -> capacity(menu, menu.getSlot(slot).getItem()) > 0,
          (slot, target) -> canSwap(menu, slot, target), this.transfers::rejected);
       boolean full = plan.hasWanted() && !plan.hasRoom(
          slot -> capacity(menu, menu.getSlot(slot).getItem()) > 0, (slot, target) -> canSwap(menu, slot, target));
-      boolean closing = full ? this.onFull.m228("Close") : this.autoClose.m215();
+      boolean closing = full ? this.onFull.is("Close") : this.autoClose.getValue();
       // Preserve the final island frame through the close delay; the vanilla chest must not flash in between.
       this.working = action != null || this.working && closing;
       if (++this.elapsedTicks <= this.waitTicks) return;
@@ -137,10 +137,10 @@ public class ChestStealer extends Feature {
             this.lastSlot = action.slot();
          } else this.transfers.reject(action.slot());
          this.elapsedTicks = 0;
-         this.waitTicks = InvManager.randomDelay((int)this.delay.m220(), (int)this.delayMax.m220());
+         this.waitTicks = InventoryManager.randomDelay((int)this.delay.getValue(), (int)this.delayMax.getValue());
          return;
       }
-      if (full && this.onFull.m228("Drop Trash")) {
+      if (full && this.onFull.is("Drop Trash")) {
          int junk = plan.disposableInventorySlot(index -> !this.transfers.rejected(plan.chestSize + index)
             && menu.getSlot(inventoryMenuSlot(plan.chestSize, index)).mayPickup(mc.player));
          if (junk >= 0) {
@@ -150,7 +150,7 @@ public class ChestStealer extends Feature {
             this.working = !ItemStack.matches(before, menu.getSlot(slot).getItem());
             if (!this.working) this.transfers.reject(plan.chestSize + junk);
             this.elapsedTicks = 0;
-            this.waitTicks = InvManager.randomDelay((int)this.delay.m220(), (int)this.delayMax.m220());
+            this.waitTicks = InventoryManager.randomDelay((int)this.delay.getValue(), (int)this.delayMax.getValue());
             return;
          }
       }
@@ -164,8 +164,8 @@ public class ChestStealer extends Feature {
       int size = menu.getContainer().getContainerSize();
       ItemStack[] chest = new ItemStack[size];
       for (int slot = 0; slot < size; slot++) chest[slot] = menu.getSlot(slot).getItem();
-      return new LootPlan(InvManager.inventoryItems(), InvManager.wornArmor(), chest,
-         InvManager.sharedRules(), this.skipTrash.m215(), this.quickSwaps.m215());
+      return new LootPlan(InventoryManager.inventoryItems(), InventoryManager.wornArmor(), chest,
+         InventoryManager.sharedRules(), this.skipTrash.getValue(), this.quickSwaps.getValue());
    }
 
    static int inventoryMenuSlot(int chestSize, int inventoryIndex) {
@@ -197,17 +197,17 @@ public class ChestStealer extends Feature {
    static final class LootPlan {
       final ItemStack[] items;
       final int chestSize;
-      private final InvManager.Plan cleanup;
-      private final InvManager.Plan inventoryCleanup;
+      private final InventoryManager.Plan cleanup;
+      private final InventoryManager.Plan inventoryCleanup;
       private final boolean skipTrash, quickSwaps;
       LootPlan(ItemStack[] inventory, EnumMap<EquipmentSlot, ItemStack> worn, ItemStack[] chest,
-               InvManager.Rules rules, boolean skipTrash, boolean quickSwaps) {
+               InventoryManager.Rules rules, boolean skipTrash, boolean quickSwaps) {
          this.chestSize = chest.length;
          this.items = Arrays.copyOf(inventory, 36 + chest.length);
          System.arraycopy(chest, 0, this.items, 36, chest.length);
-         this.cleanup = new InvManager.Plan(this.items, worn, rules);
+         this.cleanup = new InventoryManager.Plan(this.items, worn, rules);
          // Full-inventory disposal must never discard the current best item before its replacement is taken.
-         this.inventoryCleanup = new InvManager.Plan(inventory, worn, rules);
+         this.inventoryCleanup = new InventoryManager.Plan(inventory, worn, rules);
          this.skipTrash = skipTrash;
          this.quickSwaps = quickSwaps;
       }
@@ -217,7 +217,7 @@ public class ChestStealer extends Feature {
          for (int slot = 0; slot < this.chestSize; slot++) {
             if (!wanted(slot)) continue;
             int target = this.cleanup.destination(36 + slot);
-            if (canMove.test(slot) || this.quickSwaps && target >= 0 && !InvManager.Plan.serverItem(this.items[target]) && canSwap.test(slot, target)) return true;
+            if (canMove.test(slot) || this.quickSwaps && target >= 0 && !InventoryManager.Plan.serverItem(this.items[target]) && canSwap.test(slot, target)) return true;
          }
          return false;
       }
@@ -234,7 +234,7 @@ public class ChestStealer extends Feature {
          } else candidates.sort(order.thenComparingInt(slot -> slot));
          for (int slot : candidates) {
             int target = this.cleanup.destination(36 + slot);
-            if (this.quickSwaps && target >= 0 && !InvManager.Plan.serverItem(this.items[target]) && canSwap.test(slot, target))
+            if (this.quickSwaps && target >= 0 && !InventoryManager.Plan.serverItem(this.items[target]) && canSwap.test(slot, target))
                return new LootAction(slot, target, ContainerInput.SWAP);
             if (canMove.test(slot)) return new LootAction(slot, 0, ContainerInput.QUICK_MOVE);
          }

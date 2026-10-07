@@ -14,8 +14,8 @@ import org.spongepowered.asm.mixin.injection.Redirect;
 @Mixin({ScreenEffectRenderer.class})
 public class MixinScreenEffectRenderer {
    @Inject(method = "submitFire", at = @At("HEAD"), cancellable = true)
-   private static void pm$53(PoseStack poseStack, SubmitNodeCollector submitNodeCollector, TextureAtlasSprite texture, CallbackInfo ci) {
-      if (FeatureManager.f31.isEnabled()) {
+   private static void samsara$hideFireOverlay(PoseStack poseStack, SubmitNodeCollector submitNodeCollector, TextureAtlasSprite texture, CallbackInfo ci) {
+      if (FeatureManager.antiFire.isEnabled()) {
          ci.cancel();
       }
    }

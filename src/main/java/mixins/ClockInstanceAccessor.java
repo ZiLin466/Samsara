@@ -9,5 +9,5 @@ public interface ClockInstanceAccessor {
    long getTotalTicks();
 
    @Accessor("totalTicks")
-   void setTotalTicks(long var1);
+   void setTotalTicks(long totalTicks);
 }

@@ -17,11 +17,11 @@ public class MixinSoundEngine {
       at = {@At("HEAD")},
       cancellable = true
    )
-   private void pm$42(SoundInstance var1, CallbackInfoReturnable var2) {
-      EventSound var3 = Events.f16.m45(var1.getIdentifier());
-      var3.call();
-      if (var3.isCancelled()) {
-         var2.setReturnValue(PlayResult.NOT_STARTED);
+   private void samsara$dispatchSound(SoundInstance sound, CallbackInfoReturnable callback) {
+      EventSound soundEvent = Events.SOUND.reset(sound.getIdentifier());
+      soundEvent.call();
+      if (soundEvent.isCancelled()) {
+         callback.setReturnValue(PlayResult.NOT_STARTED);
       }
    }
 }

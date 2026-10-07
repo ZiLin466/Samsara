@@ -25,22 +25,40 @@ public final class ColorUtility {
 
    public static int applyOpacity(int color, float opacityFactor) {
       opacityFactor = Math.min(1, Math.max(0, opacityFactor));
-      int[] colorRGBA = hexToRGBA(color);
-      return rgbaToHex(colorRGBA[0], colorRGBA[1], colorRGBA[2], (int)(opacityFactor * 255F));
+      return (int)(opacityFactor * 255F) << 24 | color & 0xFFFFFF;
+   }
+
+   /** Scales the existing alpha, preserving the material's opacity. */
+   public static int multiplyOpacity(int color, float opacityFactor) {
+      return (int)((color >>> 24) * Math.clamp(opacityFactor, 0, 1)) << 24 | color & 0xFFFFFF;
+   }
+
+   public static int multiplyOpacityRounded(int color, float opacityFactor) {
+      return Math.round((color >>> 24) * Math.clamp(opacityFactor, 0, 1)) << 24 | color & 0xFFFFFF;
+   }
+
+   /** UI transitions use float arithmetic and truncate each channel. */
+   public static int mix(int from, int to, float fraction) {
+      fraction = Math.clamp(fraction, 0, 1);
+      int result = 0;
+      for (int shift = 0; shift <= 24; shift += 8) {
+         int start = from >>> shift & 0xFF;
+         int end = to >>> shift & 0xFF;
+         result |= (int)(start + (end - start) * fraction) << shift;
+      }
+      return result;
    }
 
    public static int interpolateColors(int color1, int color2, float amount) {
       amount = Math.min(1, Math.max(0, amount));
 
-      int[] color1RGBA = hexToRGBA(color1);
-      int[] color2RGBA = hexToRGBA(color2);
-
-      int r = (int)interpolate(color1RGBA[0], color2RGBA[0], amount);
-      int g = (int)interpolate(color1RGBA[1], color2RGBA[1], amount);
-      int b = (int)interpolate(color1RGBA[2], color2RGBA[2], amount);
-      int a = (int)interpolate(color1RGBA[3], color2RGBA[3], amount);
-
-      return rgbaToHex(r, g, b, a);
+      int result = 0;
+      for (int shift = 0; shift <= 24; shift += 8) {
+         int start = color1 >>> shift & 0xFF;
+         int end = color2 >>> shift & 0xFF;
+         result |= (int)interpolate(start, end, amount) << shift;
+      }
+      return result;
    }
 
    public static int rainbow(int speed, int index, float saturation, float brightness) {
@@ -55,7 +73,7 @@ public final class ColorUtility {
       return interpolateColors(startColor, endColor, angle / 360f);
    }
 
-   private static double interpolate(double a, double b, double v) {
-      return a + (b - a) * v;
+   private static double interpolate(double from, double to, double fraction) {
+      return from + (to - from) * fraction;
    }
 }

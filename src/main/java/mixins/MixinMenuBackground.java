@@ -12,10 +12,10 @@ import org.spongepowered.asm.mixin.injection.At;
 public abstract class MixinMenuBackground {
    @WrapOperation(method = "extractRenderStateWithTooltipAndSubtitles", at = @At(value = "INVOKE",
       target = "Lnet/minecraft/client/gui/screens/Screen;extractBackground(Lnet/minecraft/client/gui/GuiGraphicsExtractor;IIF)V"))
-   private void samsara$background(Screen screen, GuiGraphicsExtractor g, int x, int y, float delta, Operation<Void> original) {
+   private void samsara$background(Screen screen, GuiGraphicsExtractor graphics, int x, int y, float delta, Operation<Void> original) {
       if (screen instanceof com.samsara.ui.terminal.TerminalPage page)
-         com.samsara.ui.terminal.TerminalTheme.background(g, screen, page);
-      else if (MenuBackground.applies(screen)) MenuBackground.render(g, screen.width, screen.height);
-      else original.call(screen, g, x, y, delta);
+         com.samsara.ui.terminal.TerminalTheme.background(graphics, screen, page);
+      else if (MenuBackground.applies(screen)) MenuBackground.render(graphics, screen.width, screen.height);
+      else original.call(screen, graphics, x, y, delta);
    }
 }

@@ -70,20 +70,20 @@ final class AutoRodBehaviorTest {
    }
    @Test void nearProjectileUsesThePolynomialAngleAndPredictsMotion() {
       Vec3 eyes = new Vec3(0, 1.6, 0);
-      var stationary = AutoRod.Aim.projectile(eyes, ticks -> new Vec3(0, 0, 4), .6, 1.8, (a, b) -> true);
+      var stationary = AutoRod.Aim.projectile(eyes, ticks -> new Vec3(0, 0, 4), .6, 1.8, (rayStart, rayEnd) -> true);
       assertNotNull(stationary); assertEquals(0, stationary.yaw());
       double discriminant = Math.pow(2.25, 2) - .03 * (.03 * 16 - 3.2 * 2.25);
       double expected = -Math.toDegrees(Math.atan((2.25 - Math.sqrt(discriminant)) / (.03 * 4)));
       assertEquals(expected, stationary.pitch(), 1e-5);
-      var moving = AutoRod.Aim.projectile(eyes, ticks -> new Vec3(ticks * .2, 0, 4), .6, 1.8, (a, b) -> true);
+      var moving = AutoRod.Aim.projectile(eyes, ticks -> new Vec3(ticks * .2, 0, 4), .6, 1.8, (rayStart, rayEnd) -> true);
       assertNotNull(moving); assertTrue(moving.yaw() < 0);
-      assertNull(AutoRod.Aim.projectile(Vec3.ZERO, ticks -> new Vec3(0, 100, 1), .6, 1.8, (a, b) -> true));
+      assertNull(AutoRod.Aim.projectile(Vec3.ZERO, ticks -> new Vec3(0, 100, 1), .6, 1.8, (rayStart, rayEnd) -> true));
    }
    @Test void distantProjectileUsesDragGravityAndRejectsBlockedImpact() {
       Vec3 eye = new Vec3(0, 1.6, 0), target = new Vec3(0, 0, 7);
-      var rotation = AutoRod.Aim.projectile(eye, ticks -> target, .6, 1.8, (a, b) -> true);
+      var rotation = AutoRod.Aim.projectile(eye, ticks -> target, .6, 1.8, (rayStart, rayEnd) -> true);
       assertNotNull(rotation); assertTrue(Float.isFinite(rotation.pitch()));
-      assertNull(AutoRod.Aim.projectile(eye, ticks -> target, .6, 1.8, (a, b) -> false));
+      assertNull(AutoRod.Aim.projectile(eye, ticks -> target, .6, 1.8, (rayStart, rayEnd) -> false));
       double time = 5;
       Vec3 direction = AutoRod.Aim.directionByTime(eye, target, time);
       double drag = .92, power = Math.pow(drag, time), sum = (power - 1) / (drag - 1);

@@ -63,10 +63,10 @@ final class NanoVGBackendTest {
          }
          int coverage=0;
          for (int i=0;i<vertices.length;i+=12) {
-            double a=cross(vertices[i+4]-vertices[i],vertices[i+5]-vertices[i+1],x-vertices[i],y-vertices[i+1]);
-            double b=cross(vertices[i+8]-vertices[i+4],vertices[i+9]-vertices[i+5],x-vertices[i+4],y-vertices[i+5]);
+            double firstEdgeCross=cross(vertices[i+4]-vertices[i],vertices[i+5]-vertices[i+1],x-vertices[i],y-vertices[i+1]);
+            double secondEdgeCross=cross(vertices[i+8]-vertices[i+4],vertices[i+9]-vertices[i+5],x-vertices[i+4],y-vertices[i+5]);
             double c=cross(vertices[i]-vertices[i+8],vertices[i+1]-vertices[i+9],x-vertices[i+8],y-vertices[i+9]);
-            if ((a>0 && b>0 && c>0) || (a<0 && b<0 && c<0)) coverage++;
+            if ((firstEdgeCross>0 && secondEdgeCross>0 && c>0) || (firstEdgeCross<0 && secondEdgeCross<0 && c<0)) coverage++;
          }
          assertEquals(winding==0 ? 0 : 1,coverage,"Coverage at "+x+", "+y);
       }

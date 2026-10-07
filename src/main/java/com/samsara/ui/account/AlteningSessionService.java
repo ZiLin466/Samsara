@@ -27,7 +27,7 @@ final class AlteningSessionService implements SessionService {
       try {
          client.post(MinecraftServicesDiscoveryService.constantURL("http://sessionserver.thealtening.com/session/minecraft/join"),
             new JoinMinecraftServerRequest(token, id, server), Void.class);
-      } catch (MinecraftClientException e) { throw e.toAuthenticationException(); }
+      } catch (MinecraftClientException error) { throw error.toAuthenticationException(); }
    }
    @Override public ProfileResult hasJoinedServer(String name, String server, InetAddress address) throws AuthenticationUnavailableException {
       return official.hasJoinedServer(name, server, address);

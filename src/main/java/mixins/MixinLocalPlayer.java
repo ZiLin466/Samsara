@@ -28,8 +28,8 @@ public abstract class MixinLocalPlayer extends AbstractClientPlayer {
    @Unique
    private float samsara$motionPitch;
 
-   public MixinLocalPlayer(ClientLevel var1, GameProfile var2) {
-      super(var1, var2);
+   public MixinLocalPlayer(ClientLevel level, GameProfile profile) {
+      super(level, profile);
    }
 
    @ModifyExpressionValue(
@@ -39,10 +39,10 @@ public abstract class MixinLocalPlayer extends AbstractClientPlayer {
          target = "Lnet/minecraft/client/player/LocalPlayer;itemUseSpeedMultiplier()F"
       )
    )
-   private float pm$46(float original) {
-      EventSlowdown var2 = Events.f9.m92(original);
-      var2.call();
-      return var2.m93();
+   private float samsara$itemUseSpeedMultiplier(float original) {
+      EventSlowdown slowdownEvent = Events.SLOWDOWN.reset(original);
+      slowdownEvent.call();
+      return slowdownEvent.getSpeedMultiplier();
    }
 
    @Inject(
@@ -50,10 +50,10 @@ public abstract class MixinLocalPlayer extends AbstractClientPlayer {
       at = {@At("HEAD")},
       cancellable = true
    )
-   private void pm$45(CallbackInfo var1) {
-      Events.f3.m75(this.getYRot(), this.getXRot()).call();
-      if (Events.f3.isCancelled()) {
-         var1.cancel();
+   private void samsara$dispatchRotation(CallbackInfo callback) {
+      Events.ROTATION.reset(this.getYRot(), this.getXRot()).call();
+      if (Events.ROTATION.isCancelled()) {
+         callback.cancel();
       }
    }
 
@@ -61,32 +61,32 @@ public abstract class MixinLocalPlayer extends AbstractClientPlayer {
    // threshold, idle packets, position reminder and sneaking protocol fixes here.
    @Inject(method = "sendPosition", at = @At("HEAD"))
    private void samsara$preMotion(CallbackInfo ci) {
-      this.samsara$motion = Events.f1.m62(this.getX(), this.getY(), this.getZ(), this.onGround(), this.horizontalCollision);
+      this.samsara$motion = Events.PRE_MOTION.reset(this.getX(), this.getY(), this.getZ(), this.onGround(), this.horizontalCollision);
       this.samsara$motion.call();
-      this.samsara$motionYaw = Events.f3.m76();
-      this.samsara$motionPitch = Events.f3.m82();
+      this.samsara$motionYaw = Events.ROTATION.getYaw();
+      this.samsara$motionPitch = Events.ROTATION.getPitch();
    }
 
    @ModifyExpressionValue(method = "sendPosition", at = @At(value = "INVOKE", target = "Lnet/minecraft/client/player/LocalPlayer;getX()D"))
    private double samsara$motionX(double original) {
-      return this.samsara$motion.m63();
+      return this.samsara$motion.getX();
    }
 
    @ModifyExpressionValue(method = "sendPosition", at = @At(value = "INVOKE", target = "Lnet/minecraft/client/player/LocalPlayer;getY()D"))
    private double samsara$motionY(double original) {
-      return this.samsara$motion.m65();
+      return this.samsara$motion.getY();
    }
 
    @ModifyExpressionValue(method = "sendPosition", at = @At(value = "INVOKE", target = "Lnet/minecraft/client/player/LocalPlayer;getZ()D"))
    private double samsara$motionZ(double original) {
-      return this.samsara$motion.m67();
+      return this.samsara$motion.getZ();
    }
 
    // 26.3 constructs Pos/PosRot from position(), not from getX/Y/Z. Substitute
    // that Vec3 too, so packet coordinates match the deltas and last-sent cache.
    @ModifyExpressionValue(method = "sendPosition", at = @At(value = "INVOKE", target = "Lnet/minecraft/client/player/LocalPlayer;position()Lnet/minecraft/world/phys/Vec3;"))
    private Vec3 samsara$motionPosition(Vec3 original) {
-      return new Vec3(this.samsara$motion.m63(), this.samsara$motion.m65(), this.samsara$motion.m67());
+      return new Vec3(this.samsara$motion.getX(), this.samsara$motion.getY(), this.samsara$motion.getZ());
    }
 
    @ModifyExpressionValue(method = "sendPosition", at = @At(value = "INVOKE", target = "Lnet/minecraft/client/player/LocalPlayer;getYRot()F"))
@@ -101,17 +101,17 @@ public abstract class MixinLocalPlayer extends AbstractClientPlayer {
 
    @ModifyExpressionValue(method = "sendPosition", at = @At(value = "INVOKE", target = "Lnet/minecraft/client/player/LocalPlayer;onGround()Z"))
    private boolean samsara$motionOnGround(boolean original) {
-      return this.samsara$motion.m71();
+      return this.samsara$motion.isOnGround();
    }
 
    @ModifyExpressionValue(method = "sendPosition", at = @At(value = "FIELD", target = "Lnet/minecraft/client/player/LocalPlayer;horizontalCollision:Z"))
    private boolean samsara$motionHorizontalCollision(boolean original) {
-      return this.samsara$motion.m73();
+      return this.samsara$motion.isHorizontalCollision();
    }
 
    @Inject(method = "sendPosition", at = @At("RETURN"))
    private void samsara$postMotion(CallbackInfo ci) {
-      Events.f2.call();
+      Events.POST_MOTION.call();
    }
 
    @ModifyExpressionValue(
@@ -121,10 +121,10 @@ public abstract class MixinLocalPlayer extends AbstractClientPlayer {
          target = "Lnet/minecraft/client/player/LocalPlayer;canStartSprinting()Z"
       )
    )
-   private boolean pm$47(boolean original) {
+   private boolean samsara$dispatchSprint(boolean original) {
       // Read the result after ViaFabricPlus's redirect instead of replacing it.
-      EventSprint var2 = Events.f12.m95(this.sprintTriggerTime, original);
-      var2.call();
-      return var2.m98();
+      EventSprint sprintEvent = Events.SPRINT.reset(this.sprintTriggerTime, original);
+      sprintEvent.call();
+      return sprintEvent.isSprinting();
    }
 }

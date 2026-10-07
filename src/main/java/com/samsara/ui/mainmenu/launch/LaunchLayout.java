@@ -30,6 +30,6 @@ public record LaunchLayout(float scale, float left, float top) {
    public float x(double screenX) { return (float)(screenX - left) / scale; }
    public float y(double screenY) { return (float)(screenY - top) / scale; }
    public Tile hit(double screenX, double screenY) {
-      return ACTIONS.stream().filter(t -> t.contains(x(screenX), y(screenY))).findFirst().orElse(null);
+      return ACTIONS.stream().filter(tile -> tile.contains(x(screenX), y(screenY))).findFirst().orElse(null);
    }
 }

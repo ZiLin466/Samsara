@@ -5,22 +5,21 @@ import com.samsara.event.Events;
 import com.samsara.module.Category;
 import com.samsara.module.Feature;
 import com.samsara.setting.NumberSetting;
-import java.nio.charset.StandardCharsets;
 
 public class Flight extends Feature {
-   private static final String f371 = "Speed";
-   private static final String f370 = "Flight";
-   private NumberSetting f372 = new NumberSetting(f371, this, 1.0, 1.0, 10.0, 0.5);
+   private static final String SPEED_LABEL = "Speed";
+   private static final String FLIGHT_LABEL = "Flight";
+   private NumberSetting speed = new NumberSetting(SPEED_LABEL, this, 1.0, 1.0, 10.0, 0.5);
 
    public Flight() {
-      super(f370, Category.MOVEMENT);
+      super(FLIGHT_LABEL, Category.MOVEMENT);
    }
 
    @Override
-   public void onEvent(Event var1) {
-      if (var1 == Events.f1) {
+   public void onEvent(Event event) {
+      if (event == Events.PRE_MOTION) {
          mc.player.getAbilities().flying = true;
-         mc.player.getAbilities().setFlyingSpeed((float)this.f372.m220() * 0.1F);
+         mc.player.getAbilities().setFlyingSpeed((float)this.speed.getValue() * 0.1F);
       }
    }
 }

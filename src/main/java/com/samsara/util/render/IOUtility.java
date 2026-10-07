@@ -2,6 +2,7 @@ package com.samsara.util.render;
 
 import java.io.IOException;
 import java.io.InputStream;
+import java.io.UncheckedIOException;
 import java.nio.ByteBuffer;
 import java.nio.channels.Channels;
 import java.nio.channels.ReadableByteChannel;
@@ -38,9 +39,8 @@ public final class IOUtility {
 
          buffer.flip();
          return memSlice(buffer);
-      } catch (IOException e) {
-         e.printStackTrace();
-         return null;
+      } catch (IOException error) {
+         throw new UncheckedIOException("Unable to read font resource", error);
       }
    }
 

@@ -7,36 +7,26 @@ import net.minecraft.world.item.Item;
 import net.minecraft.world.item.ItemStack;
 
 public class InventoryUtil {
-   private static final Minecraft f758 = Minecraft.getInstance();
+   private static final Minecraft mc = Minecraft.getInstance();
 
-   public static int m41() {
-      int var0 = 0;
+   public static int countHotbarBlocks() {
+      int blockCount = 0;
 
-      for (int var1 = 0; var1 < 9; var1++) {
-         ItemStack var2 = f758.player.getInventory().getItem(var1);
-         if (var2.getItem() instanceof BlockItem) {
-            var0 += var2.getCount();
+      for (int slot = 0; slot < 9; slot++) {
+         ItemStack stack = mc.player.getInventory().getItem(slot);
+         if (stack.getItem() instanceof BlockItem) {
+            blockCount += stack.getCount();
          }
       }
 
-      return var0;
+      return blockCount;
    }
 
-   public static boolean m39() {
-      if (f758.player == null) {
-         return false;
-      } else {
-         Item var0 = f758.player.getMainHandItem().getItem();
-         return f758.player.getMainHandItem().is(ItemTags.SWORDS);
-      }
+   public static boolean isHoldingSword() {
+      return mc.player != null && mc.player.getMainHandItem().is(ItemTags.SWORDS);
    }
 
-   public static boolean m40() {
-      if (f758.player == null) {
-         return false;
-      } else {
-         Item var0 = f758.player.getMainHandItem().getItem();
-         return var0 instanceof BlockItem;
-      }
+   public static boolean isHoldingPlaceableBlock() {
+      return mc.player != null && mc.player.getMainHandItem().getItem() instanceof BlockItem;
    }
 }

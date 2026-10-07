@@ -10,7 +10,7 @@ import org.spongepowered.asm.mixin.gen.Invoker;
 @Mixin({Screen.class})
 public interface ScreenAccessor {
    @Invoker("addRenderableWidget")
-   GuiEventListener invokeAddRenderableWidget(GuiEventListener var1);
+   GuiEventListener invokeAddRenderableWidget(GuiEventListener widget);
 
    @Accessor("minecraft")
    Minecraft getMinecraft();

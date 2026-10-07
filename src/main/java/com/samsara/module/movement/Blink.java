@@ -19,45 +19,45 @@ import net.minecraft.network.protocol.login.ServerboundHelloPacket;
 import net.minecraft.world.entity.Entity;
 
 public class Blink extends Feature {
-   private static final String f431 = "Blink";
-   private static final String f432 = "Tick";
-   private static final String f433 = "Slow Release";
-   private static final String f434 = "Slow Move";
-   private static final String f435 = "Slow Move Tick";
-   private static final String f436 = "Fake Player";
-   private final NumberSetting f437;
-   private final BooleanSetting f438;
-   private final BooleanSetting f439;
-   private final NumberSetting f440;
-   private final BooleanSetting f441;
-   private final ConcurrentLinkedQueue<Packet> f442;
-   private RemotePlayer f443;
-   private boolean f444;
-   private double f445;
-   private double f446;
-   private double f447;
-   private double f448;
-   private double f449;
-   private double f450;
-   private float f451;
-   private float f452;
-   private float f453;
-   private float f454;
-   private float f455;
-   private float f456;
-   private double f457;
-   private double f458;
-   private double f459;
+   private static final String BLINK_LABEL = "Blink";
+   private static final String TICK_LABEL = "Tick";
+   private static final String SLOW_RELEASE_LABEL = "Slow Release";
+   private static final String SLOW_MOVE_LABEL = "Slow Move";
+   private static final String SLOW_MOVE_TICK_LABEL = "Slow Move Tick";
+   private static final String FAKE_PLAYER_LABEL = "Fake Player";
+   private final NumberSetting tick;
+   private final BooleanSetting slowRelease;
+   private final BooleanSetting slowMove;
+   private final NumberSetting slowMoveTick;
+   private final BooleanSetting fakePlayer;
+   private final ConcurrentLinkedQueue<Packet> queuedPackets;
+   private RemotePlayer fakePlayerEntity;
+   private boolean flushing;
+   private double serverX;
+   private double serverY;
+   private double serverZ;
+   private double previousServerX;
+   private double previousServerY;
+   private double previousServerZ;
+   private float serverYaw;
+   private float serverPitch;
+   private float serverHeadYaw;
+   private float previousServerYaw;
+   private float previousServerPitch;
+   private float previousServerHeadYaw;
+   private double renderedX;
+   private double renderedY;
+   private double renderedZ;
 
    @Override
-   public void onEvent(Event var1) {
-      if (var1 == Events.f10) {
-         if (this.f444 || mc.player == null) {
+   public void onEvent(Event event) {
+      if (event == Events.PACKET_SEND) {
+         if (this.flushing || mc.player == null) {
             return;
          }
 
-         Packet var2 = Events.f10.m44();
-         if (var2 instanceof ServerboundHelloPacket || var2 instanceof ClientIntentionPacket) {
+         Packet packet = Events.PACKET_SEND.getPacket();
+         if (packet instanceof ServerboundHelloPacket || packet instanceof ClientIntentionPacket) {
             return;
          }
 
@@ -66,44 +66,44 @@ public class Blink extends Feature {
             return;
          }
 
-         if (var2 instanceof ServerboundMovePlayerPacket) {
-            if (this.pm$155() > this.f437.m220()) {
-               if (this.f438.m215()) {
-                  this.pm$156();
+         if (packet instanceof ServerboundMovePlayerPacket) {
+            if (this.countQueuedMovementPackets() > this.tick.getValue()) {
+               if (this.slowRelease.getValue()) {
+                  this.flushOneMovement();
                } else {
-                  this.pm$157();
+                  this.flushAllPackets();
                }
             }
 
-            if (this.f439.m215() && mc.player.tickCount % (int)this.f440.m220() == 0) {
-               this.pm$156();
+            if (this.slowMove.getValue() && mc.player.tickCount % (int)this.slowMoveTick.getValue() == 0) {
+               this.flushOneMovement();
             }
          }
 
-         var1.setCancelled(true);
-         this.f442.add(var2);
+         event.setCancelled(true);
+         this.queuedPackets.add(packet);
       }
 
-      if (var1 == Events.f5) {
-         if (this.f443 != null && this.f441.m215() && mc.player != null) {
-            float var3 = mc.getDeltaTracker().getGameTimeDeltaPartialTick(true);
-            double var4 = this.f448 + (this.f445 - this.f448) * (double)var3;
-            double var6 = this.f449 + (this.f446 - this.f449) * (double)var3;
-            double var8 = this.f450 + (this.f447 - this.f450) * (double)var3;
-            this.f443.xOld = this.f457;
-            this.f443.yOld = this.f458;
-            this.f443.zOld = this.f459;
-            this.f443.setPos(var4, var6, var8);
-            this.f457 = var4;
-            this.f458 = var6;
-            this.f459 = var8;
-            float var10 = this.f454 + (this.f451 - this.f454) * var3;
-            float var11 = this.f455 + (this.f452 - this.f455) * var3;
-            float var12 = this.f456 + (this.f453 - this.f456) * var3;
-            this.f443.setYRot(var10);
-            this.f443.setXRot(var11);
-            this.f443.setYHeadRot(var12);
-            this.f443.setYBodyRot(var10);
+      if (event == Events.RENDER_2D) {
+         if (this.fakePlayerEntity != null && this.fakePlayer.getValue() && mc.player != null) {
+            float partialTick = mc.getDeltaTracker().getGameTimeDeltaPartialTick(true);
+            double renderX = this.previousServerX + (this.serverX - this.previousServerX) * (double)partialTick;
+            double renderY = this.previousServerY + (this.serverY - this.previousServerY) * (double)partialTick;
+            double renderZ = this.previousServerZ + (this.serverZ - this.previousServerZ) * (double)partialTick;
+            this.fakePlayerEntity.xOld = this.renderedX;
+            this.fakePlayerEntity.yOld = this.renderedY;
+            this.fakePlayerEntity.zOld = this.renderedZ;
+            this.fakePlayerEntity.setPos(renderX, renderY, renderZ);
+            this.renderedX = renderX;
+            this.renderedY = renderY;
+            this.renderedZ = renderZ;
+            float renderYaw = this.previousServerYaw + (this.serverYaw - this.previousServerYaw) * partialTick;
+            float renderPitch = this.previousServerPitch + (this.serverPitch - this.previousServerPitch) * partialTick;
+            float renderHeadYaw = this.previousServerHeadYaw + (this.serverHeadYaw - this.previousServerHeadYaw) * partialTick;
+            this.fakePlayerEntity.setYRot(renderYaw);
+            this.fakePlayerEntity.setXRot(renderPitch);
+            this.fakePlayerEntity.setYHeadRot(renderHeadYaw);
+            this.fakePlayerEntity.setYBodyRot(renderYaw);
          }
       }
    }
@@ -111,106 +111,106 @@ public class Blink extends Feature {
    @Override
    public void onEnable() {
       if (mc.player != null) {
-         this.f445 = this.f448 = mc.player.getX();
-         this.f446 = this.f449 = mc.player.getY();
-         this.f447 = this.f450 = mc.player.getZ();
-         this.f451 = this.f454 = mc.player.getYRot();
-         this.f452 = this.f455 = mc.player.getXRot();
-         this.f453 = this.f456 = mc.player.getYHeadRot();
-         this.f443 = null;
-         if (this.f441.m215()) {
-            this.f443 = new RemotePlayer(mc.level, new GameProfile(UUID.nameUUIDFromBytes("".getBytes(StandardCharsets.UTF_8)), ""));
-            this.f443.setId(-1337);
-            this.f443.copyPosition(mc.player);
-            this.f443.setYRot(mc.player.getYRot());
-            this.f443.setXRot(mc.player.getXRot());
-            this.f443.setYHeadRot(mc.player.getYHeadRot());
-            this.f443.setHealth(mc.player.getHealth());
-            this.f443.setAbsorptionAmount(mc.player.getAbsorptionAmount());
-            mc.level.addEntity(this.f443);
+         this.serverX = this.previousServerX = mc.player.getX();
+         this.serverY = this.previousServerY = mc.player.getY();
+         this.serverZ = this.previousServerZ = mc.player.getZ();
+         this.serverYaw = this.previousServerYaw = mc.player.getYRot();
+         this.serverPitch = this.previousServerPitch = mc.player.getXRot();
+         this.serverHeadYaw = this.previousServerHeadYaw = mc.player.getYHeadRot();
+         this.fakePlayerEntity = null;
+         if (this.fakePlayer.getValue()) {
+            this.fakePlayerEntity = new RemotePlayer(mc.level, new GameProfile(UUID.nameUUIDFromBytes("".getBytes(StandardCharsets.UTF_8)), ""));
+            this.fakePlayerEntity.setId(-1337);
+            this.fakePlayerEntity.copyPosition(mc.player);
+            this.fakePlayerEntity.setYRot(mc.player.getYRot());
+            this.fakePlayerEntity.setXRot(mc.player.getXRot());
+            this.fakePlayerEntity.setYHeadRot(mc.player.getYHeadRot());
+            this.fakePlayerEntity.setHealth(mc.player.getHealth());
+            this.fakePlayerEntity.setAbsorptionAmount(mc.player.getAbsorptionAmount());
+            mc.level.addEntity(this.fakePlayerEntity);
          }
       }
    }
 
    @Override
    public void onDisable() {
-      if (this.f443 != null && mc.level != null) {
-         mc.level.removeEntity(this.f443.getId(), Entity.RemovalReason.DISCARDED);
-         this.f443 = null;
+      if (this.fakePlayerEntity != null && mc.level != null) {
+         mc.level.removeEntity(this.fakePlayerEntity.getId(), Entity.RemovalReason.DISCARDED);
+         this.fakePlayerEntity = null;
       }
 
-      this.pm$157();
+      this.flushAllPackets();
    }
 
-   private void pm$151(ServerboundMovePlayerPacket var1) {
-      this.f448 = this.f445;
-      this.f449 = this.f446;
-      this.f450 = this.f447;
-      this.f445 = var1.getX(this.f445);
-      this.f446 = var1.getY(this.f446);
-      this.f447 = var1.getZ(this.f447);
-      this.f454 = this.f451;
-      this.f455 = this.f452;
-      this.f456 = this.f453;
-      this.f451 = var1.getYRot(this.f451);
-      this.f452 = var1.getXRot(this.f452);
-      if (var1.hasRotation()) {
-         this.f453 = var1.getYRot(this.f453);
+   private void updateServerPosition(ServerboundMovePlayerPacket movePlayerPacket) {
+      this.previousServerX = this.serverX;
+      this.previousServerY = this.serverY;
+      this.previousServerZ = this.serverZ;
+      this.serverX = movePlayerPacket.getX(this.serverX);
+      this.serverY = movePlayerPacket.getY(this.serverY);
+      this.serverZ = movePlayerPacket.getZ(this.serverZ);
+      this.previousServerYaw = this.serverYaw;
+      this.previousServerPitch = this.serverPitch;
+      this.previousServerHeadYaw = this.serverHeadYaw;
+      this.serverYaw = movePlayerPacket.getYRot(this.serverYaw);
+      this.serverPitch = movePlayerPacket.getXRot(this.serverPitch);
+      if (movePlayerPacket.hasRotation()) {
+         this.serverHeadYaw = movePlayerPacket.getYRot(this.serverHeadYaw);
       }
    }
 
-   private double pm$155() {
-      double var1 = 0.0;
+   private double countQueuedMovementPackets() {
+      double movementPacketCount = 0.0;
 
-      for (Packet var3 : this.f442) {
-         if (var3 instanceof ServerboundMovePlayerPacket) {
-            ++var1;
+      for (Packet packet : this.queuedPackets) {
+         if (packet instanceof ServerboundMovePlayerPacket) {
+            ++movementPacketCount;
          }
       }
 
-      return var1;
+      return movementPacketCount;
    }
 
-   private void pm$156() {
-      while (!this.f442.isEmpty()) {
-         Packet var1 = (Packet)this.f442.poll();
-         this.pm$158(var1);
-         if (var1 instanceof ServerboundMovePlayerPacket var2) {
-            this.pm$151(var2);
+   private void flushOneMovement() {
+      while (!this.queuedPackets.isEmpty()) {
+         Packet packet = (Packet)this.queuedPackets.poll();
+         this.sendQueuedPacket(packet);
+         if (packet instanceof ServerboundMovePlayerPacket movePlayerPacket) {
+            this.updateServerPosition(movePlayerPacket);
             break;
          }
       }
    }
 
-   private void pm$157() {
-      Packet var1;
-      while ((var1 = (Packet)this.f442.poll()) != null) {
-         this.pm$158(var1);
-         if (var1 instanceof ServerboundMovePlayerPacket var2) {
-            this.pm$151(var2);
+   private void flushAllPackets() {
+      Packet packet;
+      while ((packet = (Packet)this.queuedPackets.poll()) != null) {
+         this.sendQueuedPacket(packet);
+         if (packet instanceof ServerboundMovePlayerPacket movePlayerPacket) {
+            this.updateServerPosition(movePlayerPacket);
          }
       }
    }
 
-   private void pm$158(Packet var1) {
+   private void sendQueuedPacket(Packet packet) {
       if (mc.getConnection() != null) {
-         this.f444 = true;
+         this.flushing = true;
 
          try {
-            mc.getConnection().send(var1);
+            mc.getConnection().send(packet);
          } finally {
-            this.f444 = false;
+            this.flushing = false;
          }
       }
    }
 
    public Blink() {
-      super(f431, Category.MOVEMENT);
-      this.f437 = new NumberSetting(f432, this, 30.0, 5.0, 200.0, 1.0);
-      this.f438 = new BooleanSetting(f433, this, true);
-      this.f439 = new BooleanSetting(f434, this, false);
-      this.f440 = new NumberSetting(f435, this, 5.0, 2.0, 5.0, 1.0);
-      this.f441 = new BooleanSetting(f436, this, false);
-      this.f442 = new ConcurrentLinkedQueue<>();
+      super(BLINK_LABEL, Category.MOVEMENT);
+      this.tick = new NumberSetting(TICK_LABEL, this, 30.0, 5.0, 200.0, 1.0);
+      this.slowRelease = new BooleanSetting(SLOW_RELEASE_LABEL, this, true);
+      this.slowMove = new BooleanSetting(SLOW_MOVE_LABEL, this, false);
+      this.slowMoveTick = new NumberSetting(SLOW_MOVE_TICK_LABEL, this, 5.0, 2.0, 5.0, 1.0);
+      this.fakePlayer = new BooleanSetting(FAKE_PLAYER_LABEL, this, false);
+      this.queuedPackets = new ConcurrentLinkedQueue<>();
    }
 }

@@ -94,6 +94,9 @@ public final class NVGTextRenderer {
       nvgFontFaceId(vg, this.fontId);
       nvgFontSize(vg, size);
 
+      if (text.indexOf(COLOR_INVOKER) < 0) {
+         return nvgTextBounds(vg, 0, 0, text, (FloatBuffer)null);
+      }
       StringBuilder segment = new StringBuilder();
       float width = 0F;
       for (int i = 0; i < text.length(); i++) {
